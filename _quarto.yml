@@ -1,6 +1,6 @@
 project:
   title: "immunity-landscape"
-  output-dir: _docs
+  output-dir: rendered/draft
   
 toc: true
 
@@ -11,5 +11,6 @@ execute:
 format: 
   html:
     toc: true
+    code-overflow: wrap
 
 

@@ -37,4 +37,4 @@ immunity-landscape.Rproj
 
 # quarto
 /.quarto/
-/_docs/*_files/
+/rendered/draft/

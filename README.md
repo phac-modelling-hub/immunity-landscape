@@ -16,7 +16,7 @@ When opening this project in a R session, be sure that the `{renv}` project has 
 
 This repo is set up as a [Quarto Project](https://quarto.org/docs/projects/quarto-projects.html). Quarto docs (_e.g._, notes) should be kept at the top level and they inherit the metadata specified in `_quarto.yml`. You can additionally specify document-specific metadata in the YAML header of each file; this will get [merged](https://quarto.org/docs/projects/quarto-projects.html#metadata-merging) with the project-level metadata.
 
-Rendered documents will appear in `_docs/`. Before rendering a doc to send, be sure to add the following setting to the document's YAML header to ensure the generated `.html` is portable:
+Rendered documents appear in `rendered/draft/`. Since these are generated files that are likely to change a lot as we work on the associated `.qmd`s, tracking changes to them with git would not be useful (we're already tracking the source docs anyway). Thus, `rendered/draft/` is ignored by git. If you would like to share a rendered report over GitHub, please copy it over to `rendered/` (not ignored), having first rendered with the following setting to ensure the generated `.html` is self-contained:
 
 ```
 format: 
