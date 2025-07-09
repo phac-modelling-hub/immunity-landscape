@@ -10,11 +10,15 @@ author:
   - name: Applied Public Health Sciences Directorate
   - name: Science and Policy Integration Branch
   - name: Public Health Agency of Canada
+execute:
+  echo: false
+format: 
+  html:
+    embed-resources: true
 ---
 
 ```{r}
 #| label: setup
-#| echo: false
 #| output: false
 
 # packages
@@ -27,6 +31,9 @@ library(tidyr)
 library(scales)
 
 library(ggplot2); theme_set(theme_bw())
+
+# Source functions
+invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
 ```
 
 Our ultimate goal is to compile a data set of measles vaccine coverage by PT, age, and number of doses in order to implement a more realistic immunity landscape within Modelling Hub models (_e.g._, the Agent Based Model). 
@@ -46,7 +53,6 @@ This data will be standardized into a table with the following columns:
 
 ```{r}
 #| label: coverage_dict
-#| echo: false
 
 data_dict <- tibble::tribble(
   ~variable, ~description, ~type,
@@ -66,27 +72,12 @@ Either (1) `age` and `year_report` or (2) `year_birth` must be specified for eac
 
 ```{r}
 #| label: data_cleaning_utils
-#| echo: false
 
 #' Pull first number from string
 #' 
 #' @param x string
 pull_numeric <- function(x){
   as.numeric(str_extract(x, "[[:digit:]]+"))
-}
-
-#' Pull first age out of string
-#' 
-#' @param x string
-pull_first <- function(x){
-  as.numeric(str_extract(x, "^[[:digit:]\\.]+"))
-}
-
-#' Pull last age out of string
-#' 
-#' @param x string
-pull_last <- function(x){
-  as.numeric(str_extract(x, "[[:digit:]\\.]+$"))
 }
 
 #' Parse character variable with integer info into an ordered factor variable
@@ -132,7 +123,6 @@ pt_lookup <- function() {
 
 ```{r}
 #| label: plot_coverage
-#| echo: false
 
 #' Plot vaccine coverage from our standardized format
 #' 
