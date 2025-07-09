@@ -9,3 +9,29 @@ Quantifying the immunity landscape for vaccine preventable diseases using immuni
 This project uses `{renv}` to manage R package versions. If you are unfamiliar with this software, please first review the package's [get started guide](https://rstudio.github.io/renv/articles/renv.html).
 
 When opening this project in a R session, be sure that the `{renv}` project has been activated. Be sure to resolve any inconsistencies in the state of the project when prompted. When you open this project for the first time, you will need to `renv::restore()` to install all a packages required by this project.
+
+# Conventions
+
+## Keeping notes with Quarto
+
+This repo is set up as a [Quarto Project](https://quarto.org/docs/projects/quarto-projects.html). Quarto docs (_e.g._, notes) should be kept at the top level and they inherit the metadata specified in `_quarto.yml`. You can additionally specify document-specific metadata in the YAML header of each file; this will get [merged](https://quarto.org/docs/projects/quarto-projects.html#metadata-merging) with the project-level metadata.
+
+Rendered documents will appear in `_docs/`. Before rendering a doc to send, be sure to add the following setting to the document's YAML header to ensure the generated `.html` is portable:
+
+```
+format: 
+  html:
+    embed-resources: true
+```
+
+## File paths
+
+Please use [`here::here()`](https://here.r-lib.org/) to specify file paths. These should _always_ be relative to the top-level of the project.
+
+## Using functions
+
+If a bit of code is re-used more than twice, it should be written up as a function. Functions that are specific to a document can remain defined in that document. Functions that are shared across documents should be defined in the `R/` subdirectory (one function per file, where the file shares a name with the function). You can source all functions in  `R/` easily with the following snippet:
+
+```
+invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
+```

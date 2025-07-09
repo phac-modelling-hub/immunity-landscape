@@ -1,0 +1,15 @@
+project:
+  title: "immunity-landscape"
+  output-dir: _docs
+  
+toc: true
+
+execute: 
+  warning: false
+  echo: false
+  
+format: 
+  html:
+    toc: true
+
+

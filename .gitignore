@@ -34,3 +34,7 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 immunity-landscape.Rproj
+
+# quarto
+/.quarto/
+/_docs/*_files/
