@@ -288,7 +288,7 @@ plot_coverage(vax_PE, x = "year_birth")
 
 ### Government of Quebec
 
-The [MSSS (Ministère de la Santé et des Services sociaux)](https://msss.gouv.qc.ca/professionnels/vaccination/piq-impacts-des-programmes-de-vaccination/donnees-de-couverture-vaccinale-au-quebec/), a government ministry of Quebec, released a report in 2024 documenting vaccine coverage. In the report, they estimate that in 2021-2022, 88% of primary school children (6-11 years old) were vaccinated and 95%  of the secondary school children (12-16 years old) were vaccinated[^QCschoolage]. It is assumed that these statistics represent the full series (2 doses).
+The [MSSS (Ministère de la Santé et des Services sociaux)](https://msss.gouv.qc.ca/professionnels/vaccination/piq-impacts-des-programmes-de-vaccination/donnees-de-couverture-vaccinale-au-quebec/), a government ministry of Quebec, released a report in 2024 documenting vaccine coverage. In the report, they estimate that in 2021-2022, 88% of primary school children (6-11 years old) were vaccinated and 92%  of the secondary school children (12-16 years old) were vaccinated[^QCschoolage]. It is assumed that these statistics represent the full series (2 doses).
 
 [^QCschoolage]: School ages taken from [school attendance rules for QC](https://www.quebec.ca/en/education/study-quebec/education-system).
 
