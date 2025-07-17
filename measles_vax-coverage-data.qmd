@@ -82,8 +82,6 @@ pull_numeric <- function(x){
 
 #' Parse character variable with integer info into an ordered factor variable
 #' 
-#' Fill in missing value for plotting
-#' 
 #' @param df data frame
 #' @param col column to transform, as a symbol
 factorize <- function(df, col){
@@ -97,6 +95,7 @@ factorize <- function(df, col){
 
 #' Parse character variable with numeric info into a numeric variable
 #'
+#' Fill in missing value for plotting
 #' @param df data frame
 #' @param col column to transform, as a symbol
 numericize <- function(df, col){
