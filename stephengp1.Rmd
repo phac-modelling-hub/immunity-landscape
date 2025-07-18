@@ -137,7 +137,7 @@ gpdraw_df <- tibble()
 for(indexA in 1:50){
 # for(indexA in 1:1){
   gpdraw_df <- bind_rows(gpdraw_df, tibble(
-    draw=indexA, x=xvals, y=rmnorm(1, rep(0,npts), covmat + 1e-6*diag(npts))
+    draw=indexA, x=xvals, y=rmnorm(1, rep(0,npts), covmat+1e-6*diag(npts))
   ))
   # gpdraw <- rmnorm(1, rep(0,npts), covmat)  
 }

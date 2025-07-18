@@ -52,7 +52,7 @@ vax_plot  <- vax_raw %>%
 ```
 
 ```{r}
-#| label: byprovince_plot
+#| label: plot_byprovince
 
 plot_coverage(vax_plot)
 ```
@@ -105,7 +105,7 @@ plot_coverage_country <- function(df, x = "age", plot_year_report = TRUE, ncol =
 ```
 
 ```{r}
-#| label: naive_country_plots
+#| label: plot_country_naive
 
 plot_coverage_country(vax_plot)
 plot_coverage_country(vax_plot,x="year_report")
@@ -117,6 +117,6 @@ plot_coverage_country(vax_plot2,x="age_current")
 Note that Ontario's data represents *exactly* 0, 1, 2 doses, where 0 + 1 + 2 sums to 1. This is currently misleading so remove Ontario data for now (and filter out 0 dose data points).
 
 ```{r}
-#| label: country_-ON_plot
+#| label: plot_country_notON
 plot_coverage_country(vax_plot %>% filter(n_doses %in% c("1","1+","2","2+")) %>% filter(pt!="ON"))
 ```
