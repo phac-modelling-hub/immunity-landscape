@@ -15,6 +15,9 @@ execute:
 format: 
   html:
     embed-resources: true
+editor: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r}
@@ -36,18 +39,32 @@ library(ggplot2); theme_set(theme_bw())
 invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
 ```
 
-Our ultimate goal is to compile a data set of measles vaccine coverage by PT, age, and number of doses in order to implement a more realistic immunity landscape within Modelling Hub models (_e.g._, the Agent Based Model). 
+Our ultimate goal is to compile a data set of measles vaccine coverage
+by PT, age, and number of doses in order to implement a more realistic
+immunity landscape within Modelling Hub models (*e.g.*, the Agent Based
+Model).
 
-We start by collecting the available vaccine coverage data, all of which was collected for a purpose other than disease modelling (monitoring of public health milestones, school administrative data, etc). Any transformations and modelling of data required to use it to inform models (_e.g._, age estimates to present day, infer estimates for missing ages) is done downstream, within the context of each modelling project, as the most appropriate methodology would likely be model- and modelling-problem-dependent.
+We start by collecting the available vaccine coverage data, all of which
+was collected for a purpose other than disease modelling (monitoring of
+public health milestones, school administrative data, etc). Any
+transformations and modelling of data required to use it to inform
+models (*e.g.*, age estimates to present day, infer estimates for
+missing ages) is done downstream, within the context of each modelling
+project, as the most appropriate methodology would likely be model- and
+modelling-problem-dependent.
 
 In this report, we:
 
-- document a [standardized data format](#standardized-data-format) for all of the datasets we compile
-- give an overview of the [available national data sources](#available-national-data-sources), which are used as a fall-back when province-specific data is not readily available
-- show the estimates we've compiled from [provincial sources](#provincial) and from [national sources](#cNICS)
-- [summarize](#summary-across-pts) the data across PTs
+-   document a [standardized data format](#standardized-data-format) for
+    all of the datasets we compile
+-   give an overview of the [available national data
+    sources](#available-national-data-sources), which are used as a
+    fall-back when province-specific data is not readily available
+-   show the estimates we've compiled from [provincial
+    sources](#provincial) and from [national sources](#cNICS)
+-   [summarize](#summary-across-pts) the data across PTs
 
-# Standardized data format
+# Standardized data format {#standardized-data-format}
 
 This data will be standardized into a table with the following columns:
 
@@ -68,7 +85,8 @@ data_dict <- tibble::tribble(
 DT::datatable(data_dict)
 ```
 
-Either (1) `age` and `year_report` or (2) `year_birth` must be specified for each coverage estimate.
+Either (1) `age` and `year_report` or (2) `year_birth` must be specified
+for each coverage estimate.
 
 ```{r}
 #| label: data_cleaning_utils
@@ -173,23 +191,41 @@ plot_coverage <- function(df, x = "age", plot_year_report = TRUE, ncol = 3){
 th <- theme(legend.position = "bottom")
 ```
 
-# Available national data sources
+# Available national data sources {#available-national-data-sources}
 
 ## Adult National Immunization Coverage Survey
 
-For adults, there have been a few rounds of the adult coverage survey ([aNICS](https://www.canada.ca/en/public-health/services/immunization-vaccines/vaccination-coverage/adult-national-immunization-coverage-survey-2023-results.html)), which has some information on 1-dose coverage in people aged 18+ years. Note that these data are self-reported.
+For adults, there have been a few rounds of the adult coverage survey
+([aNICS](https://www.canada.ca/en/public-health/services/immunization-vaccines/vaccination-coverage/adult-national-immunization-coverage-survey-2023-results.html)),
+which has some information on 1-dose coverage in people aged 18+ years.
+Note that these data are self-reported.
 
 We used the latest version, which is from 2023.
 
-> The 2023 adult National Immunization Coverage Survey (aNICS) asked respondents if they have ever been vaccinated for 11 routine vaccines, though number of doses received was not available.
+> The 2023 adult National Immunization Coverage Survey (aNICS) asked
+> respondents if they have ever been vaccinated for 11 routine vaccines,
+> though number of doses received was not available.
 
-> In Canada, 87% of adults have received at least one dose of measles vaccine
+> In Canada, 87% of adults have received at least one dose of measles
+> vaccine
 
-> Measles-containing vaccine is recommended for susceptible adults born in or after 1970. In Canada, adults born prior to 1970 are generally presumed to have acquired natural immunity to measles; however, some of these individuals may be susceptible. Health care workers, travellers to destinations outside of Canada, and military personnel should receive MMR vaccine, regardless of year of birth. The aNICS collected measles immunization coverage for all respondents regardless of age. Some results may be underestimated.
+> Measles-containing vaccine is recommended for susceptible adults born
+> in or after 1970. In Canada, adults born prior to 1970 are generally
+> presumed to have acquired natural immunity to measles; however, some
+> of these individuals may be susceptible. Health care workers,
+> travellers to destinations outside of Canada, and military personnel
+> should receive MMR vaccine, regardless of year of birth. The aNICS
+> collected measles immunization coverage for all respondents regardless
+> of age. Some results may be underestimated.
 
-> Immunization coverage for hepatitis B, varicella, HPV, pneumococcal, shingles, polio, and meningococcal vaccines was higher among adults living in urban settings. Tetanus immunization coverage was higher among adults living in rural settings, while **no major differences were reported for pertussis, measles, and meningococcal vaccines**.
+> Immunization coverage for hepatitis B, varicella, HPV, pneumococcal,
+> shingles, polio, and meningococcal vaccines was higher among adults
+> living in urban settings. Tetanus immunization coverage was higher
+> among adults living in rural settings, while **no major differences
+> were reported for pertussis, measles, and meningococcal vaccines**.
 
-> Immunization coverage varies by ethnicity and was highest among [...] Indigenous populations for measles vaccine
+> Immunization coverage varies by ethnicity and was highest among
+> \[...\] Indigenous populations for measles vaccine
 
 ```{r}
 #| label: vax_CA_adult
@@ -225,10 +261,20 @@ DT::datatable(vax_CA)
 
 ## Newfoundland and Labrador
 
-- a CBC [news article](https://www.cbc.ca/player/play/video/1.7112669), in which Newfoundland and Labrador's chief medical officer of health, Janice Fitzgerald, was interviewed, noted a 95% population-level coverage. Note that this estimate is provided for reference, and is not necessarily used in the analyses below.  
-- A [government report](https://www.gov.nl.ca/releases/2024/health/0314n01/) from March 14, 2024 states that:
+-   a CBC [news
+    article](https://www.cbc.ca/player/play/video/1.7112669), in which
+    Newfoundland and Labrador's chief medical officer of health, Janice
+    Fitzgerald, was interviewed, noted a 95% population-level coverage.
+    Note that this estimate is provided for reference, and is not
+    necessarily used in the analyses below.\
+-   A [government
+    report](https://www.gov.nl.ca/releases/2024/health/0314n01/) from
+    March 14, 2024 states that:
 
-> The province benefits from one of the highest vaccination rates in Canada. In 2022, 94.7 per cent of two-year-olds and 92.6 per cent of kindergarteners in Newfoundland and Labrador were fully vaccinated with two doses of measles-containing vaccines.
+> The province benefits from one of the highest vaccination rates in
+> Canada. In 2022, 94.7 per cent of two-year-olds and 92.6 per cent of
+> kindergarteners in Newfoundland and Labrador were fully vaccinated
+> with two doses of measles-containing vaccines.
 
 ```{r}
 #| label: vax_NL
@@ -251,14 +297,20 @@ DT::datatable(vax_NL)
 
 plot_coverage(vax_NL)
 ```
-  
+
 ## Prince Edward Island
 
-The following sources present immunization coverage prior to Grade 1 entry by birth cohort. Note that while there is overlapping data within the different reports, each report has at least 1 additional birth cohort compared to the others.
+The following sources present immunization coverage prior to Grade 1
+entry by birth cohort. Note that while there is overlapping data within
+the different reports, each report has at least 1 additional birth
+cohort compared to the others.
 
-- [2022-2023 school year](https://www.princeedwardisland.ca/sites/default/files/publications/childhood_immunization_year_2022_2023_school_age.pdf)
-- [2023-2024 school year](https://www.princeedwardisland.ca/sites/default/files/publications/school_year_2023_2024_immunization_rates_prior_to_grade_1_entry.pdf)
-- [2009 cohort](https://canvax.ca/sites/default/files/2018-07/PEI_ChildhoodImmunizationInPEI_2017.pdf)
+-   [2022-2023 school
+    year](https://www.princeedwardisland.ca/sites/default/files/publications/childhood_immunization_year_2022_2023_school_age.pdf)
+-   [2023-2024 school
+    year](https://www.princeedwardisland.ca/sites/default/files/publications/school_year_2023_2024_immunization_rates_prior_to_grade_1_entry.pdf)
+-   [2009
+    cohort](https://canvax.ca/sites/default/files/2018-07/PEI_ChildhoodImmunizationInPEI_2017.pdf)
 
 ```{r}
 #| label: vax_PE
@@ -282,52 +334,85 @@ DT::datatable(vax_PE |> arrange(year_birth))
 plot_coverage(vax_PE, x = "year_birth")
 ```
 
-
 ## Quebec
 
 ### Government of Quebec
 
-The [MSSS (Ministère de la Santé et des Services sociaux)](https://msss.gouv.qc.ca/professionnels/vaccination/piq-impacts-des-programmes-de-vaccination/donnees-de-couverture-vaccinale-au-quebec/), a government ministry of Quebec, released a report in 2024 documenting vaccine coverage. In the report, they estimate that in 2021-2022, 88% of primary school children (6-11 years old) were vaccinated and 92%  of the secondary school children (12-16 years old) were vaccinated[^QCschoolage]. It is assumed that these statistics represent the full series (2 doses).
+The [MSSS (Ministère de la Santé et des Services
+sociaux)](https://msss.gouv.qc.ca/professionnels/vaccination/piq-impacts-des-programmes-de-vaccination/donnees-de-couverture-vaccinale-au-quebec/),
+a government ministry of Quebec, released a report in 2024 documenting
+vaccine coverage. In the report, they estimate that in 2021-2022, 88% of
+primary school children (6-11 years old) were vaccinated and 92% of the
+secondary school children (12-16 years old) were vaccinated[^1]. It is
+assumed that these statistics represent the full series (2 doses).
 
-[^QCschoolage]: School ages taken from [school attendance rules for QC](https://www.quebec.ca/en/education/study-quebec/education-system).
+[^1]: School ages taken from [school attendance rules for
+    QC](https://www.quebec.ca/en/education/study-quebec/education-system).
 
 ### Flash Vigie
 
-The Government of Quebec put out a report, [Flash vigie](https://publications.msss.gouv.qc.ca/msss/fichiers/flashvigie/FlashVigie_vol19_no2.pdf), in 2025 detailing measles in QC in 2024. Page 2 contains figures detailing the regional vaccine uptake. Note that this data has *not* been incorporated into the dataset below. 
+The Government of Quebec put out a report, [Flash
+vigie](https://publications.msss.gouv.qc.ca/msss/fichiers/flashvigie/FlashVigie_vol19_no2.pdf),
+in 2025 detailing measles in QC in 2024. Page 2 contains figures
+detailing the regional vaccine uptake. Note that this data has *not*
+been incorporated into the dataset below.
 
 ### INSPQ
 
-INSPQ puts out a regular biennial report of vaccine coverage for 1 and 2 year olds (7 year olds were added as a cohort in the---2019---report), so we may be able to leverage older reports to get approximations for older cohorts, *e.g.*, by using the 2 year old coverage level as the most recent estimate.
+INSPQ puts out a regular biennial report of vaccine coverage for 1 and 2
+year olds (7 year olds were added as a cohort in the---2019---report),
+so we may be able to leverage older reports to get approximations for
+older cohorts, *e.g.*, by using the 2 year old coverage level as the
+most recent estimate.
 
-The [2021 report](https://www.inspq.qc.ca/sites/default/files/publications/2776-couverture-vaccinale-enfants-quebecois.pdf) presents data collected in 2012-2019. 
-The [2024 report](https://www.inspq.qc.ca/sites/default/files/publications/3570-etude-couverture-vaccinale-enfants-quebecois-1-2-7-ans-2021.pdf) contains additional data collected in 2021. 
+The [2021
+report](https://www.inspq.qc.ca/sites/default/files/publications/2776-couverture-vaccinale-enfants-quebecois.pdf)
+presents data collected in 2012-2019. The [2024
+report](https://www.inspq.qc.ca/sites/default/files/publications/3570-etude-couverture-vaccinale-enfants-quebecois-1-2-7-ans-2021.pdf)
+contains additional data collected in 2021.
 
-This study looks at vaccine coverage for 1, 2, and 7 years olds over time. It looks like it's mostly for all of QC, though there are two tables for two regions: Capitale-Nationale (Table 17A), Laval (Table 17B).
+This study looks at vaccine coverage for 1, 2, and 7 years olds over
+time. It looks like it's mostly for all of QC, though there are two
+tables for two regions: Capitale-Nationale (Table 17A), Laval (Table
+17B).
 
-> En 2019, la proportion des enfants qui ont reçu tous les vaccins du programme régulier est de:
+> En 2019, la proportion des enfants qui ont reçu tous les vaccins du
+> programme régulier est de:
 >
 > -   85 % pour la cohorte 1 an (vaccins reçu avant l'âge de 15 mois);
 > -   81 % pour la cohorte 2 ans (vaccins reçu avant l'âge de 24 mois)
 
-The above is a lower bound on the MMR coverage because it's % coverage of the _complete_ childhood series (so if a child has MMR but is missing something else routine, they wouldn't be counted in this coverage.
+The above is a lower bound on the MMR coverage because it's % coverage
+of the *complete* childhood series (so if a child has MMR but is missing
+something else routine, they wouldn't be counted in this coverage.
 
-> La couverture vaccinale par antigène demeure très élevée pour chacune des cohortes. La couverture complète pour le DCaT-VPI-Hib avant 15 mois est de 96 %, et de 92 % avant 24 mois. Pour le pneumocoque, les proportions sont de 94 % et 97 % pour la cohorte 1 an et 2 ans respectivement. **Pour le RRO, elles sont de 95 % et 92 %.**
+> La couverture vaccinale par antigène demeure très élevée pour chacune
+> des cohortes. La couverture complète pour le DCaT-VPI-Hib avant 15
+> mois est de 96 %, et de 92 % avant 24 mois. Pour le pneumocoque, les
+> proportions sont de 94 % et 97 % pour la cohorte 1 an et 2 ans
+> respectivement. **Pour le RRO, elles sont de 95 % et 92 %.**
 
 In Annex E, vax coverage for measles by cohort is defined as:
 
-- 1 year old cohort: one dose >= 12 months
-- 2 year old cohort: 2 doses (1re dose âge min. d'adm. = 12 mois, Interv. min. de 4 sem. entre ces
-deux doses)
-- 7 year old cohort: 2 doses (1re dose âge min. d'adm. = 12 mois, Interv. min. de 4 sem. entre ces
-deux doses)
+-   1 year old cohort: one dose \>= 12 months
+-   2 year old cohort: 2 doses (1re dose âge min. d'adm. = 12 mois,
+    Interv. min. de 4 sem. entre ces deux doses)
+-   7 year old cohort: 2 doses (1re dose âge min. d'adm. = 12 mois,
+    Interv. min. de 4 sem. entre ces deux doses)
 
-RRO = MMR, so 95% of the one-year-old cohort had received one dose and 92% of the two-year-old cohort had received two doses  
+RRO = MMR, so 95% of the one-year-old cohort had received one dose and
+92% of the two-year-old cohort had received two doses
 
-Table 16: Couverture vaccinale complète par antigène à 15 mois selon le nombre de doses, de 2012 à 2019, cohorte 1 an
+Table 16: Couverture vaccinale complète par antigène à 15 mois selon le
+nombre de doses, de 2012 à 2019, cohorte 1 an
 
-- Rougeole (1 dose et +), 2019 - Toutes doses %: 97.6 - CV à 15 mois %: 94.9
-- We are assuming couverture vaccinale refers to the proportion of childeren at the target age who received the recomended number of doses, while toutes doses includes children who were vaccinated early. For the purposes of this report, we will use the couverture vaccinale measurement. 
-
+-   Rougeole (1 dose et +), 2019 - Toutes doses %: 97.6 - CV à 15 mois
+    %: 94.9
+-   We are assuming couverture vaccinale refers to the proportion of
+    childeren at the target age who received the recomended number of
+    doses, while toutes doses includes children who were vaccinated
+    early. For the purposes of this report, we will use the couverture
+    vaccinale measurement.
 
 ```{r}
 #| label: vax_QC
@@ -380,27 +465,36 @@ plot_coverage(vax_QC)
 
 ## Ontario
 
-Three files are available from Public Health Ontario in their [Immunization Data Tool](https://www.publichealthontario.ca/en/Data-and-Analysis/Infectious-Disease/Immunization-Tool): 
+Three files are available from Public Health Ontario in their
+[Immunization Data
+Tool](https://www.publichealthontario.ca/en/Data-and-Analysis/Infectious-Disease/Immunization-Tool):
 
-1. Immunization coverage for age milestones (coverage by year, PHU, age milestone) 
-1. Immunization coverage by age (coverage by year, PHU, and age)
-1. Immunization coverage by dose (by year, PHU, and number of doses)
+1.  Immunization coverage for age milestones (coverage by year, PHU, age
+    milestone)
+2.  Immunization coverage by age (coverage by year, PHU, and age)
+3.  Immunization coverage by dose (by year, PHU, and number of doses)
 
-"Immunization coverage" for measles is defined in the Overview tab of the Immunization Data Tool as:
+"Immunization coverage" for measles is defined in the Overview tab of
+the Immunization Data Tool as:
 
-> the proportion of a population that is appropriately immunized against a vaccine preventable disease (VPD) at a specific point in time
+> the proportion of a population that is appropriately immunized against
+> a vaccine preventable disease (VPD) at a specific point in time
 
- [This doc](https://www.publichealthontario.ca/-/media/Data-Files/immunization-tool-technical-notes.pdf?sc_lang=en&rev=e2858a935e374fdaada91daff5246ee6&hash=0860C5FE20F6FF4F8A310BC953364110), outlining the methods used for the Immunization Data Tool, defines "up-to-date coverage" for measles as:
+[This
+doc](https://www.publichealthontario.ca/-/media/Data-Files/immunization-tool-technical-notes.pdf?sc_lang=en&rev=e2858a935e374fdaada91daff5246ee6&hash=0860C5FE20F6FF4F8A310BC953364110),
+outlining the methods used for the Immunization Data Tool, defines
+"up-to-date coverage" for measles as:
 
-> Must satisfy one of the following criteria:
-> - >=2 valid doses
-> - Have a documented exemption for evidence of immunity
+> Must satisfy one of the following criteria: - \>=2 valid doses - Have
+> a documented exemption for evidence of immunity
 
-Thus, the immunization coverage by age milestones and by age files effectively refer to 2-dose vaccine coverage.
+Thus, the immunization coverage by age milestones and by age files
+effectively refer to 2-dose vaccine coverage.
 
 ### Coverage by age
 
-This analysis was conducted using the second data source above: "Immunization coverage by age".
+This analysis was conducted using the second data source above:
+"Immunization coverage by age".
 
 ```{r}
 #| label: vax_ON
@@ -441,7 +535,8 @@ plot_coverage(vax_ON |> filter(location!="Ontario"), ncol = 4) + th
 
 ### Coverage by dose
 
-This analysis was conducted using the third data source above: "Immunization coverage by dose".
+This analysis was conducted using the third data source above:
+"Immunization coverage by dose".
 
 ```{r}
 #| label: vax_ON_dose
@@ -479,27 +574,59 @@ plot_coverage(vax_ON_dose |> filter(location!="Ontario"), ncol = 5) + th
 
 ## Manitoba
 
-[Manitoba Health](https://www.gov.mb.ca/health/publichealth/surveillance/immunization/index.html) published immunization coverage estimates: 
+[Manitoba
+Health](https://www.gov.mb.ca/health/publichealth/surveillance/immunization/index.html)
+published immunization coverage estimates:
 
-> Public Health Information Management System (PHIMS)
-Immunization records for reports from 2015 were extracted from the provincial immunization registry contained in the Public Health Information Management System, PHIMS.
+> Public Health Information Management System (PHIMS) Immunization
+> records for reports from 2015 were extracted from the provincial
+> immunization registry contained in the Public Health Information
+> Management System, PHIMS.
 >
-> Below are four downloadable excel file files presenting the immunization coverage rates (on December 31 of the reporting year) by antigen and the number of immunizations delivered by providers over the calendar year in Manitoba and five regions.
-> 
-> As new vaccines become available the numbers of doses required may change; therefore the coverage rates may not be comparable over time.
+> Below are four downloadable excel file files presenting the
+> immunization coverage rates (on December 31 of the reporting year) by
+> antigen and the number of immunizations delivered by providers over
+> the calendar year in Manitoba and five regions.
 >
-> - Immunization coverage in children - the percentage of vaccinated children that received all recommended doses for an antigen at a specific age.
-> - Immunization coverage in children by continuous/non-continuous status - the percentage of vaccinated children that received all recommended doses for an antigen at a specific age for those who have been continuously registered with Manitoba Health since two months of age or younger (continuous) compared to those who were born in Manitoba, but moved out for a period of time and then returned or who moved to Manitoba at an age older than two months (non-continuous).
-> - Immunization coverage in adults and seniors - the percentage of vaccinated adults that received all recommended doses for an antigen at a specific age.
-> - Immunization providers - the number of doses administered by different types of providers between January 1 and December 31 in the reporting year.
+> As new vaccines become available the numbers of doses required may
+> change; therefore the coverage rates may not be comparable over time.
+>
+> -   Immunization coverage in children - the percentage of vaccinated
+>     children that received all recommended doses for an antigen at a
+>     specific age.
+> -   Immunization coverage in children by continuous/non-continuous
+>     status - the percentage of vaccinated children that received all
+>     recommended doses for an antigen at a specific age for those who
+>     have been continuously registered with Manitoba Health since two
+>     months of age or younger (continuous) compared to those who were
+>     born in Manitoba, but moved out for a period of time and then
+>     returned or who moved to Manitoba at an age older than two months
+>     (non-continuous).
+> -   Immunization coverage in adults and seniors - the percentage of
+>     vaccinated adults that received all recommended doses for an
+>     antigen at a specific age.
+> -   Immunization providers - the number of doses administered by
+>     different types of providers between January 1 and December 31 in
+>     the reporting year.
 
-Note that the third file (coverage in adults and seniors) only includes immunizations that occur in adulthood, so no data on measles. 
+Note that the third file (coverage in adults and seniors) only includes
+immunizations that occur in adulthood, so no data on measles.
 
-We use "Immunization coverage in children" here. The most recent edition is **from 2023**. Vaccine coverage is defined as "the percentage of vaccinated children that received **all recommended doses** for an antigen at a specific age". Digging into the [methods](https://www.gov.mb.ca/health/publichealth/surveillance/immunization/docs/annual_immunization_methods_2023.pdf):
+We use "Immunization coverage in children" here. The most recent edition
+is **from 2023**. Vaccine coverage is defined as "the percentage of
+vaccinated children that received **all recommended doses** for an
+antigen at a specific age". Digging into the
+[methods](https://www.gov.mb.ca/health/publichealth/surveillance/immunization/docs/annual_immunization_methods_2023.pdf):
 
-> The number of required doses for each antigen to be complete at a specific age was based on Manitoba's Routine Immunization Schedules in the reporting year and also in previous years. The routine immunization schedules for the reporting year and the number of doses required to be complete for each age in the reporting year are provided in the Appendix.
+> The number of required doses for each antigen to be complete at a
+> specific age was based on Manitoba's Routine Immunization Schedules in
+> the reporting year and also in previous years. The routine
+> immunization schedules for the reporting year and the number of doses
+> required to be complete for each age in the reporting year are
+> provided in the Appendix.
 
-The immunization schedule is attached to the table below to determine the number of doses each coverage estimate represents.
+The immunization schedule is attached to the table below to determine
+the number of doses each coverage estimate represents.
 
 ```{r}
 #| label: vax_MB
@@ -566,12 +693,15 @@ plot_coverage(vax_MB |> filter(location=="Manitoba"))
 plot_coverage(vax_MB |> filter(location!="Manitoba")) + th
 ```
 
-
 ## Alberta
 
-[Alberta Health](http://www.ahw.gov.ab.ca/IHDA_Retrieval/selectSubCategoryParameters.do) published vaccine coverage estimates for 2014-2023 with vaccine uptake by birth cohort, and are dissagregated by zone, subzone, and local area.
+[Alberta
+Health](http://www.ahw.gov.ab.ca/IHDA_Retrieval/selectSubCategoryParameters.do)
+published vaccine coverage estimates for 2014-2023 with vaccine uptake
+by birth cohort, and are dissagregated by zone, subzone, and local area.
 
->Of note, from January 1st 2021, MMR-Var dose 2 schedule was changed from aged 4 years old to 18- months.
+> Of note, from January 1st 2021, MMR-Var dose 2 schedule was changed
+> from aged 4 years old to 18- months.
 
 ```{r}
 #| label: vax_AB
@@ -629,18 +759,32 @@ plot_coverage(filter(vax_AB, zone_type == "Subzone"), x = "year_birth", ncol = 5
 
 ## British Columbia
 
-[This BCCDC dashboard](http://www.bccdc.ca/health-professionals/data-reports/childhood-immunization-coverage-dashboard) provides estimates for 2-year olds vaccinated with one dose against measles ("MMR") and for 7-year olds vaccinated with two dose ("Measles").[^BCscrape]
+[This BCCDC
+dashboard](http://www.bccdc.ca/health-professionals/data-reports/childhood-immunization-coverage-dashboard)
+provides estimates for 2-year olds vaccinated with one dose against
+measles ("MMR") and for 7-year olds vaccinated with two dose
+("Measles").[^2]
 
-[^BCscrape]: The data are trapped in a Tableau dashboard, so they have been downloaded as PDF (using the Download icon at the bottom of the dashboard), and then the relevant table was pulled out using `Microsoft Excel > Data > Get Data > From File > From PDF` (with some manual tweaks to fix bad parsing).
+[^2]: The data are trapped in a Tableau dashboard, so they have been
+    downloaded as PDF (using the Download icon at the bottom of the
+    dashboard), and then the relevant table was pulled out using
+    `Microsoft Excel > Data > Get Data > From File > From PDF` (with
+    some manual tweaks to fix bad parsing).
 
-Methods for the 2-year old data are [here](http://www.bccdc.ca/resource-gallery/Documents/Statistics%20and%20Research/Statistics%20and%20Reports/Immunization/Coverage/Data%20Notes_2yo_2023_lowres.pdf). Methods for the 7-year old data are [here](http://www.bccdc.ca/resource-gallery/Documents/Statistics%20and%20Research/Statistics%20and%20Reports/Immunization/Coverage/Data%20Notes_7yo_2023_lowres.pdf).
+Methods for the 2-year old data are
+[here](http://www.bccdc.ca/resource-gallery/Documents/Statistics%20and%20Research/Statistics%20and%20Reports/Immunization/Coverage/Data%20Notes_2yo_2023_lowres.pdf).
+Methods for the 7-year old data are
+[here](http://www.bccdc.ca/resource-gallery/Documents/Statistics%20and%20Research/Statistics%20and%20Reports/Immunization/Coverage/Data%20Notes_7yo_2023_lowres.pdf).
 
 ```{r}
 #| label: file_BC
 file_BC <- here::here("data", "measles_raw", "vax_british-columbia.xlsx")
 ```
 
-These data are pretty granular on the geographic level; alongside the province-wide estimates we have estimates for each Health Authority (HA), and each Health Service Delivery Area (HSDA), a sub-unit of each HA.
+These data are pretty granular on the geographic level; alongside the
+province-wide estimates we have estimates for each Health Authority
+(HA), and each Health Service Delivery Area (HSDA), a sub-unit of each
+HA.
 
 The mapping between HAs and HSDAs is captured here:
 
@@ -718,10 +862,12 @@ plot_coverage(vax_BC |> filter(zone_type!="Health Authority"), ncol = 5) + th
 plot_coverage(vax_BC |> filter(zone_type=="Health Service Delivery Area"), ncol = 5) + th
 ```
 
-
 ## Northwest Territories
 
-A [report](https://ournthssa.ca/wp-content/uploads/2024/09/HCP-Alert-Respiratory-season-update-September-17-2024-Final.pdf) released by the Northwest Territories Health and Social Services in 2024 states that:
+A
+[report](https://ournthssa.ca/wp-content/uploads/2024/09/HCP-Alert-Respiratory-season-update-September-17-2024-Final.pdf)
+released by the Northwest Territories Health and Social Services in 2024
+states that:
 
 > 85% of NWT children aged two had received at least 1 dose of measles
 
@@ -749,13 +895,19 @@ plot_coverage(vax_NT)
 
 # PTs for which the cNICS data summary is used {#cNICS}
 
-We could not find any publicly available  for **Nova Scotia or Nunavut**. Instead, we pulled estimates from [cNICS](https://www.canada.ca/en/public-health/services/immunization-vaccines/vaccination-coverage/2021-highlights-childhood-national-immunization-coverage-survey.html).
+We could not find any publicly available for **Nova Scotia or Nunavut**.
+Instead, we pulled estimates from
+[cNICS](https://www.canada.ca/en/public-health/services/immunization-vaccines/vaccination-coverage/2021-highlights-childhood-national-immunization-coverage-survey.html).
 
 For cNICS:
 
-- Estimates were obtained from Table 2a ("Estimated vaccine coverage of routine childhood vaccines by 2 years of age across provinces and territories: cNICS, Canada, 2017 vs. 2021")
-- Estimates are presented in terms of a value with a 95% CI. Below we only capture the value.
-- Proportions are estimated for children aged 2 with _at least_ one dose.
+-   Estimates were obtained from Table 2a ("Estimated vaccine coverage
+    of routine childhood vaccines by 2 years of age across provinces and
+    territories: cNICS, Canada, 2017 vs. 2021")
+-   Estimates are presented in terms of a value with a 95% CI. Below we
+    only capture the value.
+-   Proportions are estimated for children aged 2 with *at least* one
+    dose.
 
 ## Nova Scotia
 
@@ -805,9 +957,10 @@ DT::datatable(vax_NU)
 plot_coverage(vax_NU)
 ```
 
-# Summary across PTs
+# Summary across PTs {#summary-across-pts}
 
-The following plot includes the data across provinces collected _as is_ (not including 18+ coverage from aNICS):
+The following plot includes the data across provinces collected *as is*
+(not including 18+ coverage from aNICS):
 
 ```{r}
 #| label: collect_vax_dfs
@@ -849,7 +1002,11 @@ vax_plot  <- vax %>%
 plot_coverage(vax_plot, ncol = 5) + th
 ```
 
-If we transform the estimates to **current age** by simply taking the age at estimate and adding the number of years that have elapsed between the production of the estimate (`year_report`) and the present year, we can get a sense of how much vaccine coverage information we have across PTs by age:
+If we transform the estimates to **current age** by simply taking the
+age at estimate and adding the number of years that have elapsed between
+the production of the estimate (`year_report`) and the present year, we
+can get a sense of how much vaccine coverage information we have across
+PTs by age:
 
 ```{r}
 #| label: overall_summary_transform_age
@@ -864,9 +1021,18 @@ vax_plot2 <- (vax_plot |>
 plot_coverage(vax_plot2, x = "age_current", ncol = 5) + th
 ```
 
-Note that this calculation is rather rough and would likely result in an _underestimate_ of vaccine coverage; all of these estimates are at least a year old, and it's possible that more vaccines have been administered to these cohorts in the meantime. It's worth noting that immigration/emigration, which is not captured by this calculation, could also affect these estimates in either direction (it could increase or decrease them).
+Note that this calculation is rather rough and would likely result in an
+*underestimate* of vaccine coverage; all of these estimates are at least
+a year old, and it's possible that more vaccines have been administered
+to these cohorts in the meantime. It's worth noting that
+immigration/emigration, which is not captured by this calculation, could
+also affect these estimates in either direction (it could increase or
+decrease them).
 
-After transforming to current age, there are multiple estimates for a given age and number of doses in some cases. If we take the **most recent estimate** available in each case, we get the following coverage curves (using simple linear interpolation):
+After transforming to current age, there are multiple estimates for a
+given age and number of doses in some cases. If we take the **most
+recent estimate** available in each case, we get the following coverage
+curves (using simple linear interpolation):
 
 ```{r}
 #| label: layer_line_under
@@ -893,3 +1059,28 @@ vax_plot2 |>
   plot_coverage(x = "age_current", ncol = 4) |>
   layer_line_under() + th
 ```
+
+# Basic data analysis
+
+We wish to understand how many observations we have of a given type to aid with selection of appropriate statistical modelling methods. Number of observations by province, by birth cohort etc. can be extracted from the `vax` dataframe (note aNICS data not currently included):
+```{r}
+#' set up data frames
+vax_all <- vax %>% mutate(age = ifelse(is.na(age) & !is.na(year_report) & !is.na(year_birth), year_report - year_birth, age)) %>%
+  numericize(age) %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - round(age), year_birth)) %>% select(-zone_type)  # manipulate age data and year_birth data to fill in blanks
+
+vax_provincial <- vax_all %>% left_join(pt_lookup(), join_by(pt), suffix = c("", ".pt")) %>% filter(location == location.pt) %>% select(-location.pt)  # filter out sub-province etc data
+
+#' calculate counts
+#' @param total_obs Total number of observations for each province, including sub-province etc data.
+#' @param province-level_obs Number of province-level observations for each province.
+#' @param birth_obsXXXX Number of province-level observations for each birth cohort.
+data_counts <- vax %>% group_by(pt) %>% summarise("total_obs" = n()) %>%
+  right_join(vax_provincial %>% group_by(pt) %>% summarise("province-level_obs" = n()), join_by(pt)) %>%
+  right_join(vax_provincial %>% group_by(pt, year_birth) %>% summarise("birth-cohort_obs" = n()) %>% pivot_wider(names_from = year_birth, values_from = "birth-cohort_obs", names_prefix = "birth_obs"), join_by(pt))
+
+data_counts
+
+# could add a row at the end for Country totals (sum column)
+```
+
+
