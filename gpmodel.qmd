@@ -7,7 +7,7 @@ editor: visual
 echo: true
 ---
 
-# Set Up
+## Set Up
 
 Load functions and packages. Read the standardized data and filter to province-level. Fill in age for rows where it is not specified.
 
@@ -41,9 +41,9 @@ vax_main  <- vax_raw %>%
 vax_ON <- vax_main %>% filter(location=="Ontario") %>% filter(year_report==2023) %>% filter(n_doses %in% c("2","1+"))  # *re-add 2+ later
 ```
 
-# Define covariance function / covariance matrix
+## Define covariance function / covariance matrix
 
-Use the squared exponential covariance to begin with and assume lengthscale `l=1`. Our dataset has 14 parameters (coverage at ages 5-18), so our covariance matrix is a 14x14 matrix defining the 'relationship' between each pair of parameters.
+Use the squared exponential covariance to begin with and assume lengthscale `l=0.1`. Our dataset has 14 parameters (coverage at ages 5-18), so our covariance matrix is a 14x14 matrix defining the 'relationships' between each pair of parameters.
 
 ```{r}
 #| label: covariance
@@ -55,16 +55,16 @@ ksqexp <- function(r,l) {  # this is also defined in ksqexp.R
 npts <- 14
 l <- 0.1
 yvals <- seq(from=0,to=1,length.out=npts)  # *model params equally spaced, and between [0,1] for now
-covmat <- expand_grid(y1=yvals,y2=yvals) %>% mutate(k=ksqexp(abs(y1-y2),l)) %>%  # pairwise evaluation of cov function  # *need a better naming system for y1, y2
+covmat <- expand_grid(y1=yvals,y2=yvals) %>% mutate(k=ksqexp(abs(y1-y2),l)) %>%  # pairwise evaluation of cov function for vectors y1, y2 (with elements/ model parameters y1_i, y2_i)
   pull(k) %>% matrix(nrow=npts)
-# note: could also use function generate_ksqexp_covmat() here
+# could also use function generate_ksqexp_covmat() here
 ```
 
 Q: Should I work with *current* age?
 
-# Define prior distribution (N(0,cov)) and draw a sample
+## Define prior distribution (N(0,cov)) and draw a sample
 
-Define a prior \~ Normal(0,cov). It is uniquely defined with mean 0 and variance equal to our covariance matrix. Take 50 draws from the prior and plot. Each y_i represents one of the 14 model parameters.
+Define a prior \~ Normal(0,cov). It is uniquely defined with mean 0 and variance equal to our covariance matrix. Take 50 draws from the prior and plot. y_i is the vector of model parameters.
 
 ```{r}
 #| label: prior
@@ -76,7 +76,7 @@ for(i in 1:50) {
 prior %>% group_by(draw) %>% ggplot(aes(x=y_i,y=prior,group=factor(draw))) + geom_point(alpha=0.5) + geom_line(alpha=0.3)
 ```
 
-# Introduce observed data
+## Introduce observed data
 
 For this mini dataset `vax_ON` (Ontario, year 2023, 2-dose, ages 5-18), we have a complete dataset of \~14 data points. First expose the model to 5 data points (and see how well it can predict the remainder).
 
@@ -84,14 +84,14 @@ For this mini dataset `vax_ON` (Ontario, year 2023, 2-dose, ages 5-18), we have 
 #| label: observe_data
 
 # observe coverage data for age 6, 9, 10, 15, 16
-yobs <- c(yvals[2],yvals[5],yvals[6],yvals[11],yvals[12])
+yobs <- c(yvals[2],yvals[5],yvals[6],yvals[11],yvals[12])  # can optionally add an error term here
 # yobs <- vax_ON %>% filter(age %in% c("6","9","10","15","16")) %>% select(age,value)
 yobs_T <- rnorm(length(yobs),0,1) # *arbitrary 'height' data points for now
 ```
 
-# Compute posterior distribution
+## Compute posterior distribution
 
-Posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationship' between unobserved `yvals` and observed data `yobs`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`.
+The posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationship' between unobserved `yvals` and observed data `yobs`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`.
 
 ```{r}
 #| label: posterior
@@ -102,11 +102,11 @@ koo <- generate_ksqexp_covmat(yobs,yobs,l=0.1) + 1e-6*diag(length(yobs))  # prot
 kuu <- generate_ksqexp_covmat(yvals,yvals,l=0.1)
 
 # calcuate posterior mean and posterior cov matrix
-post_mean <- kuo%*%solve(koo)%*%yobs_T
-post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)
+post_mean <- kuo%*%solve(koo)%*%yobs_T  # conditional mean
+post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
 ```
 
-# Plot posterior against the data
+## Plot posterior against the data
 
 Take 50 draws from the posterior and plot against the observed data.
 

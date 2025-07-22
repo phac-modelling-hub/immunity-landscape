@@ -1,7 +1,7 @@
 #' Generate a squared exponential covariance matrix
 #' 
-#' @param y1 random vector 1 (numeric vector)
-#' @param y2 random vector 2 (numeric vector)
+#' @param y1 random vector 1, with elements/ model parameters y1_i (numeric vector)
+#' @param y2 random vector 2, with elements/ model parameters y2_i (numeric vector)
 #' @param fn covariance function of two parameters: 
 #'    - abs(y1-y2) which is calculated piecewise in generate_ksqexp_covmat, 
 #'    - lengthscale l. 
