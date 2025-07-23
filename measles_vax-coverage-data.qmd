@@ -1063,6 +1063,7 @@ vax_plot2 |>
 # Basic data analysis
 
 We wish to understand how many observations we have of a given type to aid with selection of appropriate statistical modelling methods. Number of observations by province, by birth cohort etc. can be extracted from the `vax` dataframe (note aNICS data not currently included):
+
 ```{r}
 #| label: data_analysis
 
@@ -1084,4 +1085,52 @@ DT::datatable(data_counts)
 # could add a row at the end for Country totals (sum column)
 ```
 
+## Vaccine uptake rates by cohort over time
 
+It may also be good to gauge where we have multiple observations of the same cohort _by dose_ (since this could help us quantify rate of vaccine uptake to some degree):
+
+```{r}
+#| label: uptake_rate
+
+# look at counts separated by dose number
+count_by_pt_dose <- vax_provincial |>
+  group_by(pt, year_birth, n_doses) |>
+  count()
+
+# multiple obs of the same cohort
+count_by_pt_dose |> filter(n > 1)
+```
+
+It looks like the only PT for which we have a chance of understanding uptake behaviours across cohorts is AB.
+
+```{r}
+#| label: uptake_rate_2
+count_by_pt_dose |> filter(n > 1, pt == "AB") -> lookup
+
+vax_provincial |> 
+  right_join(lookup, by = join_by(pt, year_birth, n_doses)) |> 
+  arrange(year_birth, n_doses, year_report) |>
+  # calculate first differences of vaccine coverage
+  group_by(pt, location, year_birth, n_doses) |> 
+  mutate(
+    age_range = forcats::as_factor(paste(lag(age), age, sep = "-")),
+    value_first_diff = (value-lag(value))/(year_report-lag(year_report))) |>
+  filter(!is.na(value_first_diff)) |>
+  ggplot(aes(x = year_birth, y = value_first_diff, colour = age_range)) +
+  geom_point() +
+  facet_wrap(~n_doses, labeller = label_both) +
+  scale_x_continuous(labels = scales::label_number(accuracy = 1, big.mark = "")) + 
+  scale_y_continuous(limits = c(0, NA), labels = scales::label_percent()) + 
+  labs(
+     x = "Birth cohort",
+     y = "Annual change in coverage (absolute)",
+     title = "Annual rate of uptake for measles vaccine by birth cohort (AB)",
+     colour = "Current age range"
+  )
+```
+
+It looks like all changes are positive, which would indicate overall increasing coverage in the cohort over time (as expected). However, the data overlap only occurs for older cohorts, by which time you would expect a relatively small and stable increase in vaccine uptake over time (which is what is observed for first doses). It seems like there may be a recent decrease in second doses between ages 7-13...
+
+NOTE: are linear first differences appropriate if we believe there to be saturating behaviour? probably not...
+
+Overall, I have to conclude that, in general, this dataset does not include multiple observations of the same cohort (for a given dose number). Where it does (AB), the data are still quite sparse (two observations per cohort), and the rates of change in uptake that we can calculate are for relatively old ages (7-17). I'm not sure this will help us "age" estimates...
