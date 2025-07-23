@@ -1080,8 +1080,7 @@ data_counts <- vax %>% group_by(pt) %>% summarise("total_obs" = n()) %>%
   right_join(vax_provincial %>% group_by(pt) %>% summarise("province-level_obs" = n()), join_by(pt)) %>%
   right_join(vax_provincial %>% group_by(pt, year_birth) %>% summarise("birth-cohort_obs" = n()) %>% pivot_wider(names_from = year_birth, values_from = "birth-cohort_obs", names_prefix = "birth_obs"), join_by(pt))
 
-data_counts
-
+DT::datatable(data_counts)
 # could add a row at the end for Country totals (sum column)
 ```
 
