@@ -57,7 +57,7 @@ parse_age_groups <- function(df, col, last_age = 99){
 }
 ```
 
-We've collected a large dataset of vaccine coverage data (see `measles_vax-coverage-data.qmd`). In order to use use this data to inform the ABM, we have to take care of a few modelling and formatting tasks (in this rough order):
+We've collected a large dataset of vaccine coverage data (see `measles_vax-coverage-data.qmd`). In order to use this data to inform the ABM, we have to take care of a few modelling and formatting tasks (in this rough order):
 
 1. determine how to "age" the estimates to present day
 1. resolve how to use multiple estimates for a given age (stemming from a different number of doses, for instance)

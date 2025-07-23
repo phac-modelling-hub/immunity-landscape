@@ -1064,6 +1064,8 @@ vax_plot2 |>
 
 We wish to understand how many observations we have of a given type to aid with selection of appropriate statistical modelling methods. Number of observations by province, by birth cohort etc. can be extracted from the `vax` dataframe (note aNICS data not currently included):
 ```{r}
+#| label: data_analysis
+
 #' set up data frames
 vax_all <- vax %>% mutate(age = ifelse(is.na(age) & !is.na(year_report) & !is.na(year_birth), year_report - year_birth, age)) %>%
   numericize(age) %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - round(age), year_birth)) %>% select(-zone_type)  # manipulate age data and year_birth data to fill in blanks

@@ -5,7 +5,7 @@ date: "2025-04-22"
 runtime: shiny
 ---
 
-This file contains some example code from a lecture on Gaussian Processes. Liza has been using this as a learning resource.
+This file contains some example code from a lecture on Gaussian Processes. Useful as a learning resource.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -92,7 +92,7 @@ tibble(r=seq(from=0, to=10, length.out=200)) %>%  #data frame recording value of
     geom_line(linewidth=1) + 
     theme_classic() + 
     scale_color_manual(values=c("black","red","blue")) + 
-  labs(title="The squared exponential covariance function", col="Length scale", x="Distance between points (r)", y="Covariance")
+  labs(title="The squared exponential covariance function", col="Length scale", x="Distance between x points (r)", y="Covariance")
 
 ```
 
@@ -112,7 +112,7 @@ tibble(r=seq(from=0, to=10, length.out=200)) %>%
     geom_line(linewidth=1) + 
     theme_classic() + 
     scale_color_manual(values=c("black","red","blue")) + 
-  labs(title="The exponential covariance function", col="Length scale", x="Distance between points", y="Covariance")
+  labs(title="The exponential covariance function", col="Length scale", x="Distance between x points", y="Covariance")
 
 ```
 
@@ -218,11 +218,11 @@ gpdraw_df %>%  # plot the 50 draws of the posterior
 ```
 
 ```{r}
-# new example in 2d -- prior
+# new example adding an extra dimension -- priors
 npts <- 40
 l <- 1
 xvals <- seq(from=0, to=10, length.out=npts)
-yvals <- seq(from=0, to=10, length.out=npts)
+yvals <- seq(from=0, to=10, length.out=npts)  # now both x and y are inputs, with output z
 covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% 
   mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l)) %>%
   # mutate(k=kexp(sqrt((x1-x2)^2 + (y1-y2)^2), l)) %>%
@@ -231,15 +231,15 @@ covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>%
 
 xydf <- expand_grid(x=xvals, y=yvals)
 
-gpdraw_df <- tibble()  # plot of a single realisation from a 2D gaussian process, with both axes independent variables (model paramters) - one draw from the prior (we would add data points then 'update' for posterior)
-for(indexA in 1:1){
+gpdraw_df <- tibble() 
+for(indexA in 1:1){  # a single realisation from a 2D gaussian process, with both axes independent variables - one draw from the prior
   gpdraw_df <- bind_rows(gpdraw_df, tibble(
-    draw=indexA, x=xydf$x, y=xydf$y, z=rmnorm(1, rep(0,npts^2), covmat + 1e-6*diag(npts^2))
+    draw=indexA, x=xydf$x, y=xydf$y, z=rmnorm(1, rep(0,npts^2), covmat + 1e-6*diag(npts^2))  
   ))
   
 }
  
-gpdraw_df %>%
+gpdraw_df %>%  # plot prior
     ggplot(aes(x=x, y=y, z=z, group=factor(draw))) +
       geom_contour() + 
       theme_classic()
@@ -247,4 +247,5 @@ gpdraw_df %>%
 z_matrix <- matrix(gpdraw_df$z, nrow = npts, ncol = npts, byrow = FALSE)  # same plot as above
 plot_ly(x = xvals, y = yvals, z = z_matrix, type = "surface")
 
+# for posterior, we would add data points then 'update' knowledge, calculating posterior mean and cov matrix.
 ```
