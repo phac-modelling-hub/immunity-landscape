@@ -1086,6 +1086,8 @@ data_counts
 # could add a row at the end for Country totals (sum column)
 ```
 
+## Vaccine uptake rates by cohort over time
+
 It may also be good to gauge where we have multiple observations of the same cohort _by dose_ (since this could help us quantify rate of vaccine uptake to some degree):
 
 ```{r}
@@ -1131,3 +1133,5 @@ vax_provincial |>
 It looks like all changes are positive, which would indicate overall increasing coverage in the cohort over time (as expected). However, the data overlap only occurs for older cohorts, by which time you would expect a relatively small and stable increase in vaccine uptake over time (which is what is observed for first doses). It seems like there may be a recent decrease in second doses between ages 7-13...
 
 NOTE: are linear first differences appropriate if we believe there to be saturating behaviour? probably not...
+
+Overall, I have to conclude that, in general, this dataset does not include multiple observations of the same cohort (for a given dose number). Where it does (AB), the data are still quite sparse (two observations per cohort), and the rates of change in uptake that we can calculate are for relatively old ages (7-17). I'm not sure this will help us "age" estimates...
