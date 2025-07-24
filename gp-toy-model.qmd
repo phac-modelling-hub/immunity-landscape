@@ -42,9 +42,17 @@ vax_main  <- vax_raw %>%
 vax_ON <- vax_main %>% filter(location=="Ontario") %>% filter(year_report==2023) %>% filter(n_doses %in% c("2"))  # *subset of doses for the toy model
 ```
 
+IP: This is a small point, but there are definitely questions about whether the ON data for younger ages is super trustworthy. I believe the data come from school administration data, and because of how these vaccines get reported to schools, there has been a bit of an interruption in that from the pandemic, which means that it's like the coverage estimates in ON for younger ages are artificially low. This is only relevant if we start to inform the model with other data that can help predict coverage; you may want to switch to the AB data in the future.
+
+## A note on scales
+
+Modelling fitting is done using Gaussian distributions, whose domain is the entire real line. However, the vaccine coverage data is restricted to $[0,1]$ (Though in practice, they're not on the boundaries of this interval.) Thus, we transform the vaccine coverage estimates using a an inverse logit function to map it from $(0,1)$ to $(-\infty, \infty)$, perform the model fitting on the real line, and then transform the predictions back from $(-\infty, \infty)$ to $(0,1)$.
+
 ## Define covariance function / covariance matrix
 
-Use the squared exponential covariance to begin with and assume lengthscale `l=2`. Our dataset has 13 inputs/ independent variables (ages 5-17), so our covariance matrix is a 13x13 matrix defining the 'relationships' between each pair of ages.
+Use the squared exponential covariance function, `k`, to begin with and assume lengthscale `l=2`. Our dataset has 13 inputs/ independent variables (ages 5-17), so our covariance matrix is a 13x13 matrix defining the 'relationships' between each pair of ages.
+
+IP: What are the implications of using the square exponential covariance function? What kind of data would you expect to meet this assumption? What are the alternatives?
 
 ```{r}
 #| label: covariance
@@ -64,6 +72,8 @@ covmat <- expand_grid(x1=xvals,x2=xvals) %>% mutate(k=ksqexp(abs(x1-x2),l)) %>% 
 ## Define prior distribution (N(0,cov)) and draw a sample
 
 Define a prior \~ Normal(0,cov). It is uniquely defined with mean 0 and variance equal to our covariance matrix. Take 50 draws from the prior and plot. x_i is the vector of inputs (ages).
+
+IP: Since the mean is zero, is this a model for the *error*? Can you pls clarify what this is a prior of?
 
 ```{r}
 #| label: prior
@@ -92,6 +102,10 @@ tibble(xobs, yobs, logit(yobs))
 ## Compute posterior distribution
 
 The posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationships' between unobserved ages `xvals` and observed ages `xobs`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`.
+
+IP: can you either explain a bit more around the "calculation of individual covariance matrices to determine the pairwise 'relationships' between unobserved and observed ages"? I'm a little confused about how we're getting information about unobserved ages. Is it just from draws of the prior?
+
+IP: Can you pls point me to some reading material and/or your notes where the posterior covariance matrix is derived?
 
 ```{r}
 #| label: posterior
@@ -136,6 +150,7 @@ To improve this toy model, the next step would be to experiment with choice of c
 
 We could then extend to a larger portion of the dataset by adding a second dimension (e.g. year). Geometrically, this would move from a posterior curve as on the above plot, to a posterior *surface* in a 3d plot / cube. We would also want to add a dimension for province, giving a posterior hypersurface in a 4d hypercube... The final model would aim to produce separate hypersurfaces for 1-dose, 1+-dose, and 2-dose. Geometry aside, this just equates to providing an estimate of coverage at each combination of age, year, province, and dose.
 
+<<<<<<< HEAD
 Here is an example of adding in year_report:
 ```{r}
 #| label: posterior_surface
@@ -158,3 +173,6 @@ covmat <- expand_grid(x1=xvals,x2=xvals) %>% mutate(k=ksqexp(abs(x1-x2),l)) %>% 
   pull(k) %>% matrix(nrow=npts)
 ```
 
+=======
+IP: Overall, this is a great first start! I would be hesitant to push the lengthscale too far because I think vaccine coverage by cohort is fairly localized to that cohort. I'd like to think a bit more about the implications of the covariance function `k` and if we can better-inform it with some additional info to help predict for missing ages.
+>>>>>>> 21292faec885c9016c1090f564477553a3cad471
