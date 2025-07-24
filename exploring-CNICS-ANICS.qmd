@@ -1,0 +1,9 @@
+---
+title: "A closer look at CNICS/ANICS"
+author: "Irena Papst"
+editor: visual
+---
+
+I chatted with Ashleigh Tuite yesterday about our project and she pointed out that a major challenge with our present data set is that the data is not all coming from the same methodology... the survey products (CNICS/ANICS) will at least have consistent methodology between PTs for a given survey, and likely consistency from survey to survey.
+
+I'd like to take a closer look at what's really publicly available for CNICS/ANICS in terms of downloadable data. It may not be the case that we want to switch to using it as a basis for our project, but perhaps it could be useful for setting good priors when fitting models to the vaccine coverage data?
