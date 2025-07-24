@@ -56,7 +56,9 @@ ksqexp <- function(r,l) {  # this is also defined in ksqexp.R
 xvals <- (vax_ON %>% mutate(age = pull_first(age)) %>% pull(age))  # a vector of ages (these x_i's are equally spaced)
 npts <- length(xvals)
 l <- 2
-covmat <- expand_grid(x1=xvals,x2=xvals) %>% mutate(k=ksqexp(abs(x1-x2),l)) %>%  # evaluation of cov function pairwise for ages x1_i and x2_i (i=1,..,n)
+covmat <- expand_grid(x1=xvals,x2=xvals) %>% 
+  mutate(k=ksqexp(abs(x1-x2),l)) %>%  # evaluation of cov function pairwise for ages x1_i and x2_i (i=1,..,n)
+  #mutate(k=klin(x1,x2,1,2)) %>% 
   pull(k) %>% matrix(nrow=npts)
 # could also use function generate_ksqexp_covmat() here
 ```
@@ -96,10 +98,19 @@ The posterior is uniquely defined by its posterior mean and posterior covariance
 ```{r}
 #| label: posterior
 
-kuo <- generate_ksqexp_covmat(xvals,xobs,l=l)  # 'relationship' pairwise between unobserved and observed ages
-kou <- generate_ksqexp_covmat(xobs,xvals,l=l)  # 'relationship' pairwise between  observed and unobserved ages
-koo <- generate_ksqexp_covmat(xobs,xobs,l=l) + 1e-6*diag(length(xobs))  # protect against non-invertibleness
-kuu <- generate_ksqexp_covmat(xvals,xvals,l=l)
+# generate_klin_covmat <- function(x1,x2,sigma_int,sigma_slope) {
+#   expand_grid(x1=x1,x2=x2) %>% mutate(k=klin(x1,x2,sigma_int,sigma_slope)) %>%  # pairwise evaluation of cov function
+#     pull(k) %>% matrix(nrow=length(x1),byrow=T)
+# }
+# kuo <- generate_klin_covmat(xvals,xobs,1,2)  # 'relationship' pairwise between unobserved and observed ages
+# kou <- generate_klin_covmat(xobs,xvals,1,2)  # 'relationship' pairwise between  observed and unobserved ages
+# koo <- generate_klin_covmat(xobs,xobs,1,2) + 1e-3*diag(length(xobs))  # protect against non-invertibleness
+# kuu <- generate_klin_covmat(xvals,xvals,1,2)
+
+kuo <- generate_ksqexp_covmat(xvals,xobs,fn=ksqexp,l=l)  # 'relationship' pairwise between unobserved and observed ages
+kou <- generate_ksqexp_covmat(xobs,xvals,fn=ksqexp,l=l)  # 'relationship' pairwise between  observed and unobserved ages
+koo <- generate_ksqexp_covmat(xobs,xobs,fn=ksqexp,l=l) + 1e-6*diag(length(xobs))  # protect against non-invertibleness
+kuu <- generate_ksqexp_covmat(xvals,xvals,fn=ksqexp,l=l)
 
 # calcuate posterior mean and posterior cov matrix
 post_mean <- kuo%*%solve(koo)%*%(logit(yobs))  # conditional mean
@@ -129,7 +140,7 @@ We can add in the remaining true data (which the model has not seen) to evaluate
 ```{r}
 #| label: compare_to_data
 post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(name="age x_i", breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xvals, y=(vax_ON %>% pull(value))), aes(x=x,y=y), col="green") + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
-#ggsave(paste0("plots/post_l",l,"_ksqexp",".pdf"))
+ggsave(paste0("plots/toy-post_l",l,"_ksqexp",".pdf"), height=4.51, width=7.29)
 ```
 
 ## Extensions
