@@ -4,7 +4,7 @@ author:
   - name: Liza Hadley
     email: lh667@cam.ac.uk
 editor: visual
-echo: false
+echo: true
 ---
 
 ## Set Up
@@ -82,9 +82,9 @@ For this mini dataset `vax_ON` (Ontario, year 2023, 2-dose, ages 5-17), we have 
 ```{r}
 #| label: observe_data
 
-# observe coverage data for age 6, 9, 10, 15, 16
-xobs <- as.numeric(vax_ON %>% filter(age %in% c("6","9","10","15","16")) %>% pull(age))   # can optionally add an error term here
-yobs <- vax_ON %>% filter(age %in% c("6","9","10","15","16")) %>% pull(value)
+# observe coverage data for age 6, 9, 11, 15, 16
+xobs <- as.numeric(vax_ON %>% filter(age %in% c("6","9","11","15","16")) %>% pull(age))   # can optionally add an error term here
+yobs <- vax_ON %>% filter(age %in% c("6","9","11","15","16")) %>% pull(value)
 
 tibble(xobs, yobs, logit(yobs))
 ```
@@ -123,12 +123,16 @@ post %>% ggplot() + geom_point(aes(x=x_i,y=post,group=factor(draw)), alpha=0.3) 
 
 post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
 ```
+
 We can add in the remaining true data (which the model has not seen) to evaluate its performance. The true coverage values are marked as red and green points.
+
 ```{r}
-post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xvals, y=(vax_ON %>% pull(value))), aes(x=x,y=y), col="green") + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
+post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(name="age x_i", breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xvals, y=(vax_ON %>% pull(value))), aes(x=x,y=y), col="green") + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
+#ggsave(paste0("plots/post_l",l,"_ksqexp",".pdf"))
 ```
+
 ## Extensions
 
-To improve this toy model, the next step would be to experiment with choice of covariance function `k` and lengthscale `l`. 
+To improve this toy model, the next step would be to experiment with choice of covariance function `k` and lengthscale `l`.
 
-We could then extend to a larger portion of the dataset by adding a second dimension (e.g. year). This would move from a posterior curve as on the above plot, to a posterior surface in a cube. We would also want to add a dimension for province, giving a posterior hypersurface in a 4d hypercube. The final model would aim to produce separate hypersurfaces for 1-dose, 1+-dose, and 2-dose.
+We could then extend to a larger portion of the dataset by adding a second dimension (e.g. year). Geometrically, this would move from a posterior curve as on the above plot, to a posterior *surface* in a 3d plot / cube. We would also want to add a dimension for province, giving a posterior hypersurface in a 4d hypercube... The final model would aim to produce separate hypersurfaces for 1-dose, 1+-dose, and 2-dose. Geometry aside, this just equates to providing an estimate of coverage at each combination of age, year, province, and dose.
