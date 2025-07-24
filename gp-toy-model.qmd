@@ -4,7 +4,7 @@ author:
   - name: Liza Hadley
     email: lh667@cam.ac.uk
 editor: visual
-echo: true
+echo: false
 ---
 
 ## Set Up
@@ -46,7 +46,7 @@ IP: This is a small point, but there are definitely questions about whether the 
 
 ## A note on scales
 
-Modelling fitting is done using Gaussian distributions, whose domain is the entire real line. However, the vaccine coverage data is restricted to $[0,1]$ (Though in practice, they're not on the boundaries of this interval.) Thus, we transform the vaccine coverage estimates using a an inverse logit function to map it from $(0,1)$ to $(-\infty, \infty)$, perform the model fitting on the real line, and then transform the predictions back from $(-\infty, \infty)$ to $(0,1)$.
+Model fitting is done using Gaussian distributions, whose domain is the entire real line. However, the vaccine coverage data is restricted to $[0,1]$ (though in practice, they're not on the boundaries of this interval). Thus, we transform the vaccine coverage data using a logit function to map it from $(0,1)$ to $(-\infty, \infty)$, perform the model fitting on the real line, and then transform the predictions back from $(-\infty, \infty)$ to $(0,1)$.
 
 ## Define covariance function / covariance matrix
 
@@ -106,7 +106,7 @@ The posterior is uniquely defined by its posterior mean and posterior covariance
 IP: can you either explain a bit more around the "calculation of individual covariance matrices to determine the pairwise 'relationships' between unobserved and observed ages"? I'm a little confused about how we're getting information about unobserved ages. Is it just from draws of the prior?
 
 IP: Can you pls point me to some reading material and/or your notes where the posterior covariance matrix is derived?
-
+LH: Nice visual website here https://distill.pub/2019/visual-exploration-gaussian-processes/ -- in the section on 'Marginalising and Conditioning', the conditioning X|Y expression is described. **I will update with a better resource.
 ```{r}
 #| label: posterior
 
@@ -137,7 +137,9 @@ post %>% ggplot() + geom_point(aes(x=x_i,y=post,group=factor(draw)), alpha=0.3) 
 
 post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
 ```
+
 We can add in the remaining true data (which the model has not seen) to evaluate its performance. The true coverage values are marked as red (seen) and green (not seen) points.
+
 ```{r}
 #| label: compare_to_data
 post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(name="age x_i", breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xvals, y=(vax_ON %>% pull(value))), aes(x=x,y=y), col="green") + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
@@ -150,29 +152,33 @@ To improve this toy model, the next step would be to experiment with choice of c
 
 We could then extend to a larger portion of the dataset by adding a second dimension (e.g. year). Geometrically, this would move from a posterior curve as on the above plot, to a posterior *surface* in a 3d plot / cube. We would also want to add a dimension for province, giving a posterior hypersurface in a 4d hypercube... The final model would aim to produce separate hypersurfaces for 1-dose, 1+-dose, and 2-dose. Geometry aside, this just equates to providing an estimate of coverage at each combination of age, year, province, and dose.
 
-<<<<<<< HEAD
-Here is an example of adding in year_report:
-```{r}
-#| label: posterior_surface
+Here is an example of adding in year_report as a dimension (only prior is shown):
 
+```{r}
+#| label: prior_surface
+
+# setup
 vax_ON2 <- vax_main %>% filter(location=="Ontario") %>% filter(n_doses %in% c("2","2+"))  # toy dataset
 # now both x and y are inputs, with output z
 xvals <- vax_ON2 %>% mutate(age = pull_first(age)) %>% pull(age) %>% unique() %>% sort()  # a vector of ages
-yvals <- vax_ON2 %>%  pull(year_report) %>% unique() %>% sort() # a vector of year_report
+yvals <- 2011:2023
+#yvals <- vax_ON2 %>%  pull(year_report) %>% unique() %>% sort() # a vector of year_report
 npts <- length(xvals)
 l <- 1
 
-#---
+# prior
 covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% 
   mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l)) %>%
-  # mutate(k=kexp(sqrt((x1-x2)^2 + (y1-y2)^2), l)) %>%
   pull(k) %>% 
   matrix(nrow=npts^2)
 
-covmat <- expand_grid(x1=xvals,x2=xvals) %>% mutate(k=ksqexp(abs(x1-x2),l)) %>%  # evaluation of cov function pairwise for ages x1_i and x2_i (i=1,..,n)
-  pull(k) %>% matrix(nrow=npts)
+xydf <- expand_grid(x=xvals, y=yvals)
+gpdraw_df <- tibble() 
+for(i in 1:1){  # a single realisation from a 2D gaussian process, with both x, y axes independent variables - one draw from the prior
+  gpdraw_df <- bind_rows(gpdraw_df, tibble(draw=i, x=xydf$x, y=xydf$y, z=rmnorm(1, rep(0,npts^2), covmat + 1e-6*diag(npts^2))))
+}
+
+gpdraw_df %>% ggplot(aes(x=x, y=y, z=z, group=factor(draw))) + geom_contour()
 ```
 
-=======
 IP: Overall, this is a great first start! I would be hesitant to push the lengthscale too far because I think vaccine coverage by cohort is fairly localized to that cohort. I'd like to think a bit more about the implications of the covariance function `k` and if we can better-inform it with some additional info to help predict for missing ages.
->>>>>>> 21292faec885c9016c1090f564477553a3cad471
