@@ -232,7 +232,7 @@ covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>%
 xydf <- expand_grid(x=xvals, y=yvals)
 
 gpdraw_df <- tibble() 
-for(indexA in 1:1){  # a single realisation from a 2D gaussian process, with both axes independent variables - one draw from the prior
+for(indexA in 1:1){  # a single realisation from a 2D gaussian process, with both x, y axes independent variables - one draw from the prior
   gpdraw_df <- bind_rows(gpdraw_df, tibble(
     draw=indexA, x=xydf$x, y=xydf$y, z=rmnorm(1, rep(0,npts^2), covmat + 1e-6*diag(npts^2))  
   ))
@@ -247,5 +247,5 @@ gpdraw_df %>%  # plot prior
 z_matrix <- matrix(gpdraw_df$z, nrow = npts, ncol = npts, byrow = FALSE)  # same plot as above
 plot_ly(x = xvals, y = yvals, z = z_matrix, type = "surface")
 
-# for posterior, we would add data points then 'update' knowledge, calculating posterior mean and cov matrix.
+# for posterior, we would observe data then 'update' our knowledge, calculating posterior mean and cov matrix as above.
 ```

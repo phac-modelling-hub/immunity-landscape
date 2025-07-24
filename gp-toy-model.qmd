@@ -56,9 +56,7 @@ ksqexp <- function(r,l) {  # this is also defined in ksqexp.R
 xvals <- (vax_ON %>% mutate(age = pull_first(age)) %>% pull(age))  # a vector of ages (these x_i's are equally spaced)
 npts <- length(xvals)
 l <- 2
-covmat <- expand_grid(x1=xvals,x2=xvals) %>% 
-  mutate(k=ksqexp(abs(x1-x2),l)) %>%  # evaluation of cov function pairwise for ages x1_i and x2_i (i=1,..,n)
-  #mutate(k=klin(x1,x2,1,2)) %>% 
+covmat <- expand_grid(x1=xvals,x2=xvals) %>% mutate(k=ksqexp(abs(x1-x2),l)) %>%  # evaluation of cov function pairwise for ages x1_i and x2_i (i=1,..,n)
   pull(k) %>% matrix(nrow=npts)
 # could also use function generate_ksqexp_covmat() here
 ```
@@ -98,15 +96,6 @@ The posterior is uniquely defined by its posterior mean and posterior covariance
 ```{r}
 #| label: posterior
 
-# generate_klin_covmat <- function(x1,x2,sigma_int,sigma_slope) {
-#   expand_grid(x1=x1,x2=x2) %>% mutate(k=klin(x1,x2,sigma_int,sigma_slope)) %>%  # pairwise evaluation of cov function
-#     pull(k) %>% matrix(nrow=length(x1),byrow=T)
-# }
-# kuo <- generate_klin_covmat(xvals,xobs,1,2)  # 'relationship' pairwise between unobserved and observed ages
-# kou <- generate_klin_covmat(xobs,xvals,1,2)  # 'relationship' pairwise between  observed and unobserved ages
-# koo <- generate_klin_covmat(xobs,xobs,1,2) + 1e-3*diag(length(xobs))  # protect against non-invertibleness
-# kuu <- generate_klin_covmat(xvals,xvals,1,2)
-
 kuo <- generate_ksqexp_covmat(xvals,xobs,fn=ksqexp,l=l)  # 'relationship' pairwise between unobserved and observed ages
 kou <- generate_ksqexp_covmat(xobs,xvals,fn=ksqexp,l=l)  # 'relationship' pairwise between  observed and unobserved ages
 koo <- generate_ksqexp_covmat(xobs,xobs,fn=ksqexp,l=l) + 1e-6*diag(length(xobs))  # protect against non-invertibleness
@@ -134,9 +123,7 @@ post %>% ggplot() + geom_point(aes(x=x_i,y=post,group=factor(draw)), alpha=0.3) 
 
 post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
 ```
-
-We can add in the remaining true data (which the model has not seen) to evaluate its performance. The true coverage values are marked as red and green points.
-
+We can add in the remaining true data (which the model has not seen) to evaluate its performance. The true coverage values are marked as red (seen) and green (not seen) points.
 ```{r}
 #| label: compare_to_data
 post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(name="age x_i", breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xvals, y=(vax_ON %>% pull(value))), aes(x=x,y=y), col="green") + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
@@ -148,3 +135,26 @@ ggsave(paste0("plots/toy-post_l",l,"_ksqexp",".pdf"), height=4.51, width=7.29)
 To improve this toy model, the next step would be to experiment with choice of covariance function `k` and lengthscale `l`.
 
 We could then extend to a larger portion of the dataset by adding a second dimension (e.g. year). Geometrically, this would move from a posterior curve as on the above plot, to a posterior *surface* in a 3d plot / cube. We would also want to add a dimension for province, giving a posterior hypersurface in a 4d hypercube... The final model would aim to produce separate hypersurfaces for 1-dose, 1+-dose, and 2-dose. Geometry aside, this just equates to providing an estimate of coverage at each combination of age, year, province, and dose.
+
+Here is an example of adding in year_report:
+```{r}
+#| label: posterior_surface
+
+vax_ON2 <- vax_main %>% filter(location=="Ontario") %>% filter(n_doses %in% c("2","2+"))  # toy dataset
+# now both x and y are inputs, with output z
+xvals <- vax_ON2 %>% mutate(age = pull_first(age)) %>% pull(age) %>% unique() %>% sort()  # a vector of ages
+yvals <- vax_ON2 %>%  pull(year_report) %>% unique() %>% sort() # a vector of year_report
+npts <- length(xvals)
+l <- 1
+
+#---
+covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% 
+  mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l)) %>%
+  # mutate(k=kexp(sqrt((x1-x2)^2 + (y1-y2)^2), l)) %>%
+  pull(k) %>% 
+  matrix(nrow=npts^2)
+
+covmat <- expand_grid(x1=xvals,x2=xvals) %>% mutate(k=ksqexp(abs(x1-x2),l)) %>%  # evaluation of cov function pairwise for ages x1_i and x2_i (i=1,..,n)
+  pull(k) %>% matrix(nrow=npts)
+```
+
