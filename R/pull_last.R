@@ -2,6 +2,6 @@
 #' 
 #' @param x string
 pull_last <- function(x, last_age){
-  if(str_detect(x, "\\+$")) return(last_age)
-  as.numeric(str_extract(x, "[[:digit:]\\.]+$"))
+  if(stringr::str_detect(x, "\\+$")) return(last_age)
+  as.numeric(stringr::str_extract(x, "[[:digit:]\\.]+$"))
 }

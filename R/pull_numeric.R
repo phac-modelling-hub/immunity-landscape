@@ -2,5 +2,5 @@
 #' 
 #' @param x string
 pull_numeric <- function(x){
-  as.numeric(str_extract(x, "[[:digit:]]+"))
+  as.numeric(stringr::str_extract(x, "[[:digit:]]+"))
 }
