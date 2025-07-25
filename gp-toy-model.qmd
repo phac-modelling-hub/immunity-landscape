@@ -43,6 +43,7 @@ vax_ON <- vax_main %>% filter(location=="Ontario") %>% filter(year_report==2023)
 ```
 
 IP: This is a small point, but there are definitely questions about whether the ON data for younger ages is super trustworthy. I believe the data come from school administration data, and because of how these vaccines get reported to schools, there has been a bit of an interruption in that from the pandemic, which means that it's like the coverage estimates in ON for younger ages are artificially low. This is only relevant if we start to inform the model with other data that can help predict coverage; you may want to switch to the AB data in the future.
+LH: Agreed.
 
 ## A note on scales
 
@@ -53,6 +54,9 @@ Model fitting is done using Gaussian distributions, whose domain is the entire r
 Use the squared exponential covariance function, `k`, to begin with and assume lengthscale `l=2`. Our dataset has 13 inputs/ independent variables (ages 5-17), so our covariance matrix is a 13x13 matrix defining the 'relationships' between each pair of ages.
 
 IP: What are the implications of using the square exponential covariance function? What kind of data would you expect to meet this assumption? What are the alternatives?
+LH: Defaults/ reasonable first choices for covariance functions are the squared exponential, as well as exponential, rational quadratic (which is a sum of squared exponentials), and linear. (Note: using a linear covariance function collapses a GP to simply Bayesian linear regression). A squared exponential covariance function is generally a good first choice due to its smoothness, simplicity (only two params - distance r=|x1-x2| and lengthscale l), and good if you don't have much data. An exponential covariance function is generally more spiky / noisy. Another classic option is periodic but we do not have a periodic data in our case. 
+The next level up from these standard covariance functions is then something like a 'Matern' covariance function which switches/ interpolates between exponential and squared exponential - apparently useful if the sq exp is giving something too smooth. Some websites I found helpful for further reading if interested: https://www.cs.toronto.edu/~duvenaud/cookbook/ (a cookbook for covariance functions) / https://distill.pub/2019/visual-exploration-gaussian-processes/ (visual intro to GPs) / https://www.comsol.com/support/learning-center/article/more-on-covariance-functions-96531/271 (a useful paragraph on Matern below the plot).
+In answer to the question "what data is suitable for the squared exponential?", in our understanding there aren't many constraints. The general assumption is that nearby x points (e.g. ages) tend to be more correlated - this is driven by the lengthscale parameter l. [***If we aren't sure of this assumption, we could do some preliminary analysis to see if coverage for nearby ages is indeed more related than random - can discuss an idea for this.] Generally a squared exponential (and exponential) are strictly decreasing functions where pairs of points with a distance close to 0 are the most related.
 
 ```{r}
 #| label: covariance
@@ -104,9 +108,10 @@ tibble(xobs, yobs, logit(yobs))
 The posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationships' between unobserved ages `xvals` and observed ages `xobs`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`.
 
 IP: can you either explain a bit more around the "calculation of individual covariance matrices to determine the pairwise 'relationships' between unobserved and observed ages"? I'm a little confused about how we're getting information about unobserved ages. Is it just from draws of the prior?
+LH: I'll add more on Monday but just to note that we aren't using getting any info. The covariance matrix is calculated using only the independent variable (age value, e.g. 5 and 6) and does not know the coverage at each age point. It's purely a measure of how related the items on the x-scale are to each other (as I understand).
 
-IP: Can you pls point me to some reading material and/or your notes where the posterior covariance matrix is derived?
-LH: Nice visual website here https://distill.pub/2019/visual-exploration-gaussian-processes/ -- in the section on 'Marginalising and Conditioning', the conditioning X|Y expression is described. **I will update with a better resource.
+IP: Can you pls point me to some reading material and/or your notes where the posterior covariance matrix is derived? LH: Nice visual website here https://distill.pub/2019/visual-exploration-gaussian-processes/ -- in the section on 'Marginalising and Conditioning', the conditioning X\|Y expression is described. \*\*I will update with a better resource.
+
 ```{r}
 #| label: posterior
 
@@ -161,24 +166,23 @@ Here is an example of adding in year_report as a dimension (only prior is shown)
 vax_ON2 <- vax_main %>% filter(location=="Ontario") %>% filter(n_doses %in% c("2","2+"))  # toy dataset
 # now both x and y are inputs, with output z
 xvals <- vax_ON2 %>% mutate(age = pull_first(age)) %>% pull(age) %>% unique() %>% sort()  # a vector of ages
-yvals <- 2011:2023
-#yvals <- vax_ON2 %>%  pull(year_report) %>% unique() %>% sort() # a vector of year_report
-npts <- length(xvals)
-l <- 1
+yvals <- vax_ON2 %>% pull(year_report) %>% unique() %>% sort()  # a vector of year_report
+npts <- length(xvals)*length(yvals)
+l1 <- 1.5  # x lengthscale
+l2 <- 1  # relative lengthscale of x values to y values
+yvals <- yvals*l2  # scale y values to the x lengthscale
 
 # prior
-covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% 
-  mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l)) %>%
-  pull(k) %>% 
-  matrix(nrow=npts^2)
+covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l1)) %>%
+  pull(k) %>% matrix(nrow=npts)
 
 xydf <- expand_grid(x=xvals, y=yvals)
-gpdraw_df <- tibble() 
+prior2 <- tibble() 
 for(i in 1:1){  # a single realisation from a 2D gaussian process, with both x, y axes independent variables - one draw from the prior
-  gpdraw_df <- bind_rows(gpdraw_df, tibble(draw=i, x=xydf$x, y=xydf$y, z=rmnorm(1, rep(0,npts^2), covmat + 1e-6*diag(npts^2))))
+  prior2 <- bind_rows(prior2, tibble(draw=i, x_i=xydf$x, y_i=xydf$y, prior2=rmnorm(1, rep(0,npts), covmat + 1e-6*diag(npts))))
 }
 
-gpdraw_df %>% ggplot(aes(x=x, y=y, z=z, group=factor(draw))) + geom_contour()
+prior2 %>% ggplot(aes(x=x_i, y=y_i, z=prior2, group=factor(draw))) + scale_x_continuous(breaks=xvals) + geom_contour(alpha=0.3)
 ```
 
 IP: Overall, this is a great first start! I would be hesitant to push the lengthscale too far because I think vaccine coverage by cohort is fairly localized to that cohort. I'd like to think a bit more about the implications of the covariance function `k` and if we can better-inform it with some additional info to help predict for missing ages.
