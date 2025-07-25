@@ -33,7 +33,10 @@ library(stringr)
 library(tidyr)
 library(scales)
 
-library(ggplot2); theme_set(theme_bw())
+library(ggplot2)
+# common plot theme
+theme_set(theme_bw())
+th <- theme(legend.position = "bottom")
 
 # Source functions
 invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
@@ -87,109 +90,6 @@ DT::datatable(data_dict)
 
 Either (1) `age` and `year_report` or (2) `year_birth` must be specified
 for each coverage estimate.
-
-```{r}
-#| label: data_cleaning_utils
-
-#' Pull first number from string
-#' 
-#' @param x string
-pull_numeric <- function(x){
-  as.numeric(str_extract(x, "[[:digit:]]+"))
-}
-
-#' Parse character variable with integer info into an ordered factor variable
-#' 
-#' @param df data frame
-#' @param col column to transform, as a symbol
-factorize <- function(df, col){
-  df <- (df
-         |> mutate(order = pull_numeric({{col}}))
-         |> arrange(order)
-         |> select(-order)
-         |> mutate({{col}} := as.factor({{col}}))
-  )
-}
-
-#' Parse character variable with numeric info into a numeric variable
-#'
-#' Fill in missing value for plotting
-#' @param df data frame
-#' @param col column to transform, as a symbol
-numericize <- function(df, col){
-  df |>
-    rowwise() |> 
-    mutate(
-      {{col}} := list(pull_first({{col}}):pull_last({{col}}))
-    ) |>
-    unnest_longer({{col}})
-}
-
-#' Lookup table for PT names 
-pt_lookup <- function() {
-  read_csv(here::here("data", "pt_lookup.csv"), show_col_types = "FALSE") |> 
-    transmute(
-      pt = al_code, 
-      location = nm_en
-    ) |> 
-    bind_rows(
-      tibble::tibble(pt = "CA", location = "Canada")
-    )
-}
-```
-
-```{r}
-#| label: plot_coverage
-
-#' Plot vaccine coverage from our standardized format
-#' 
-#' @param df a data frame with four required columns: 
-#'  - age: age (character)
-#'  - value: vaccine coverage as a proportion (numeric)
-#'  - location: geographic location (character)
-#'  - n_doses: number of doses use to calculate vaccine coverage (character)
-#' @param x the column name of the variable to plot on the x-axis (as a string)
-#' @param plot_year_report should the plot include the year reported for each estimate? (logical)
-#' @param ncol number of columns for the plot grid
-plot_coverage <- function(df, x = "age", plot_year_report = TRUE, ncol = 3){
-  labs_x <- case_when(
-    x=="age" ~ "Age at estimate",
-    x=="year_birth" ~ "Birth year",
-    x=="age_current" ~ "Current age",
-    T ~ x
-  )  
-  
-  p <- (df
-    |> {\(.) if (!is.numeric(.[[x]])) numericize(., !!sym(x)) else .}()
-    |> {\(.) if ("n_doses" %in% colnames(.)) factorize(. , n_doses) else . }()
-    |> {\(.) if ("year_report" %in% colnames(.)) factorize(. , year_report) else . }()
-    |> ggplot(aes(x = !!sym(x), y = value, shape = n_doses))
-     + facet_wrap(~ location, ncol = ncol)
-     + scale_x_continuous(expand = expansion(add = 1))
-     + scale_y_continuous(
-       limits = c(0,1),
-       labels = label_percent()
-     )
-     + scale_shape_manual(values = c(18, 16, 17, 15, 13))
-     + labs(
-       x = labs_x,
-       y = "Vaccine coverage",
-       shape = "Number of doses"
-     )
-   )
-
-   if("year_report" %in% colnames(df) & plot_year_report){
-     p <- p + geom_point(aes(colour = year_report), size = 2, stroke = 1.5) + scale_colour_viridis_d(option = "G", direction = -1, end = 0.9) + labs(linetype = "Year reported", colour = "Year reported") 
-   } else {
-     p <- p + geom_point(size = 2)
-   }
-
-   p
-}
-
-# common theme
-th <- theme(legend.position = "bottom")
-```
 
 # Available national data sources {#available-national-data-sources}
 
