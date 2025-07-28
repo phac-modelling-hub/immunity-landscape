@@ -169,12 +169,13 @@ DT::datatable(vax_nonint)
 
 This is an issue for the ABM, where all ages are integer ages. We could either round these ages somehow or drop these estimates. For this particular case (QC for 1+ doses in report years 2012, 2014, 2016, 2019, 2021), we also have the exact same estimates for age 2:
 
+LH: I think you mean to print the 1+ dose data here so I have changed `n_doses != "1+"` to `n_doses == "1+"`. Coverage is not identical in age 2 so we may wish to reincorporate the age 1.25 data later on (if for example age 1 model estimates need more informing). But I agree with the plan to remove for now for ABM purposes.
 ```{r}
 vax_parsed |> 
   right_join(vax_nonint |> 
                select(pt, year_report), 
              by = join_by(pt, year_report)) |> 
-  filter(age == 2, n_doses != "1+") |> 
+  filter(age == 2, n_doses == "1+") |> 
   DT::datatable()
 ```
 
