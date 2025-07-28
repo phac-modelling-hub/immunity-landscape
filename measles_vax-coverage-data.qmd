@@ -633,7 +633,7 @@ vax_AB <- read.csv(here::here("data", "measles_raw", "vax_alberta.csv"))  %>%
 
 # relabel 1-dose to 1+ where needed
 vax_AB <- vax_AB %>% mutate(age = year_report - year_birth) %>%
-  mutate(dose_corrected = ifelse(n_doses=="1" & (age>2 | (age==2 & year_birth>2019)), "1+", n_doses)) %>% 
+  mutate(dose_corrected = ifelse(n_doses=="1" & (age>2 | (age==2 & year_birth>2019)), "1+", n_doses)) %>%
   mutate(n_doses = dose_corrected) %>% select(-dose_corrected, -age)
 
 #Alberta
@@ -879,7 +879,7 @@ We export our standardized dataset using the following code chunk:
 
 ```{r}
 #| label: export_vax
-#| eval: false
+#| eval: true
 
 vax |>
   # attach adult estimates from aNICS

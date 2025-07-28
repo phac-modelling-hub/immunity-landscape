@@ -197,6 +197,20 @@ vax_aged <- vax_parsed2 |>
   filter(age_current < 100)
 ```
 
+## Save cleaned data
+
+We fill in year_birth where it is missing and then export the cleaned data for use in statistical modelling.
+```{r}
+#| label: export_vax
+
+# fill in year_birth where it is missing
+vax_clean <- vax_parsed2 %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth))
+
+# export
+vax_clean %>% #bind_rows(vax_CA) %>%  # attach adult estimates from aNICS?
+  readr::write_csv(here::here("data", "measles_vax-coverage-data-clean.csv"))
+```
+
 # Set up additional immunity assumptions {#immunity-assumptions}
 
 ## "Coverage" for infants and those born before 1970
