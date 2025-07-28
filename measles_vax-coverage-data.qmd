@@ -603,6 +603,8 @@ by birth cohort, and are dissagregated by zone, subzone, and local area.
 > Of note, from January 1st 2021, MMR-Var dose 2 schedule was changed
 > from aged 4 years old to 18- months.
 
+LH: From what I can see, the Alberta 1-dose estimates represent 1+. (For example, the 1-dose estimates are slightly larger than the 2-dose estimates and together sum to greater than 1). The only exception would be 2-year-olds prior to year 2021 (i.e. year_birth =< 2019), who would not have received the second vaccine under the old vaccination schedule. I have hence relabelled 1-dose to 1+ in `vax_AB` in all relevant cases, but please revert if there is disagreement. All other provinces seem correctly labelled.
+
 ```{r}
 #| label: vax_AB
 
@@ -629,6 +631,10 @@ vax_AB <- read.csv(here::here("data", "measles_raw", "vax_alberta.csv"))  %>%
     zone_type
   )  
 
+# relabel 1-dose to 1+ where needed
+vax_AB <- vax_AB %>% mutate(age = year_report - year_birth) %>%
+  mutate(dose_corrected = ifelse(n_doses=="1" & (age>2 | (age==2 & year_birth>2019)), "1+", n_doses)) %>% 
+  mutate(n_doses = dose_corrected) %>% select(-dose_corrected, -age)
 
 #Alberta
 DT::datatable(vax_AB |> arrange(year_birth))
