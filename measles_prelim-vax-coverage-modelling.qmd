@@ -204,7 +204,7 @@ We fill in year_birth where it is missing and then export the cleaned data for u
 #| label: export_vax
 
 # fill in year_birth where it is missing
-vax_clean <- vax_parsed2 %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth))
+vax_clean <- vax_aged %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth))
 
 # export
 vax_clean %>% #bind_rows(vax_CA) %>%  # attach adult estimates from aNICS?
@@ -369,7 +369,7 @@ vv_add1dose <- vv2 |>
   left_join(to_mutate, by = join_by(pt, location, age_current)) |>
   filter(to_mutate) |>
   pivot_wider(id_cols = c(pt, location, age_current), names_from = n_doses, values_from = value) |> 
-  mutate(`1` = `1+` - `2+`, is_incompatible = `1` < 0)
+  mutate(`1` = `1+` - `2+`, is_incompatible = `1` < 0)  ##LH: this doesn't work for Alberta currently (need '2').
 
 # for the values above, either the inferred one-dose coverage makes sense (>=0) or it doesn't (<0):
 #
@@ -384,7 +384,7 @@ to_drop_1p <- vv_add1dose |>
 
 vax_deduped <- vv2 |>
   anti_join(to_drop_1p, by = join_by(pt, location, age_current, n_doses)) |>
-  # for compatible estimates, attach inferred 1-dose value
+  # for compatible estimates, attach inferred 1-dose value  ##LH: year_report/ age are not carried over.
   bind_rows(vv_add1dose |> filter(!is_incompatible) |> pivot_longer(cols = c(`1+`, `2+`, `1`), names_to = "n_doses") |> filter(n_doses == "1") |> select(-is_incompatible)) |>
   # for incompatible estimates, keep the most recent estimate
   left_join((vv_add1dose |> filter(is_incompatible) |> select(pt, location, age_current, is_incompatible)), by = join_by(pt, location, age_current)) |> 
@@ -406,11 +406,23 @@ vax_deduped |>
   geom_point(aes(shape = n_doses), stroke = 1.25) + 
   facet_wrap(~location)
 ```
+```{r}
+#| label: export_vax_deduped
+
+# fill in year_birth where it is missing and assume 2+ = 2 doses for now (as same vaccine efficacy used currently)
+vax_clean1 <- vax_deduped %>% ungroup() %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth)) %>%
+  mutate(n_doses = ifelse(n_doses=="2+", "2", n_doses)) %>% select(-2)
+
+# export -- vax_clean1 is the cleaned data set for take 1
+vax_clean1 %>% #bind_rows(vax_CA) %>%  # attach adult estimates from aNICS?
+  readr::write_csv(here::here("data", "measles_vax-coverage-data-clean1.csv"))
+```
 
 ## Interpolate/extrapolate
 
 Before we interpolate and extrapolate, we will restrict the data according to the vaccination schedule, so that we don't extrapolate doses to ages that aren't eligible for them (_e.g._, dose 2 for age 2 in PTs where the vaccine schedule recommends dose 2 at ages 4-6).
 
+LH: In many cases (e.g. Alberta, Manitoba, BC), the exactly 1-dose estimates are usually because the individual is not old enough to have received a second dose at the time of reporting. Many of those individuals likely later received their second dose. Since we are transforming to current age, we could consider assuming 1 dose becomes 1+ if current age is now greater than the age at which second dose is given. I think this might lead to more meaningful interpolation/extrapolation for exactly 1 dose?
 ```{r}
 vax_schd <- vax_schedule %>%
   pivot_longer(-"Dose number") %>%
@@ -579,6 +591,18 @@ vax_dedupe |>
   geom_point(aes(shape = n_doses), stroke = 1.25) + 
   facet_wrap(~location)
 ```
+```{r}
+#| label: export_vax_dedupe
+
+# fill in year_birth where it is missing and assume 2+ = 2 doses for now (as same vaccine efficacy used currently)
+vax_clean2 <- vax_dedupe %>% ungroup() %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth)) %>%
+  mutate(n_doses = ifelse(n_doses=="2+", "2", n_doses)) %>% mutate(n_doses = ifelse(n_doses=="dose_new", "1+", n_doses)) %>% select(-n_doses_new)
+
+# export -- vax_clean2 is the cleaned data set for take 2
+vax_clean2 %>% #bind_rows(vax_CA) %>%  # attach adult estimates from aNICS?
+  readr::write_csv(here::here("data", "measles_vax-coverage-data-clean2.csv"))
+```
+
 
 ## Interpolate/extrapolate
 

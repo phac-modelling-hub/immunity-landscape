@@ -317,7 +317,7 @@ nombre de doses, de 2012 à 2019, cohorte 1 an
 ```{r}
 #| label: vax_QC
 
-# Coverage at 15months with 1+ doses (How to interpret the dose number?)
+# Coverage at 15months with 1+ doses (Tableau 16) (How to interpret the dose number?)
 
 vax_QC1 <- tibble::tibble(
   pt = "QC",
@@ -329,7 +329,7 @@ vax_QC1 <- tibble::tibble(
 )
 
 
-# Coverage at 24 months with 1+ doses and 2+ doses (How to interpret the dose number?)
+# Coverage at 24 months with 1+ doses and 2+ doses (Tableau 17) (How to interpret the dose number?)
 
 vax_QC2 <- tibble::tibble(
   pt = "QC", 
