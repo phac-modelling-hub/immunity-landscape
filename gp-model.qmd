@@ -4,14 +4,12 @@ author:
   - name: Liza Hadley
     email: lh667@cam.ac.uk
 editor: visual
-echo: false
+echo: true
 ---
-
-# Placeholder file for real GP model. \*Replace toy text with real data problem!
 
 # Set Up
 
-Load functions and packages. Read the standardized cleaned data (currently filtered to province-level). We aim to work with current age (effectively collapsing year_birth and age dimensions into one), from the 'take 2' approach (collapsing different dose estimates to 1+).
+Load functions and packages. Read the standardized cleaned data from the 'take 2' approach (aiming to collapse different dose estimates to 1+). The data set `vax_clean` contains province-level estimates. We aim to work with current age (effectively collapsing year_birth and age dimensions into one).
 
 ```{r}
 #| label: setup
@@ -28,21 +26,23 @@ library(LaplacesDemon) # for logistic transform
 invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))  # load functions
 
 #' read cleaned data from 'take 2' approach
-vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2.csv"), show_col_types = FALSE) #|> filter(location %in% unique(pt_lookup()$location))  # filtering out sub-provinces etc estimates
+vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2.csv"), show_col_types = FALSE) %>% filter(!(pt %in% c("SK","YT","NB"))) #%>% filter(location %in% unique(pt_lookup()$location))  # filtering out sub-provinces etc estimates
 vax_schedule <- readr::read_csv(here::here("data", "measles_raw", "vax_schedule.csv"), show_col_types = FALSE)
 popsize <- readr::read_csv(here::here("data", "popsize.csv"), show_col_types = FALSE)
 current_year <- as.integer(format(Sys.Date(), "%Y")) # for ageing estimates
 age_pre1970 <- current_year - 1969 # min age of those born strictly before 1970
-
-#' first consider one province
-vax_prov <- vax_clean %>% filter(pt=="AB") #%>% filter(n_doses!="2")
 ```
 
 ## A note on scales
 
 Model fitting is done using Gaussian distributions, whose domain is the entire real line. However, the vaccine coverage data is restricted to $[0,1]$ (though in practice, they're not on the boundaries of this interval). Thus, we transform the vaccine coverage data using a logit function to map it from $(0,1)$ to $(-\infty, \infty)$, perform the model fitting on the real line, and then transform the predictions back from $(-\infty, \infty)$ to $(0,1)$.
 
+
 # 1D case (current age)
+The 1D model can be run for any single province, e.g. Alberta.
+```{r}
+vax_prov <- vax_clean %>% filter(pt=="AB") #%>% filter(n_doses!="2")
+```
 
 ## Define covariance function / covariance matrix
 
@@ -139,34 +139,59 @@ post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)),
 #ggsave(paste0("plots/ABpost_l",l,"_ksqexp",".pdf"), height=4.51, width=7.29)
 ```
 ## Extensions
-To improve this model, the next step would be to experiment with choice of covariance function `k` and lengthscale `l`, and to add in province as a second dimension.
+To improve this model, the next step would be to experiment with choice of covariance function `k` and lengthscale `l`, and to add in province as a second dimension. It is also worth considering how to treat dose data - currently the model struggles with data points for 2 dose. It may be worth fitting two fairly separate GPs (1+ and 2 dose), or using the 2 dose estimates as minimums for the prior in some way.
 
 
 # 2D case (current age and province)
+The 2D model adds province as a second dimension (only prior and observed data shown do far). Note: more information is needed to inform relationship between provinces - currently an arbitrary alphabetical relation is assumed.
 
-Here is an example of adding in year_report as a second dimension (only prior is shown):
+## Covariance and prior
+We use the squared exponential covariance function to begin with, with current age lengthscale, `l1`, and _relative_ lengthscale of current age to province, `l2`. Define the prior ~ Normal(0,cov) as before and draw a sample.
 ```{r}
-#| label: prior_surface
+#| label: prior_2D
 
 # setup
-vax_prov2 <- vax_clean %>% filter(location=="Alberta") # toy dataset
 # now both x and y are inputs, with output z
-xvals <- vax_prov2 %>% mutate(age = pull_first(age)) %>% pull(age) %>% unique() %>% sort()  # a vector of ages
-yvals <- vax_prov2 %>% pull(year_report) %>% unique() %>% sort()  # a vector of year_report
+xvals <- first_agecurrent:last_agecurrent  # a vector of current ages (these x_i's are equally spaced) 
+yvals <- 1:length(unique(vax_clean$location))  # a vector of provinces -- currently arbitrary relation (alphabetical)
+names(yvals) <- sort(unique(vax_clean$location))
+# xvals <- vax_clean %>% mutate(age = pull_first(age)) %>% pull(age) %>% unique() %>% sort()  # a vector of ages
+# yvals <- vax_clean %>% pull(year_report) %>% unique() %>% sort()  # a vector of year_report
 npts <- length(xvals)*length(yvals)
-l1 <- 1.5  # x lengthscale
+l1 <- 2  # x lengthscale
 l2 <- 1  # relative lengthscale of x values to y values
 yvals <- yvals*l2  # scale y values to the x lengthscale
 
-# prior
+# covariance matrix in 2D
 covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l1)) %>%
   pull(k) %>% matrix(nrow=npts)
 
-xydf <- expand_grid(x=xvals, y=yvals)
-prior2 <- tibble() 
-for(i in 1:50){  # a single realisation from a 2D gaussian process, with both x, y axes independent variables - one draw from the prior
-  prior2 <- bind_rows(prior2, tibble(draw=i, x_i=xydf$x, y_i=xydf$y, prior2=rmnorm(1, rep(0,npts), covmat + 1e-6*diag(npts))))
+# define prior and take 50 draws
+xygrid <- expand_grid(x=xvals, y=yvals)
+prior2D <- tibble() 
+for(i in 1:50){  # 50 realisations from a 2D gaussian process, with both x, y axes independent variables
+  prior2D <- bind_rows(prior2D, tibble(draw=i, x_i=xygrid$x, y_i=xygrid$y, prior2D=rmnorm(1, rep(0,npts), covmat + 1e-6*diag(npts))))
 }
 
-prior2 %>% ggplot(aes(x=x_i, y=prior2, group=factor(draw))) + scale_x_continuous(breaks=xvals) + geom_line(alpha=0.3) + facet_wrap(~ y_i)
+# plot prior sample
+prior2D <- prior2D %>% mutate(y_label = names(yvals)[match(y_i, yvals)])
+prior2D %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + scale_x_continuous(breaks=xvals,name="current age x_i") + geom_line(alpha=0.3) + facet_wrap(~ y_label)
 ```
+## Observed data
+Expose the model to ~10 data points (to see how well it can predict the remainder). We will use the logistic transform of z (logit(zobs)) which maps from [0,1] to [-inf,inf].
+```{r}
+#| label: data_2D
+
+# observe coverage data for age 4, 9, 13, 19, 20, 21, 25, 30, in all provinces where data exists
+xobs <- vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(age_current)   # can optionally add an error term here
+yobs <- yvals[vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(location)]  # pulling province values from yvals by name for now
+zobs <- vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(value)
+# xobs <- vax_clean %>% pull(age_current)   # can optionally add an error term here
+# yobs <- vax_clean %>% pull(location)
+# zobs <- vax_clean %>% pull(value)
+
+yobs <- yobs*l2  # scaling y data by relative lengthscale l2
+
+tibble(xobs, yobs, zobs, logit(zobs))
+```
+
