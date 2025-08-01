@@ -162,7 +162,7 @@ names(yvals) <- province_relation %>% pull(location)
 npts <- length(xvals)*length(yvals)
 l1 <- 2  # x lengthscale
 l2 <- 2  # relative lengthscale of x values to y values
-yvals <- yvals*l2  # scale y values to the x lengthscale
+yvals <- yvals/l2  # scale y values to the x lengthscale
 
 #' covariance matrix in 2D
 covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l1)) %>%
@@ -171,13 +171,15 @@ covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=ksqex
 #' define prior and take 50 draws
 xygrid <- expand_grid(x=xvals, y=yvals)
 prior2D <- tibble() 
-for(i in 1:50){  # 50 realisations from a 2D gaussian process, with both x, y as independent variables
+for(i in 1:1){  # 50 realisations from a 2D gaussian process, with both x, y as independent variables
   prior2D <- bind_rows(prior2D, tibble(draw=i, x_i=xygrid$x, y_i=xygrid$y, prior2D=rmnorm(1, rep(0,npts), covmat + 1e-6*diag(npts))))
 }
 
 #' plot prior sample
-prior2D <- prior2D %>% mutate(y_label = names(yvals)[match(y_i, yvals)])
+prior2D <- prior2D %>% mutate(y_label = names(yvals)[match(y_i, yvals)]) %>% 
+  mutate(y_label = factor(y_label, levels=c("Ontario","Quebec","Alberta","British Columbia","Manitoba","Nova Scotia","Newfoundland and Labrador","Prince Edward Island","Northwest Territories","Nunavut")))
 prior2D %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + scale_x_continuous(breaks=xvals,name="current age x_i") + geom_line(alpha=0.3) + facet_wrap(~ y_label)
+prior2D %>% ggplot(aes(x=x_i, y=y_i, z=prior2D, group=factor(draw))) + geom_contour()
 ```
 
 ## Observed data
@@ -194,7 +196,7 @@ zobs <- vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull
 # yobs <- vax_clean %>% pull(location)
 # zobs <- vax_clean %>% pull(value)
 
-yobs <- yobs*l2  # scale y data by relative lengthscale l2
+yobs <- yobs/l2  # scale y data by relative lengthscale l2
 
 tibble(xobs, yobs, zobs, logit(zobs))
 ```
