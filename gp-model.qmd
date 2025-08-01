@@ -155,14 +155,19 @@ We use the squared exponential covariance function to begin with, with current a
 
 #' setup
 #' now both x and y are inputs, with output z
+first_agecurrent <- 1  # first age for the GP model
+last_agecurrent <- 32  #age_pre1970-1  # last age for the GP model 
 xvals <- first_agecurrent:last_agecurrent  # a vector of current ages (these x_i's are equally spaced) 
-province_relation <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>% filter(location %in% unique(vax_clean$location))  # province GDP data from StatCan
+
+province_relation <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
+  filter(location %in% unique(vax_clean$location))  # province GDP data from StatCan
 yvals <- log(province_relation %>% pull(Dollars))  # a vector of provinces -- currently log(GDP)
 names(yvals) <- province_relation %>% pull(location)
+
 npts <- length(xvals)*length(yvals)
 l1 <- 2  # x lengthscale
 l2 <- 2  # relative lengthscale of x values to y values
-yvals <- yvals/l2  # scale y values to the x lengthscale
+yvals <- yvals*l2  # scale y values to the x lengthscale
 
 #' covariance matrix in 2D
 covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l1)) %>%
@@ -171,15 +176,16 @@ covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=ksqex
 #' define prior and take 50 draws
 xygrid <- expand_grid(x=xvals, y=yvals)
 prior2D <- tibble() 
-for(i in 1:1){  # 50 realisations from a 2D gaussian process, with both x, y as independent variables
+for(i in 1:50){  # 50 realisations from a 2D gaussian process, with both x, y as independent variables
   prior2D <- bind_rows(prior2D, tibble(draw=i, x_i=xygrid$x, y_i=xygrid$y, prior2D=rmnorm(1, rep(0,npts), covmat + 1e-6*diag(npts))))
 }
 
 #' plot prior sample
+prov_levels <- (province_relation %>% pull(location))  # useful shortcut for defining province factors
 prior2D <- prior2D %>% mutate(y_label = names(yvals)[match(y_i, yvals)]) %>% 
-  mutate(y_label = factor(y_label, levels=c("Ontario","Quebec","Alberta","British Columbia","Manitoba","Nova Scotia","Newfoundland and Labrador","Prince Edward Island","Northwest Territories","Nunavut")))
-prior2D %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + scale_x_continuous(breaks=xvals,name="current age x_i") + geom_line(alpha=0.3) + facet_wrap(~ y_label)
-prior2D %>% ggplot(aes(x=x_i, y=y_i, z=prior2D, group=factor(draw))) + geom_contour()
+  mutate(y_label = factor(y_label, levels=prov_levels))
+prior2D %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + scale_x_continuous(breaks=xvals,name="current age x_i") +
+  geom_line(alpha=0.3) + facet_wrap(~ y_label)
 ```
 
 ## Observed data
@@ -190,20 +196,19 @@ Expose the model to ~10 data points (to see how well it can predict the remainde
 
 #' observe coverage data for age 4, 9, 13, 19, 20, 21, 25, 30 in all provinces where data exists
 xobs <- vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(age_current)   # can optionally add an error term here
-yobs <- yvals[vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(location)]  # Alberta==25.55, BC==25.31 etc as in yvals (log(GDP))
+yobs <- yvals[vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(location)]  # Alberta==25.55, BC==25.31 etc as in yvals (log(GDP))  **already scaled by l2
 zobs <- vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(value)
 # xobs <- vax_clean %>% pull(age_current)   # can optionally add an error term here
 # yobs <- vax_clean %>% pull(location)
 # zobs <- vax_clean %>% pull(value)
 
-yobs <- yobs/l2  # scale y data by relative lengthscale l2
-
 tibble(xobs, yobs, zobs, logit(zobs))
 ```
 
 ## Posterior
-As in the 1D case, the posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationships' between unobserved `{xvals, yvals}` and observed `(xobs, yobs)`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`.
+As in the 1D case, the posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationships' between unobserved independent variables `{xvals, yvals}` and observed independent variables `(xobs, yobs)`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`.
 In the 1D case, our unobserved was `xvals`, now it is the concatenated vector grid `{xvals, yvals}` of size 320x320 (32 ages in each of 10 provinces).
+
 ```{r}
 #| label: posterior_2D
 
@@ -225,22 +230,46 @@ post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
 
 #' draw from the posterior distribution and record in dataframe post2D
 post2D <- tibble()
-for(i in 1:1) {  # take 50 posterior draws
+for(i in 1:50) {  # take 50 posterior draws
   post2D <- bind_rows(post2D, tibble(draw=i, x_i=xygrid$x, y_i=xygrid$y, post2D=rmnorm(1, post_mean, post_covmat + 1e-6*diag(nrow(post_covmat)))))  # each rmnorm is a random draw from the (multivariate) posterior
 }
 post2D <- post2D %>% mutate(post2D_constrained=invlogit(post2D)) %>%  # add column to transform back to [0,1]
-  mutate(y_label = as.factor(names(yvals)[match(y_i, yvals)])) %>%  # add column to return province names
-  select(draw,x_i,y_i,y_label,post2D,post2D_constrained)  # reorder columns
+  mutate(y_label = names(yvals)[match(y_i, yvals)]) %>%  # add column to return province names
+  mutate(y_label = factor(y_label, levels=(province_relation %>% pull(location)))) %>%  # order provinces
+  select(draw, x_i, y_i, y_label, post2D, post2D_constrained)  # reorder columns
 
 #' plot posterior sample 
-yobs_factors <- factor(names(yobs), levels(factor(post2D$y_label)))
-post2D %>% ggplot() + geom_point(aes(x=x_i,y=post2D,group=factor(draw)), alpha=0.3) +
-  geom_line(aes(x=x_i,y=post2D,group=factor(draw)), alpha=0.2) +
-  geom_point(data=tibble(x=xobs, y=logit(zobs), y_label=yobs_factors), aes(x=x,y=y), col="red") +
-  scale_x_continuous(breaks=xvals,name="current age x_i") +
+yobs_factors <- factor(names(yobs), levels(post2D$y_label))  # convert yobs to factors for use in facet_wrap
+post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D, group=factor(draw)), alpha=0.1) +
+  geom_line(aes(x=x_i, y=post2D, group=factor(draw)), alpha=0.2) +
+  geom_point(data=tibble(x=xobs, y=logit(zobs), y_label=yobs_factors), aes(x=x, y=y), col="red") +
+  scale_x_continuous(breaks=xvals, name="current age x_i") +
   facet_wrap(~ y_label)
 
-# post2D %>% ggplot() + geom_point(aes(x=x_i,y=post2D_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(breaks=xvals,name="current age x_i") + geom_line(aes(x=x_i,y=post2D_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xobs, y_label=names(yobs), y=zobs), aes(x=x,y=y), col="red") + facet_wrap(~ y_label)
+post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) +
+  geom_line(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.2) +
+  geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red") +
+  scale_x_continuous(breaks=xvals, name="current age x_i") +
+  facet_wrap(~ y_label)
 
+```
+
+As before, we can compare performance by adding back in data points that the model has not seen in green:
+
+```{r}
+#| label: compare2D
+
+
+post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) + 
+  geom_line(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.2) + 
+  geom_point(data=tibble(x=(vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(age_current)),  # adding in full data from vax_clean
+                         y=(vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(value)), 
+                         y_label=factor((vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(location)), levels=prov_levels)),
+                         aes(x=x,y=y), col="green") + 
+  geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red") +
+  scale_x_continuous(breaks=xvals, name="current age x_i") + #scale_y_continuous(limits=c(0,1))
+  facet_wrap(~ y_label)
+
+#ggsave(paste0("plots/ABpost_l",l,"_ksqexp",".pdf"), height=4.51, width=7.29)
 ```
 
