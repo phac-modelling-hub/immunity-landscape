@@ -289,14 +289,28 @@ The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`.
 ```{r}
 #| label: auto2D
 
-#' x and y are independent variables, with dependent variable z
-run_GP <- function(vax_dataset, first_agecurrent=NA, last_agecurrent=NA, yvals=NA, k=NA, k_name=NA, l1=NA, l2=NA, ndrws=50) {
+#' Run the full 2D Gaussian Process model
+#' 
+#' First input `vax_dataset` must be specified. All other inputs are optional.
+#' Note: x and y are independent variables, with dependent variable z. x is assumed to represent
+#' current age, y province, and z vaccine coverage.
+#' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
+#' @param first_agecurrent first age for the GP model, i.e. smallest x-variable entry (numeric)
+#' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
+#' @param yvals numeric vector defining possible range of y-values (numeric)  **do not scale
+#' @param k covariance function chosen from the following list: (function) **Functionality not added yet for matern.
+#'          - ksqexp,
+#'          - kexp, 
+#'          - kmatern.
+#' @param k_name as above, but written as a character string (character)
+#' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
+#' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
+#' @param ndrws specify number of draws to be taken from the prior and posterior distributions
+run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=NA, k_name=NA, l1=NA, l2=NA, ndrws=50) {
   #' define possible x values
-  if (is.na(first_agecurrent)) first_agecurrent <- 1  # first age for the GP model
-  if (is.na(last_agecurrent)) last_agecurrent <- 32  #age_pre1970-1  # last age for the GP model 
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
 
-  #' define possible y values (yvals is a named vector)
+  #' define possible y values
   province_relation <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
     filter(location %in% unique(vax_clean$location))  # province GDP data from StatCan
   prov_levels <- (province_relation %>% pull(location))  # useful shortcut for defining province factors
@@ -324,6 +338,11 @@ run_GP <- function(vax_dataset, first_agecurrent=NA, last_agecurrent=NA, yvals=N
   post2D <- compute_posterior2D(xvals=xvals, yvals=yvals, xobs=xobs, yobs=yobs, zobs=zobs,
                               k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels)
   post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k=k_name, k_param1=l1, k_param2=l2) %>% print()
+  
+  #' compare performance
+  post_error <- post2D %>% group_by(x_i, y_i, y_label) %>% mutate(mean=mean(post2D_constrained))
+  
+  return(list(prior2D, post2D, post_error))
 }
 
 run_GP(vax_clean)
