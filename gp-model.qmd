@@ -12,7 +12,7 @@ echo: true
 Load functions and packages. Read the standardized cleaned data from the 'take 2' preliminary modelling approach (aiming to collapse different dose estimates to 1+). The data set `vax_clean` contains province-level estimates. We aim to work with current age (effectively collapsing year_birth and age dimensions into one).
 
 ```{r}
-#| label: setup
+#| label: initial_setup
 
 library(readr)
 library(dplyr)
@@ -166,7 +166,7 @@ names(yvals) <- province_relation %>% pull(location)
 
 npts <- length(xvals)*length(yvals)
 l1 <- 2  # x lengthscale
-l2 <- 2  # relative lengthscale of x values to y values
+l2 <- 3  # relative lengthscale of x values to y values
 yvals <- yvals*l2  # scale y values to the x lengthscale
 
 #' covariance matrix in 2D
@@ -191,6 +191,7 @@ prior2D %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + scale_x_continuo
 ## Observed data
 Expose the model to ~10 data points (to see how well it can predict the remainder). We will use the logistic transform of z (logit(zobs)) which maps from [0,1] to [-inf,inf].
 
+To expose the model to the full vaccine coverage dataset, uncomment the three commented lines below.
 ```{r}
 #| label: data_2D
 
@@ -198,9 +199,11 @@ Expose the model to ~10 data points (to see how well it can predict the remainde
 xobs <- vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(age_current)   # can optionally add an error term here
 yobs <- yvals[vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(location)]  # Alberta==25.55, BC==25.31 etc as in yvals (log(GDP))  **already scaled by l2
 zobs <- vax_clean %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(value)
-# xobs <- vax_clean %>% pull(age_current)   # can optionally add an error term here
-# yobs <- vax_clean %>% pull(location)
-# zobs <- vax_clean %>% pull(value)
+
+#' alternatively uncomment to observe all available data
+# xobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(age_current)
+# yobs <- yvals[vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(location)]
+# zobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(value)
 
 tibble(xobs, yobs, zobs, logit(zobs))
 ```
@@ -209,6 +212,7 @@ tibble(xobs, yobs, zobs, logit(zobs))
 As in the 1D case, the posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationships' between unobserved independent variables `{xvals, yvals}` and observed independent variables `(xobs, yobs)`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`.
 In the 1D case, our unobserved was `xvals`, now it is the concatenated vector grid `{xvals, yvals}` of size 320x320 (32 ages in each of 10 provinces).
 
+Plot a sample of posterior curves against the observed data (red points).
 ```{r}
 #| label: posterior_2D
 
@@ -251,14 +255,12 @@ post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(d
   geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red") +
   scale_x_continuous(breaks=xvals, name="current age x_i") +
   facet_wrap(~ y_label)
-
 ```
 
 As before, we can compare performance by adding back in data points that the model has not seen in green:
 
 ```{r}
 #| label: compare2D
-
 
 post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) + 
   geom_line(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.2) + 
@@ -270,6 +272,60 @@ post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(d
   scale_x_continuous(breaks=xvals, name="current age x_i") + #scale_y_continuous(limits=c(0,1))
   facet_wrap(~ y_label)
 
-#ggsave(paste0("plots/ABpost_l",l,"_ksqexp",".pdf"), height=4.51, width=7.29)
+#ggsave(paste0("plots/post2D_l1",l1,"_l2",l2,"_ksqexp","_alldata",".pdf"), height=4.51, width=7.29)
+```
+
+
+
+# 2D case model fitting
+We now wish to improve our basic model by adding information to the prior and experimenting with choice of covariance function and related parameters. First, define helper functions to enable easy running of the 2D model (saved in "R/"):
+`compute_prior2D()`
+`plot_prior2D()`
+`compute_posterior2D()`
+`plot_posterior2D()`
+`run_GP()`
+The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`.
+
+```{r}
+#| label: auto2D
+
+#' x and y are independent variables, with dependent variable z
+run_GP <- function(vax_dataset, first_agecurrent=NA, last_agecurrent=NA, yvals=NA, k=NA, k_name=NA, l1=NA, l2=NA, ndrws=50) {
+  #' define possible x values
+  if (is.na(first_agecurrent)) first_agecurrent <- 1  # first age for the GP model
+  if (is.na(last_agecurrent)) last_agecurrent <- 32  #age_pre1970-1  # last age for the GP model 
+  xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
+
+  #' define possible y values (yvals is a named vector)
+  province_relation <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
+    filter(location %in% unique(vax_clean$location))  # province GDP data from StatCan
+  prov_levels <- (province_relation %>% pull(location))  # useful shortcut for defining province factors
+  if (is.na(yvals)) yvals <- log(province_relation %>% pull(Dollars))  # a vector of provinces -- currently log(GDP)
+  names(yvals) <- prov_levels
+
+  #' define covariance and related parameters
+  if (is.na(k)) k <- ksqexp
+  if (is.na(k_name)) k_name <- "ksqexp"  # for plot titles
+  if (is.na(l1)) l1 <- 2  # x lengthscale
+  if (is.na(l2)) l2 <- 3  # relative lengthscale of x values to y values
+  yvals <- yvals*l2  # scale y values to the x lengthscale
+
+  #' compute and plot prior
+  prior2D <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels)
+  prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
+
+  #' observe data (we may wish to use cNICS here instead of vax_clean)
+  xobs <- vax_dataset %>% filter(age_current<=last_agecurrent) %>% pull(age_current)
+  yobs <- yvals[vax_dataset %>% filter(age_current<=last_agecurrent) %>% pull(location)]  # this includes scaling by l2
+  zobs <- vax_dataset %>% filter(age_current<=last_agecurrent) %>% pull(value)
+  tibble(xobs, yobs, zobs, logit(zobs)) %>% print()
+
+  #' compute and plot posterior
+  post2D <- compute_posterior2D(xvals=xvals, yvals=yvals, xobs=xobs, yobs=yobs, zobs=zobs,
+                              k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels)
+  post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k=k_name, k_param1=l1, k_param2=l2) %>% print()
+}
+
+run_GP(vax_clean)
 ```
 
