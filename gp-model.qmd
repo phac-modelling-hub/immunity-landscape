@@ -37,9 +37,10 @@ age_pre1970 <- current_year - 1969 # min age of those born strictly before 1970
 
 Model fitting is done using Gaussian distributions, whose domain is the entire real line. However, the vaccine coverage data is restricted to $[0,1]$ (though in practice, they're not on the boundaries of this interval). Thus, we transform the vaccine coverage data using a logit function to map it from $(0,1)$ to $(-\infty, \infty)$, perform the model fitting on the real line, and then transform the predictions back from $(-\infty, \infty)$ to $(0,1)$.
 
-
 # 1D case (current age)
+
 The 1D model can be run for any single province, e.g. Alberta.
+
 ```{r}
 vax_prov <- vax_clean %>% filter(pt=="AB") #%>% filter(n_doses!="2")
 ```
@@ -51,8 +52,8 @@ Use the squared exponential covariance function, `k`, to begin with and assume l
 ```{r}
 #| label: covariance
 
-ksqexp <- function(r,l) {  # this is also defined in ksqexp.R
-  exp(-r^2 / (2*l^2))
+ksqexp <- function(r,l,b=1) {  # this is also defined in ksqexp.R
+  b*exp(-r^2 / (2*l^2))
 }
 
 first_agecurrent <- 1  # first age for the GP model
@@ -139,6 +140,7 @@ post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)),
 
 #ggsave(paste0("plots/ABpost_l",l,"_ksqexp",".pdf"), height=4.51, width=7.29)
 ```
+
 ## Extensions
 To improve this model, the next step would be to experiment with choice of covariance function `k` and lengthscale `l`, and to add in province as a second dimension. It is also worth considering how to treat dose data - currently the model struggles with data points for 2 dose. It may be worth fitting two fairly separate GPs (1+ and 2 dose), or using the 2 dose estimates as minimums for the prior in some way.
 
@@ -148,7 +150,7 @@ To improve this model, the next step would be to experiment with choice of covar
 The 2D model adds province as a second dimension (only prior and observed data shown do far). In this model, x_i is current age, y_i is province, and vertical axis (z_i) is always estimated vaccine coverage. Note: more information is needed to inform relationship between provinces.
 
 ## Covariance and prior
-We use the squared exponential covariance function to begin with, with current age lengthscale, `l1`, and _relative_ lengthscale of current age to province, `l2`. Relation of provinces currently uses GDP from StatCan (https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610040201) -- this should be updated when a better method is found. Define the prior ~ Normal(0,cov) as before and draw a sample.
+We use the squared exponential covariance function to begin with, with current age lengthscale, `l1`, and *relative* lengthscale of current age to province, `l2`. If the squared exponential is too strong an assumption, we can also increase its variance (i.e. the model uncertainty) with parameter `b`. Relation of provinces currently uses GDP from StatCan (https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610040201) -- this should be updated when a better method is found. Define the prior \~ Normal(0,cov) as before and draw a sample.
 
 Note that we currently assume a mean of 0. We could specify a non-zero mean here in the prior, or equivalently, we could centre the observed data to mean 0, run the Gaussian Process as normal and then rescale the data back at the end. We will do the latter as it simplifies calculation.
 
@@ -172,7 +174,8 @@ l2 <- 3  # relative lengthscale of x values to y values
 yvals <- yvals*l2  # scale y values to the x lengthscale
 
 #' covariance matrix in 2D
-covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l1)) %>%
+b <- 1 # optional function scale for ksqexp determining output variance
+covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l1, b=b)) %>%
   pull(k) %>% matrix(nrow=npts)
 
 #' define prior and take 50 draws
@@ -191,7 +194,7 @@ prior2D %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + scale_x_continuo
 ```
 
 ## Observed data
-Expose the model to ~50 data points (to see how well it can predict the remainder). Exclude 2-dose data. We will use the logistic transform of z (`logit(zobs)`) which maps from [0,1] to [-inf,inf]. Our GP uses a prior mean of 0 so we centre the data around 0 after transforming.
+Expose the model to ~50 data points (to see how well it can predict the remainder). Exclude 2-dose data. We will use the logistic transform of z (`logit(zobs)`) which maps from \[0,1\] to \[-inf,inf\]. Our GP uses a prior mean of 0 so we centre the data around 0 after transforming.
 
 To expose the model to the full vaccine coverage dataset, uncomment the three commented lines below.
 
@@ -215,8 +218,7 @@ tibble(xobs, yobs, zobs, logit_zobs_centred)
 ```
 
 ## Posterior
-As in the 1D case, the posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationships' between unobserved independent variables `{xvals, yvals}` and observed independent variables `(xobs, yobs)`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`.
-In the 1D case, our unobserved was `xvals`, now it is the concatenated vector grid `{xvals, yvals}` of size 320x320 (32 ages in each of 10 provinces).
+As in the 1D case, the posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationships' between unobserved independent variables `{xvals, yvals}` and observed independent variables `(xobs, yobs)`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`. In the 1D case, our unobserved was `xvals`, now it is the concatenated vector grid `{xvals, yvals}` of size 320x320 (32 ages in each of 10 provinces).
 
 Plot a sample of posterior curves against the observed data (red points).
 
@@ -226,10 +228,10 @@ Plot a sample of posterior curves against the observed data (red points).
 xygrid <- expand_grid(x=xvals, y=yvals)
 xyobs <- tibble(x=xobs,y=yobs)
 
-kuo <- generate_2Dksqexp_covmat(xygrid,xyobs,fn=ksqexp,l=l1)  # 'relationship' pairwise between unobserved and observed
-kou <- generate_2Dksqexp_covmat(xyobs,xygrid,fn=ksqexp,l=l1)  # 'relationship' pairwise between observed and unobserved
-koo <- generate_2Dksqexp_covmat(xyobs,xyobs,fn=ksqexp,l=l1) + 1e-6*diag(nrow(xyobs))  # protect against non-invertibleness
-kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=ksqexp,l=l1)
+kuo <- generate_2Dksqexp_covmat(xygrid,xyobs,fn=ksqexp,l=l1,b=b)  # 'relationship' pairwise between unobserved and observed
+kou <- generate_2Dksqexp_covmat(xyobs,xygrid,fn=ksqexp,l=l1,b=b)  # 'relationship' pairwise between observed and unobserved
+koo <- generate_2Dksqexp_covmat(xyobs,xyobs,fn=ksqexp,l=l1,b=b) + 1e-6*diag(nrow(xyobs))  # protect against non-invertibleness
+kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=ksqexp,l=l1,b=b)
 
 #' calculate posterior mean and posterior cov matrix
 post_mean <- kuo%*%solve(koo)%*%(logit_zobs_centred)  # conditional mean
@@ -264,7 +266,7 @@ post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(d
   facet_wrap(~ y_label)
 ```
 
-As before, we can compare performance by adding back in data points that the model has not seen in green:
+As before, we can compare performance by adding back in data points that the model has not seen in green (including for example 2-dose data):
 
 ```{r}
 #| label: compare2D
@@ -282,15 +284,15 @@ post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(d
 #ggsave(paste0("plots/post2D_l1",l1,"_l2",l2,"_ksqexp","_alldata",".pdf"), height=4.51, width=7.29)
 ```
 
-
-
 # 2D case model fitting
 We now wish to improve our basic model by adding information to the prior and experimenting with choice of covariance function and related parameters. First, define helper functions to enable easy running of the 2D model (saved in "R/"):
-`compute_prior2D()`
-`plot_prior2D()`
-`compute_posterior2D()`
-`plot_posterior2D()`
-`run_GP()`
+
+-   `compute_prior2D()`
+-   `plot_prior2D()`
+-   `compute_posterior2D()`
+-   `plot_posterior2D()`
+-   `run_GP()`.
+
 The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`.
 
 ```{r}
@@ -313,7 +315,7 @@ The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`.
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions
-run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=NA, k_name=NA, l1=NA, l2=NA, ndrws=50) {
+run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=NA, k_name=NA, l1=NA, l2=NA, ndrws=50, b=1) {
   #' define possible x values
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
 
@@ -330,9 +332,10 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
   if (is.na(l1)) l1 <- 1.5  # x lengthscale
   if (is.na(l2)) l2 <- 3  # relative lengthscale of x values to y values
   yvals <- yvals*l2  # scale y values to the x lengthscale
+  if (is.na(b)) b <- 1  # optional extra parameter for covariance
 
   #' compute and plot prior
-  prior2D <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels)
+  prior2D <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
   prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
 
   #' observe data (we may wish to use cNICS here instead of vax_clean)
@@ -344,7 +347,7 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
 
   #' compute and plot posterior
   post2D <- compute_posterior2D(xvals=xvals, yvals=yvals, xobs=xobs, yobs=yobs, zobs=zobs,
-                              k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels)
+                              k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
   post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k=k_name, k_param1=l1, k_param2=l2) %>% print()
   
   #' compare performance
@@ -355,4 +358,3 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
 
 run_GP(vax_clean)
 ```
-

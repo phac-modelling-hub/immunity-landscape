@@ -16,15 +16,16 @@
 #' @param l1 optional x-lengthscale parameter, for use with covariance functions ksqexp and kexp
 #' @param ndrws optional specify number of draws from the prior distribution
 #' @param prov_levels factor defining the names of provinces e.g. for y-values
-compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA, ndrws=50, prov_levels) {
+#' @param b optional function scale determining the output variance for k
+compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA, ndrws=50, prov_levels, b=1) {
   #' calculate covariances between unobserved and observed
   xygrid <- expand_grid(x=xvals, y=yvals)
   xyobs <- tibble(x=xobs,y=yobs)
   
-  kuo <- generate_2Dksqexp_covmat(xygrid,xyobs,fn=k,l=l1)  # 'relationship' pairwise between unobserved and observed
-  kou <- generate_2Dksqexp_covmat(xyobs,xygrid,fn=k,l=l1)  # 'relationship' pairwise between observed and unobserved
-  koo <- generate_2Dksqexp_covmat(xyobs,xyobs,fn=k,l=l1) + 1e-6*diag(nrow(xyobs))  # protect against non-invertibleness
-  kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=k,l=l1)
+  kuo <- generate_2Dksqexp_covmat(xygrid,xyobs,fn=k,l=l1,b=b)  # 'relationship' pairwise between unobserved and observed
+  kou <- generate_2Dksqexp_covmat(xyobs,xygrid,fn=k,l=l1,b=b)  # 'relationship' pairwise between observed and unobserved
+  koo <- generate_2Dksqexp_covmat(xyobs,xyobs,fn=k,l=l1,b=b) + 1e-6*diag(nrow(xyobs))  # protect against non-invertibleness
+  kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=k,l=l1,b=b)
   
   #' calculate posterior mean and posterior cov matrix
   logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # use the logistic-transformed data centred around mean 0

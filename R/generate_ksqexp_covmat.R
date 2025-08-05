@@ -7,8 +7,8 @@
 #'    - lengthscale l. 
 #'    fn is set to ksqexp by default; also works for kexp.
 #' @param l lengthscale
-
-generate_ksqexp_covmat <- function(x1,x2,fn=ksqexp,l) {
-  expand_grid(x1=x1,x2=x2) %>% mutate(k=fn(abs(x1-x2),l)) %>%  # pairwise evaluation of cov function
+#' @param b optional function scale determining the output variance for fn
+generate_ksqexp_covmat <- function(x1,x2,fn=ksqexp,l,b=1) {
+  expand_grid(x1=x1,x2=x2) %>% mutate(k=fn(abs(x1-x2),l,b)) %>%  # pairwise evaluation of cov function
     pull(k) %>% matrix(nrow=length(x1),byrow=T)
 }
