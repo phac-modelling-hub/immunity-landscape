@@ -27,7 +27,8 @@ compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA,
   kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=k,l=l1)
   
   #' calculate posterior mean and posterior cov matrix
-  post_mean <- kuo%*%solve(koo)%*%(logit(zobs))  # conditional mean
+  logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # use the logistic-transformed data centred around mean 0
+  post_mean <- kuo%*%solve(koo)%*%(logit_zobs_centred)  # conditional mean
   post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
   
   #' draw from the posterior distribution and record in dataframe post2D
@@ -35,7 +36,7 @@ compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA,
   for(i in 1:ndrws) {  # take 50 posterior draws
     post2D <- bind_rows(post2D, tibble(draw=i, x_i=xygrid$x, y_i=xygrid$y, post2D=rmnorm(1, post_mean, post_covmat + 1e-6*diag(nrow(post_covmat)))))  # each rmnorm is a random draw from the (multivariate) posterior
   }
-  post2D <- post2D %>% mutate(post2D_constrained=invlogit(post2D)) %>%  # add column to transform back to [0,1]
+  post2D <- post2D %>% mutate(post2D_constrained=invlogit(post2D + mean(logit(zobs)))) %>%  # add column to return mean and transform back to [0,1]
     mutate(y_label = names(yvals)[match(y_i, yvals)]) %>%  # add column to return province names
     mutate(y_label = factor(y_label, levels=prov_levels)) %>%  # order provinces
     select(draw, x_i, y_i, y_label, post2D, post2D_constrained)  # reorder columns
