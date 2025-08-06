@@ -82,7 +82,7 @@ prior %>% group_by(draw) %>% ggplot(aes(x=x_i,y=prior,group=factor(draw))) + sca
 
 ## Introduce observed data
 
-For this mini dataset `vax_prov`, we have a dataset of n data points. First expose the model to ~8 data points (to see how well it can predict the remainder). We will use the logistic transform of y (`logit(yobs)`) which maps from \[0,1\] to \[-inf,inf\].
+For this mini dataset `vax_prov`, we have a dataset of n data points. First expose the model to \~8 data points (to see how well it can predict the remainder). We will use the logistic transform of y (`logit(yobs)`) which maps from \[0,1\] to \[-inf,inf\].
 
 ```{r}
 #| label: observe_data
@@ -142,14 +142,15 @@ post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)),
 ```
 
 ## Extensions
+
 To improve this model, the next step would be to experiment with choice of covariance function `k` and lengthscale `l`, and to add in province as a second dimension. It is also worth considering how to treat dose data - currently the model struggles with data points for 2 dose. It may be worth fitting two fairly separate GPs (1+ and 2 dose), or using the 2 dose estimates as minimums for the prior in some way.
 
-
-
 # 2D case (current age and province)
+
 The 2D model adds province as a second dimension (only prior and observed data shown do far). In this model, x_i is current age, y_i is province, and vertical axis (z_i) is always estimated vaccine coverage. Note: more information is needed to inform relationship between provinces.
 
 ## Covariance and prior
+
 We use the squared exponential covariance function to begin with, with current age lengthscale, `l1`, and *relative* lengthscale of current age to province, `l2`. If the squared exponential is too strong an assumption, we can also increase its variance (i.e. the model uncertainty) with parameter `b`. Relation of provinces currently uses GDP from StatCan (https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610040201) -- this should be updated when a better method is found. Define the prior \~ Normal(0,cov) as before and draw a sample.
 
 Note that we currently assume a mean of 0. We could specify a non-zero mean here in the prior, or equivalently, we could centre the observed data to mean 0, run the Gaussian Process as normal and then rescale the data back at the end. We will do the latter as it simplifies calculation.
@@ -194,7 +195,8 @@ prior2D %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + scale_x_continuo
 ```
 
 ## Observed data
-Expose the model to ~50 data points (to see how well it can predict the remainder). Exclude 2-dose data. We will use the logistic transform of z (`logit(zobs)`) which maps from \[0,1\] to \[-inf,inf\]. Our GP uses a prior mean of 0 so we centre the data around 0 after transforming.
+
+Expose the model to \~50 data points (to see how well it can predict the remainder). Exclude 2-dose data. We will use the logistic transform of z (`logit(zobs)`) which maps from \[0,1\] to \[-inf,inf\]. Our GP uses a prior mean of 0 so we centre the data around 0 after transforming.
 
 To expose the model to the full vaccine coverage dataset, uncomment the three commented lines below.
 
@@ -223,6 +225,7 @@ tibble(xobs, yobs, zobs, logit_zobs_centred)
 ```
 
 ## Posterior
+
 As in the 1D case, the posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationships' between unobserved independent variables `{xvals, yvals}` and observed independent variables `(xobs, yobs)`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`. In the 1D case, our unobserved was `xvals`, now it is the concatenated vector grid `{xvals, yvals}` of size 320x320 (32 ages in each of 10 provinces).
 
 Plot a sample of posterior curves against the observed data (red points).
@@ -306,8 +309,8 @@ post2D_new <- post2D %>% ungroup() %>% left_join(data_2dose, by=c("x_i","y_label
   group_by(draw) %>% filter(all(row_valid))
 ```
 
-
 # 2D case model fitting
+
 We now wish to improve our basic model by adding information to the prior and experimenting with choice of covariance function and related parameters. First, define helper functions to enable easy running of the 2D model (saved in "R/"):
 
 -   `compute_prior2D()`
@@ -337,9 +340,11 @@ The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`.
 #' @param k_name as above, but written as a character string (character)
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
+#' @param b scale for covariance function determining the output variance
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions
-#' @param b optional scale for covariance function determining the output variance
-run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=NA, k_name=NA, l1=NA, l2=NA, b=1, ndrws=50) {
+#' @param show_plots if false, plots are hidden
+run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=NA, k_name=NA, l1=NA, l2=NA, b=1, 
+                   ndrws=50, show_plots=T) {
   #' define possible x values
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
 
@@ -359,19 +364,20 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
 
   #' compute and plot prior
   prior2D <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
-  prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
+  if (show_plots) prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
 
   #' observe data (we may wish to use cNICS here instead of vax_clean)
   xobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(age_current)
   yobs <- yvals[vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(location)]  # this includes scaling by l2
   zobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(value)
   logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # apply logistic transform and centre the data around mean 0
-  tibble(xobs, yobs, zobs, logit_zobs_centred) %>% print()
+  if (show_plots) tibble(xobs, yobs, zobs, logit_zobs_centred) %>% print()
 
   #' compute and plot posterior
   post2D <- compute_posterior2D(xvals=xvals, yvals=yvals, xobs=xobs, yobs=yobs, zobs=zobs,
                               k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
-  post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k=k_name, k_param1=l1, k_param2=l2) %>% print()
+  if (show_plots) post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k=k_name, k_param1=l1, k_param2=l2, k_param3=b,
+                              vax_dataset=vax_dataset, last_agecurrent=last_agecurrent, prov_levels=prov_levels) %>% print()
   
   #' compare performance
   #post_error <- post2D %>% group_by(x_i, y_i, y_label) %>% mutate(mean=mean(post2D_constrained))
@@ -380,4 +386,5 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
 }
 
 run_GP(vax_clean)
+#ggsave(paste0("plots/post2D_l1",1.5,"_l2",3,"_ksqexp","_not2dose",".pdf"), height=4.51, width=7.29)
 ```
