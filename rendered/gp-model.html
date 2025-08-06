@@ -338,7 +338,7 @@ window.Quarto = {
 <span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>yvals <span class="ot">&lt;-</span> yvals<span class="sc">*</span>l2  <span class="co"># scale y values to the x lengthscale</span></span>
 <span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="co">#' covariance matrix in 2D</span></span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co"># optional function scale for ksqexp determining output variance</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fl">0.75</span> <span class="co"># optional function scale for ksqexp determining output variance</span></span>
 <span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>covmat <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(<span class="at">x1=</span>xvals, <span class="at">y1=</span>yvals, <span class="at">x2=</span>xvals, <span class="at">y2=</span>yvals) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">k=</span><span class="fu">ksqexp</span>(<span class="fu">sqrt</span>((x1<span class="sc">-</span>x2)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> (y1<span class="sc">-</span>y2)<span class="sc">^</span><span class="dv">2</span>), l1, <span class="at">b=</span>b)) <span class="sc">%&gt;%</span></span>
 <span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(k) <span class="sc">%&gt;%</span> <span class="fu">matrix</span>(<span class="at">nrow=</span>npts)</span>
 <span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a></span>
@@ -421,7 +421,7 @@ window.Quarto = {
 <div class="cell">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' draw from the posterior distribution and record in dataframe post2D</span></span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>post2D <span class="ot">&lt;-</span> <span class="fu">tibble</span>()</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">50</span>) {  <span class="co"># take 50 posterior draws</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>) {  <span class="co"># take 50 posterior draws</span></span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  post2D <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(post2D, <span class="fu">tibble</span>(<span class="at">draw=</span>i, <span class="at">x_i=</span>xygrid<span class="sc">$</span>x, <span class="at">y_i=</span>xygrid<span class="sc">$</span>y, <span class="at">post2D=</span><span class="fu">rmnorm</span>(<span class="dv">1</span>, post_mean, post_covmat <span class="sc">+</span> <span class="fl">1e-6</span><span class="sc">*</span><span class="fu">diag</span>(<span class="fu">nrow</span>(post_covmat)))))  <span class="co"># each rmnorm is a random draw from the (multivariate) posterior</span></span>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>post2D <span class="ot">&lt;-</span> post2D <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">post2D_constrained=</span><span class="fu">invlogit</span>(post2D <span class="sc">+</span> <span class="fu">mean</span>(<span class="fu">logit</span>(zobs)))) <span class="sc">%&gt;%</span>  <span class="co"># add column to return mean and transform back to [0,1]</span></span>
@@ -507,24 +507,24 @@ window.Quarto = {
 <span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp</span></span>
 <span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp</span></span>
 <span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param ndrws specify number of draws to be taken from the prior and posterior distributions</span></span>
-<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>run_GP <span class="ot">&lt;-</span> <span class="cf">function</span>(vax_dataset, <span class="at">first_agecurrent=</span><span class="dv">1</span>, <span class="at">last_agecurrent=</span><span class="dv">32</span>, <span class="at">yvals=</span><span class="cn">NA</span>, <span class="at">k=</span><span class="cn">NA</span>, <span class="at">k_name=</span><span class="cn">NA</span>, <span class="at">l1=</span><span class="cn">NA</span>, <span class="at">l2=</span><span class="cn">NA</span>, <span class="at">ndrws=</span><span class="dv">50</span>, <span class="at">b=</span><span class="dv">1</span>) {</span>
-<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>  <span class="co">#' define possible x values</span></span>
-<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>  xvals <span class="ot">&lt;-</span> first_agecurrent<span class="sc">:</span>last_agecurrent  <span class="co"># a vector of current ages</span></span>
-<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">#' define possible y values</span></span>
-<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>  province_relation <span class="ot">&lt;-</span> readr<span class="sc">::</span><span class="fu">read_csv</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data"</span>, <span class="st">"3610040201-noSymbol.csv"</span>), <span class="at">show_col_types =</span> F) <span class="sc">%&gt;%</span></span>
-<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(location <span class="sc">%in%</span> <span class="fu">unique</span>(vax_clean<span class="sc">$</span>location))  <span class="co"># province GDP data from StatCan</span></span>
-<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>  prov_levels <span class="ot">&lt;-</span> (province_relation <span class="sc">%&gt;%</span> <span class="fu">pull</span>(location))  <span class="co"># useful shortcut for defining province factors</span></span>
-<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(yvals)) yvals <span class="ot">&lt;-</span> <span class="fu">log</span>(province_relation <span class="sc">%&gt;%</span> <span class="fu">pull</span>(Dollars))  <span class="co"># a vector of provinces -- currently log(GDP)</span></span>
-<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(yvals) <span class="ot">&lt;-</span> prov_levels</span>
-<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a>  <span class="co">#' define covariance and related parameters</span></span>
-<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(k)) k <span class="ot">&lt;-</span> ksqexp</span>
-<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(k_name)) k_name <span class="ot">&lt;-</span> <span class="st">"ksqexp"</span>  <span class="co"># for plot titles</span></span>
-<span id="cb20-32"><a href="#cb20-32" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(l1)) l1 <span class="ot">&lt;-</span> <span class="fl">1.5</span>  <span class="co"># x lengthscale</span></span>
-<span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(l2)) l2 <span class="ot">&lt;-</span> <span class="dv">3</span>  <span class="co"># relative lengthscale of x values to y values</span></span>
-<span id="cb20-34"><a href="#cb20-34" aria-hidden="true" tabindex="-1"></a>  yvals <span class="ot">&lt;-</span> yvals<span class="sc">*</span>l2  <span class="co"># scale y values to the x lengthscale</span></span>
-<span id="cb20-35"><a href="#cb20-35" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(b)) b <span class="ot">&lt;-</span> <span class="dv">1</span>  <span class="co"># optional extra parameter for covariance</span></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param b optional scale for covariance function determining the output variance</span></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>run_GP <span class="ot">&lt;-</span> <span class="cf">function</span>(vax_dataset, <span class="at">first_agecurrent=</span><span class="dv">1</span>, <span class="at">last_agecurrent=</span><span class="dv">32</span>, <span class="at">yvals=</span><span class="cn">NA</span>, <span class="at">k=</span><span class="cn">NA</span>, <span class="at">k_name=</span><span class="cn">NA</span>, <span class="at">l1=</span><span class="cn">NA</span>, <span class="at">l2=</span><span class="cn">NA</span>, <span class="at">ndrws=</span><span class="dv">50</span>, <span class="at">b=</span><span class="fl">0.75</span>) {</span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">#' define possible x values</span></span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>  xvals <span class="ot">&lt;-</span> first_agecurrent<span class="sc">:</span>last_agecurrent  <span class="co"># a vector of current ages</span></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>  <span class="co">#' define possible y values</span></span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>  province_relation <span class="ot">&lt;-</span> readr<span class="sc">::</span><span class="fu">read_csv</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data"</span>, <span class="st">"3610040201-noSymbol.csv"</span>), <span class="at">show_col_types =</span> F) <span class="sc">%&gt;%</span></span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(location <span class="sc">%in%</span> <span class="fu">unique</span>(vax_clean<span class="sc">$</span>location))  <span class="co"># province GDP data from StatCan</span></span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a>  prov_levels <span class="ot">&lt;-</span> (province_relation <span class="sc">%&gt;%</span> <span class="fu">pull</span>(location))  <span class="co"># useful shortcut for defining province factors</span></span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(yvals)) yvals <span class="ot">&lt;-</span> <span class="fu">log</span>(province_relation <span class="sc">%&gt;%</span> <span class="fu">pull</span>(Dollars))  <span class="co"># a vector of provinces -- currently log(GDP)</span></span>
+<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(yvals) <span class="ot">&lt;-</span> prov_levels</span>
+<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a>  <span class="co">#' define covariance and related parameters</span></span>
+<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(k)) k <span class="ot">&lt;-</span> ksqexp</span>
+<span id="cb20-32"><a href="#cb20-32" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(k_name)) k_name <span class="ot">&lt;-</span> <span class="st">"ksqexp"</span>  <span class="co"># for plot titles</span></span>
+<span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(l1)) l1 <span class="ot">&lt;-</span> <span class="fl">1.5</span>  <span class="co"># x lengthscale</span></span>
+<span id="cb20-34"><a href="#cb20-34" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.na</span>(l2)) l2 <span class="ot">&lt;-</span> <span class="dv">3</span>  <span class="co"># relative lengthscale of x values to y values</span></span>
+<span id="cb20-35"><a href="#cb20-35" aria-hidden="true" tabindex="-1"></a>  yvals <span class="ot">&lt;-</span> yvals<span class="sc">*</span>l2  <span class="co"># scale y values to the x lengthscale</span></span>
 <span id="cb20-36"><a href="#cb20-36" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb20-37"><a href="#cb20-37" aria-hidden="true" tabindex="-1"></a>  <span class="co">#' compute and plot prior</span></span>
 <span id="cb20-38"><a href="#cb20-38" aria-hidden="true" tabindex="-1"></a>  prior2D <span class="ot">&lt;-</span> <span class="fu">compute_prior2D</span>(<span class="at">xvals=</span>xvals, <span class="at">yvals=</span>yvals, <span class="at">k=</span>k, <span class="at">l1=</span>l1, <span class="at">ndrws=</span>ndrws, <span class="at">prov_levels=</span>prov_levels, <span class="at">b=</span>b)</span>
@@ -596,32 +596,32 @@ window.Quarto = {
 # A tibble: 16,000 × 5
     draw   x_i   y_i prior2D y_label                  
    &lt;int&gt; &lt;int&gt; &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;                    
- 1     1     1  25.0  -1.39  Nunavut                  
- 2     1     1  25.0  -1.38  Northwest Territories    
- 3     1     1  26.8  -0.541 Prince Edward Island     
- 4     1     1  30.9  -0.223 Newfoundland and Labrador
- 5     1     1  32.2   0.432 Nova Scotia              
- 6     1     1  33.5   1.03  Manitoba                 
- 7     1     1  38.0   0.814 British Columbia         
- 8     1     1  38.3   0.966 Alberta                  
- 9     1     1  39.0   0.906 Quebec                   
-10     1     1  41.1  -0.615 Ontario                  
+ 1     1     1  25.0  2.08   Nunavut                  
+ 2     1     1  25.0  2.07   Northwest Territories    
+ 3     1     1  26.8  0.0541 Prince Edward Island     
+ 4     1     1  30.9 -0.721  Newfoundland and Labrador
+ 5     1     1  32.2 -0.637  Nova Scotia              
+ 6     1     1  33.5  0.204  Manitoba                 
+ 7     1     1  38.0  0.721  British Columbia         
+ 8     1     1  38.3  0.857  Alberta                  
+ 9     1     1  39.0  0.869  Quebec                   
+10     1     1  41.1 -0.335  Ontario                  
 # ℹ 15,990 more rows
 
 [[2]]
 # A tibble: 16,000 × 6
-    draw   x_i   y_i y_label                   post2D post2D_constrained
-   &lt;int&gt; &lt;int&gt; &lt;dbl&gt; &lt;fct&gt;                      &lt;dbl&gt;              &lt;dbl&gt;
- 1     1     1  25.0 Nunavut                   -0.535              0.813
- 2     1     1  25.0 Northwest Territories     -0.514              0.816
- 3     1     1  26.8 Prince Edward Island       1.11               0.958
- 4     1     1  30.9 Newfoundland and Labrador  0.484              0.923
- 5     1     1  32.2 Nova Scotia                0.331              0.912
- 6     1     1  33.5 Manitoba                  -0.214              0.857
- 7     1     1  38.0 British Columbia          -1.03               0.725
- 8     1     1  38.3 Alberta                   -0.997              0.732
- 9     1     1  39.0 Quebec                    -0.820              0.766
-10     1     1  41.1 Ontario                   -0.438              0.827
+    draw   x_i   y_i y_label                    post2D post2D_constrained
+   &lt;int&gt; &lt;int&gt; &lt;dbl&gt; &lt;fct&gt;                       &lt;dbl&gt;              &lt;dbl&gt;
+ 1     1     1  25.0 Nunavut                   -0.952               0.741
+ 2     1     1  25.0 Northwest Territories     -0.952               0.741
+ 3     1     1  26.8 Prince Edward Island      -0.372               0.836
+ 4     1     1  30.9 Newfoundland and Labrador -1.36                0.655
+ 5     1     1  32.2 Nova Scotia                0.0267              0.884
+ 6     1     1  33.5 Manitoba                   0.616               0.932
+ 7     1     1  38.0 British Columbia          -0.939               0.744
+ 8     1     1  38.3 Alberta                   -1.46                0.633
+ 9     1     1  39.0 Quebec                    -1.99                0.503
+10     1     1  41.1 Ontario                    0.281               0.908
 # ℹ 15,990 more rows</code></pre>
 </div>
 </div>

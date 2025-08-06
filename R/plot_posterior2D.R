@@ -39,12 +39,12 @@ plot_posterior2D <- function(df, xobs, yobs, zobs, vax_clean=NA, last_agecurrent
     facet_wrap(~ y_label) 
   
   #' #' plot 3
-  #' df %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) + 
-  #'   geom_line(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.2) + 
+  #' p3 <- df %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) +
+  #'   geom_line(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.2) +
   #'   geom_point(data=tibble(x=(vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(age_current)),  # adding in full data from vax_clean
-  #'                          y=(vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(value)), 
+  #'                          y=(vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(value)),
   #'                          y_label=factor((vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(location)), levels=prov_levels)),
-  #'              aes(x=x,y=y), col="green") + 
+  #'              aes(x=x,y=y), col="green") +
   #'   geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red") +
   #'   scale_x_continuous(breaks=unique(df$x_i), name="current age x_i") + scale_y_continuous(limits=c(0,1)) +
   #'   facet_wrap(~ y_label)

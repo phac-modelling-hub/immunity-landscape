@@ -198,6 +198,8 @@ Expose the model to ~50 data points (to see how well it can predict the remainde
 
 To expose the model to the full vaccine coverage dataset, uncomment the three commented lines below.
 
+Extension: A possible model extension is to add 2-dose data as minimums at this point. We are currently considering how to do this...
+
 ```{r}
 #| label: data_2D
 
@@ -210,6 +212,9 @@ zobs <- vax_clean %>% filter((age_current %in% c(4,9,13,19,20,21,25,30)) & n_dos
 xobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2") %>% pull(age_current)
 yobs <- yvals[vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2") %>% pull(location)]
 zobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2") %>% pull(value)
+
+#' optional extension: add 2-dose data as minimums?
+# vax_obs <- vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2")  # unclear how to incorporate as a minimum
 
 #' apply logistic transform and then centre the data around mean 0
 logit_zobs_centred <- logit(zobs) - mean(logit(zobs))
@@ -284,6 +289,24 @@ post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(d
 #ggsave(paste0("plots/post2D_l1",l1,"_l2",l2,"_ksqexp","_alldata",".pdf"), height=4.51, width=7.29)
 ```
 
+Optional: We can also drop any posterior draws that do not satisfy the 2-dose data points as a minimum. Due to the underlying mathematics, this is (*we think*) mathematically equivalent to constraining the prior and proportionally reweighting the remaining valid draws. This turns out to be too strong a constraint so the code snippet is skipped.
+
+```{r}
+#| label: set_minimums2D
+#| eval: false
+
+# extract 2-dose data from vax_clean, matching column names with post2D
+data_2dose <- tibble(x_i=(vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2") %>% pull(age_current)),  # adding in full data from vax_clean
+                     y_label=factor((vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2") %>% pull(location)), levels=prov_levels),
+                     value_2dose=(vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2") %>% pull(value)))
+# filter out posterior draws that do not meet the criterion, using all()
+post2D_new <- post2D %>% ungroup() %>% left_join(data_2dose, by=c("x_i","y_label")) %>%
+  mutate(value_2dose=ifelse(is.na(value_2dose), 0, value_2dose)) %>%  ##UP TO HERE
+  mutate(row_valid=(post2D_constrained >= value_2dose)) %>%
+  group_by(draw) %>% filter(all(row_valid))
+```
+
+
 # 2D case model fitting
 We now wish to improve our basic model by adding information to the prior and experimenting with choice of covariance function and related parameters. First, define helper functions to enable easy running of the 2D model (saved in "R/"):
 
@@ -315,7 +338,8 @@ The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`.
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions
-run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=NA, k_name=NA, l1=NA, l2=NA, ndrws=50, b=1) {
+#' @param b optional scale for covariance function determining the output variance
+run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=NA, k_name=NA, l1=NA, l2=NA, b=1, ndrws=50) {
   #' define possible x values
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
 
@@ -332,7 +356,6 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
   if (is.na(l1)) l1 <- 1.5  # x lengthscale
   if (is.na(l2)) l2 <- 3  # relative lengthscale of x values to y values
   yvals <- yvals*l2  # scale y values to the x lengthscale
-  if (is.na(b)) b <- 1  # optional extra parameter for covariance
 
   #' compute and plot prior
   prior2D <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)

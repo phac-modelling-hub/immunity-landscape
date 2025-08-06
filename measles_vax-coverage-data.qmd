@@ -875,7 +875,7 @@ df_names <- c(paste0("vax_", pt_lookup() |> filter(!(pt %in% c("CA", "SK", "NB",
 vax <- lapply(df_names, get) |> bind_rows() # aggregated df for kids estimates (for plotting here)
 ```
 
-We export our standardized dataset using the following code chunk:
+We also export our standardized dataset.
 
 ```{r}
 #| label: export_vax
