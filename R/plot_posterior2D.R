@@ -17,9 +17,9 @@
 #' @param k_name covariance function name as a character string (character)
 #' @param k_param1 value of first k parameter e.g. lengthscale (numeric)
 #' @param k_param2 value of second k parameter e.g. relative lengthscale of x to y (numeric)
-#' @param k_param2 value of third k parameter e.g. b (numeric)
+#' @param k_param3 value of third k parameter e.g. b (numeric)
 #' 
-#' The final plot also makes use of the full (observed and unobserved) data:
+#' The final plot also makes use of the full (observed and unobserved) data from vax_dataset:
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
 #' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
 #' @param prov_levels factor defining the names of provinces
@@ -35,14 +35,14 @@ plot_posterior2D <- function(df, xobs, yobs, zobs, k_name=NA, k_param1=NA, k_par
     scale_x_continuous(breaks=unique(df$x_i), name="current age x_i") +
     ggtitle(paste0("k=", k_name, "; k_param1=", k_param1, ", k_param2=", k_param2)) +
     facet_wrap(~ y_label)
-  
+
   #' plot 2
   p2 <- df %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) +
     geom_line(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.2) +
     geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red") +
     scale_x_continuous(breaks=unique(df$x_i), name="current age x_i") + scale_y_continuous(limits=c(0,1)) +
     ggtitle(paste0("k=", k_name, "; k_param1=", k_param1, ", k_param2=", k_param2)) +
-    facet_wrap(~ y_label) 
+    facet_wrap(~ y_label)
   
   #' plot 3
   p3 <- df %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) +
@@ -53,8 +53,9 @@ plot_posterior2D <- function(df, xobs, yobs, zobs, k_name=NA, k_param1=NA, k_par
                aes(x=x,y=y), col="green") +
     geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red") +
     scale_x_continuous(breaks=unique(df$x_i), name="current age x_i") + scale_y_continuous(limits=c(0,1)) +
-    ggtitle(paste0("k=", k_name, "; k_param1=", k_param1, ", k_param2=", k_param2, ", k_param=", k_param3)) +
+    ggtitle(paste0("k=", k_name, "; k_param1=", k_param1, ", k_param2=", k_param2, ", k_param3=", k_param3)) +
     facet_wrap(~ y_label)
   
+  #list(p3)
   list(p1,p2,p3)
 }
