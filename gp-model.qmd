@@ -408,13 +408,13 @@ run_GP(vax_clean,l1=1.5,l2=3,b=0.75)
 
 ## Running with cNICS data
 
-Note that the provincial estimates collected in `vax_clean` are from multiple sources with varying data collection methodology. As an alternative, the national cNICS study, although perhaps less trustworthy, does at least have consistent methodology across provinces. We make use of Irena's cleaned, standardised cNICS data.
+Note that the provincial estimates collected in `vax_clean` are from multiple sources with varying data collection methodology. As an alternative, the national cNICS study, although perhaps less trustworthy, does at least have consistent methodology across provinces. We make use of Irena's cleaned, standardised cNICS data and run_GP(). The final plot compares model fit against the provincial dataset `vax_clean`.
 
 Note: Nunavut youngest estimate is described as "treat with caution" in the cNICS online dataset.
 ```{r}
 #| label: run_cNICS
 
-vax_cNICS <- readr::read_csv(here::here("data", "measles_CNICS.csv"), show_col_types = FALSE) %>% 
+vax_cNICS <- readr::read_csv(here::here("data", "measles_CNICS.csv"), show_col_types = FALSE) %>%
   filter(!(pt %in% c("SK","YT","NB","CA"))) %>%
   mutate(age_current=current_year - year_birth)
 run_GP(vax_cNICS, b=0.75, ndrws=15)
