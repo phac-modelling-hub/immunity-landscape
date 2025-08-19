@@ -41,7 +41,6 @@ Model fitting is done using Gaussian distributions, whose domain is the entire r
 
 A Gaussian Process model assumes relation of the independent variable(s), i.e. that ages which are 'close-by' (defined however we wish with parameter l) will have similar vaccination coverage. We can test if this is a plausible assumption for our dataset. ...
 
-
 # 1D case (current age)
 
 The 1D model can be run for any single province, e.g. Alberta.
@@ -152,7 +151,7 @@ To improve this model, the next step would be to experiment with choice of covar
 
 # 2D case (current age and province)
 
-The 2D model adds province as a second dimension (only prior and observed data shown do far). In this model, x_i is current age, y_i is province, and vertical axis (z_i) is always estimated vaccine coverage. Note: more information is needed to inform relationship between provinces.
+The 2D model adds province as a second dimension. In this model, x_i is current age, y_i is province, and vertical axis (z_i) is always estimated vaccine coverage. Note: more information is needed to inform relationship between provinces.
 
 ## Covariance and prior
 
@@ -390,7 +389,7 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
 run_GP(vax_clean)
 ```
 
-From a quick by-eye model fitting, current best GP model parameter values are approximately `l1=1.5, l2=3, b=0.75` for `k=ksqexp`. A more formal fit could also be done, using for example take-one-out cross-validation with log posterior predictive density (lppd) as the 'error' metric (**functionality not yet added).
+From a quick by-eye model fitting, current best GP model parameter values are approximately `l1=1.5, l2=3, b=0.75` for `k=ksqexp`. A more formal fit could also be done, using for example take-one-out cross-validation with log posterior predictive density (lppd) as the 'error' metric (\*\*functionality not yet added).
 
 ```{r}
 #| label: fit_byeye
@@ -411,6 +410,7 @@ run_GP(vax_clean,l1=1.5,l2=3,b=0.75)
 Note that the provincial estimates collected in `vax_clean` are from multiple sources with varying data collection methodology. As an alternative, the national cNICS study, although perhaps less trustworthy, does at least have consistent methodology across provinces. We make use of Irena's cleaned, standardised cNICS data and run_GP(). The final plot compares model fit against the provincial dataset `vax_clean`.
 
 Note: Nunavut youngest estimate is described as "treat with caution" in the cNICS online dataset.
+
 ```{r}
 #| label: run_cNICS
 
