@@ -81,7 +81,7 @@ prior <- tibble()
 for(i in 1:50) {
   prior <- bind_rows(prior, tibble(draw=i, x_i=xvals, prior=rmnorm(1, rep(0,npts), covmat+1e-6*diag(npts))))  # each rmnorm is a random draw from the (multivariate) prior
 }
-prior %>% group_by(draw) %>% ggplot(aes(x=x_i,y=prior,group=factor(draw))) + scale_x_continuous(breaks=xvals,name="current age x_i") + geom_point(alpha=0.3) + geom_line(alpha=0.2)
+prior %>% group_by(draw) %>% ggplot(aes(x=x_i,y=prior,group=factor(draw))) + scale_x_continuous(breaks=xvals, name="current age x_i") + geom_point(alpha=0.3) + geom_line(alpha=0.2)
 ```
 
 ## Introduce observed data
@@ -194,8 +194,12 @@ for(i in 1:50){  # 50 realisations from a 2D gaussian process, with both x, y as
 prov_levels <- (province_relation %>% pull(location))  # useful shortcut for defining province factors
 prior2D <- prior2D %>% mutate(y_label = names(yvals)[match(y_i, yvals)]) %>% 
   mutate(y_label = factor(y_label, levels=prov_levels))
-prior2D %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + scale_x_continuous(breaks=xvals,name="current age x_i") +
+prior2D %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + scale_x_continuous(breaks=xvals, name="current age x_i") +
   geom_line(alpha=0.3) + facet_wrap(~ y_label)
+
+# prior2D %>% ggplot(aes(x=x_i, y=invlogit(prior2D + mean(logit(zobs))), group=factor(draw))) +  # transformed centred plot for talks
+#   scale_x_continuous(name="current age x_i", limits=c(1,32), breaks=xvals) + ylab("prior") + ylim(c(0,1)) +
+#   geom_line(alpha=0.3) + facet_wrap(~ y_label) + theme(axis.text.x = element_text(size = 6))
 ```
 
 ## Observed data
@@ -407,7 +411,7 @@ run_GP(vax_clean,l1=1.5,l2=3,b=0.75)
 
 ## Running with cNICS data
 
-Note that the provincial estimates collected in `vax_clean` are from multiple sources with varying data collection methodology. As an alternative, the national cNICS study, although perhaps less trustworthy, does at least have consistent methodology across provinces. We make use of Irena's cleaned, standardised cNICS data and run_GP(). The final plot compares model fit against the provincial dataset `vax_clean`.
+Note that the provincial estimates collected in `vax_clean` are from multiple sources with varying data collection methodology. As an alternative, the national cNICS study, although perhaps less trustworthy, does at least have consistent methodology across provinces. We make use of Irena's cleaned, standardised cNICS data and run_GP(). The final plot compares model fit against the full (1+ and 2 dose) provincial dataset `vax_clean`.
 
 Note: Nunavut youngest estimate is described as "treat with caution" in the cNICS online dataset.
 
