@@ -64,17 +64,51 @@ number-sections: true
 
 *Vaccine* articles have a word limit of 5000, with up to 10 figures+tables and up to 50 references. The abstract needs to be under 300 words - ours is currently 326. The journal also allows/ encourages a graphical abstract.
 
+Introductory paragraph
+
+Background on Measles/ Measles in Canada
+
+Paragraph on the research problem - limited serological data, vaccine data only by province & very heterogeneous
+
+Paragraph outlining what this article adds ("Using XXX, this article estimates ...")
+
 ## Material and methods
 
-text
+### Data
+
+#### Provincial data sources
+
+Explain data sources and standardisation. Will we make the standardised dataset available on GitHub?
+
+#### National data sources
+
+Flag nuances in the data: 1/2 vs 1+/2+ dose, differing vaccination schedules between provinces (second dose administered at 18mnths vs 4-6y), level of reporting, methodology (whether self-reported or from GP data if known)
+
+### Model 1: Gaussian Process model
+
+### Model 2: GLM with XXX
+
+### Model fitting procedures
 
 ## Results
 
-text
+### Vaccine coverage estimates
 
 ```{r}
 ```
 
+### Model comparison
+
+### Additional sensitivity analysis and uncertainty quantification
+
 ## Discussion
 
-text
+Paragraphs to discuss findings
+
+Paragraph/s to compare to other literature
+
+Miscaellanous discussion points - list here as we think of them
+
+Limitations paragraph
+
+Conclusions paragraph
