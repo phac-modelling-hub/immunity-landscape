@@ -72,7 +72,7 @@ Introductory paragraph
 
 Background on Measles/ Measles in Canada
 
-Paragraph on the research problem - limited serological data, vaccine data only by province & very heterogeneous
+Paragraph on the research problem - limited serological data, vaccine data only by province & very heterogeneous. Flag susceptibility vs vaccination. Flag the need for modelling (preliminary linear stuff didn't work/ datasets all have different methodology!).
 
 Paragraph outlining what this article adds ("Using XXX, this article estimates ...")
 
@@ -94,6 +94,8 @@ Flag nuances in the data: 1/2 vs 1+/2+ dose, differing vaccination schedules bet
 
 ### Model fitting procedures
 
+### Model comparison
+
 ## Results
 
 ### Vaccine coverage estimates
@@ -111,8 +113,8 @@ Paragraphs to discuss findings
 
 Paragraph/s to compare to other literature
 
-Miscaellanous discussion points - list here as we think of them
+Miscellaneous discussion points - list here as we think of them: Susceptibility vs Vaccination (they are not the same); flag that we haven't tested the model on other countries/pathogens;
 
-Limitations paragraph
+Limitations paragraph: note older ages not explicitly considered/note the assumptions on older ages; some discussion of relation of provinces; 
 
-Conclusions paragraph
+Conclusions paragraph 
