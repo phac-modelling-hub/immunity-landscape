@@ -1,0 +1,80 @@
+---
+title: "Quantifying population susceptibility to measles in Canada using vaccine coverage estimates"
+editor: visual
+author:
+  - name: Liza Hadley
+    corresponding: true
+    email: lh667@cam.ac.uk; liza.hadley@colorado.edu
+    affiliations:
+      - id: cu
+        name: University of Colorado Boulder
+        city: Boulder
+        state: CO
+        country: USA
+        postal-code: 80309
+      - name: University of Cambridge
+        city: Cambridge
+        country: UK
+        postal-code: CB3 0ES
+  - name: Rachael M. Milwid
+    corresponding: false
+    affiliations:
+      - id: phac
+        name: Public Health Agency of Canada
+        city: Toronto?
+        state: ON?
+        country: Canada
+        postal-code:
+  - name: Valerie Hongoh
+    corresponding: false
+    affiliations:
+      - ref: phac
+  - name: Stephen M. Kissler
+    corresponding: false
+    affiliations:
+      - ref: cu
+    acknowledgements: "SMK is supported by a Mathematical Modeling of Policy Options for Evolving Public Health Challenges award from the U.S. National Science Foundation and Centers for Disease Control and Prevention (DMS- 2436340)."
+  - name: Irena Papst
+    corresponding: false
+    affiliations:
+      - ref: phac
+keywords:
+  - Measles
+  - vaccination
+  - coverage
+  - statistical modelling
+  - Canada
+abstract: |
+  Background & aims of study: The 2024/2025 global measles outbreak underscored ongoing changes in the immunity landscape of some vaccine-preventable diseases (VPDs), which have been occurring steadily over the last two decades. In Canada, there were 3170 reported measles cases between January and early June 2025, far exceeding the average annual case count of <200. This significant outbreak has underscored the need to better understand the present state of population immunity to measles in Canada, an essential input parameter for outbreak response models. Most population immunity in this setting is derived from routine childhood vaccination, but the best available data (vaccine coverage) is often collected cross-sectionally to monitor population adherence to recommended immunization schedules, and not to inform the current state of the population’s susceptibility to measles. This study hence aims to develop statistical methods to adapt available measles vaccine coverage estimates into reliable estimates of present-day immunity in Canada by age and province/territory.
+  
+  Methods & results: This modelling project centres on a classic problem in both human and veterinary epidemiology - making inferences with incomplete epidemiological data. First, a standardised dataset for vaccine coverage by province/territory was curated from existing publicly-available datasets and reports. Due to significant missing data points by year and age in many of the provinces, this project then uses statistical modelling to approximate current vaccination coverage in missing cohorts, to create a more complete ‘modelled dataset’ of estimated coverage by province/territory, age, and number of doses. This is used to estimate population immunity for current outbreak response models. We compare and contrast two statistical methods to identify strengths and weaknesses of each approach.
+  
+  Implications: We develop methodology for estimating vaccination coverage in the absence of population immunity data, to support the ongoing measles outbreak modelling response work. While this is primarily a measles epidemiology project, we build the associated code/tools such that the methodology can be applied to other vaccine-preventable diseases for use in future outbreak settings.
+key-points:
+  - ...All Vaccine articles need a 'highlights'. 3-5 key points, 85 characters each.
+  - ...hightlight 2
+  - ...
+funding: "Funding text to be stated here."
+conflict-of-interest: "SMK has received consulting fees from Moderna Therapeutics. All other authors declare no conflicts of interest. Edit as needed."
+bibliography: []
+number-sections: true
+---
+
+## Introduction
+
+*Vaccine* articles have a word limit of 5000, with up to 10 figures+tables and up to 50 references. The abstract needs to be under 300 words - ours is currently 326. The journal also allows/ encourages a graphical abstract.
+
+## Material and methods
+
+text
+
+## Results
+
+text
+
+```{r}
+```
+
+## Discussion
+
+text
