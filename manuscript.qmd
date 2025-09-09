@@ -29,6 +29,10 @@ author:
     corresponding: false
     affiliations:
       - ref: phac
+  - name: Rania Wasfi
+    corresponding: false
+    affiliations:
+      - ref: phac 
   - name: Stephen M. Kissler
     corresponding: false
     affiliations:
