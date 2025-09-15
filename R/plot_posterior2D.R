@@ -56,6 +56,6 @@ plot_posterior2D <- function(df, xobs, yobs, zobs, k_name=NA, k_param1=NA, k_par
     ggtitle(paste0("k=", k_name, "; k_param1=", k_param1, ", k_param2=", k_param2, ", k_param3=", k_param3)) +
     facet_wrap(~ y_label)
   
-  #list(p3)
-  list(p1,p2,p3)
+  list(p2)
+  #list(p1,p2,p3)
 }

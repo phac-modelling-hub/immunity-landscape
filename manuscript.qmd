@@ -86,7 +86,9 @@ Explain data sources and standardisation. Will we make the standardised dataset 
 
 #### National data sources
 
-Flag nuances in the data, perhaps as a table: 1/2 vs 1+/2+ dose, differing vaccination schedules between provinces (second dose administered at 18mnths vs 4-6y), level of reporting, methodology (whether self-reported or from GP data if known?)
+Flag nuances in the data, perhaps as a table: 1/2 vs 1+/2+ dose, differing vaccination schedules between provinces (second dose administered at 18mnths vs 4-6y), level of reporting, methodology (whether self-reported or from GP data if known?).
+
+Discuss ageing of estimates.
 
 ### Model 1: Gaussian Process model
 
@@ -99,6 +101,7 @@ Flag nuances in the data, perhaps as a table: 1/2 vs 1+/2+ dose, differing vacci
 ## Results
 
 ### Vaccine coverage data
+
 Plot/s showing the curated data.
 
 ```{r}
@@ -118,6 +121,6 @@ Paragraph/s to compare to other literature
 
 Miscellaneous discussion points - list here as we think of them: Immunity vs Vaccination (they are not the same); flag that we haven't tested the model on other countries/pathogens;
 
-Limitations paragraph: note older ages not explicitly considered/note the assumptions on older ages; some discussion of relation of provinces;
+Limitations paragraph: note older ages not explicitly considered/note the assumptions on older ages; some discussion of relation of provinces; ageing of estimates.
 
 Conclusions paragraph

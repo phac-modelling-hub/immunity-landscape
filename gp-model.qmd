@@ -20,6 +20,7 @@ library(ggplot2)
 library(tidyr)
 library(stringr)
 library(scales)
+library(purrr)
 library(mnormt) # for multivariate normal
 library(LaplacesDemon) # for logistic transform
 
@@ -324,17 +325,16 @@ We now wish to improve our basic model by adding information to the prior and ex
 -   `compute_prior2D()`
 -   `plot_prior2D()`
 -   `compute_posterior2D()`
--   `plot_posterior2D()`
--   `run_GP()`.
+-   `plot_posterior2D()`.
 
-The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`.
+The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`. The prior plot is currently hidden.
 
 ```{r}
 #| label: auto2D
 
 #' Run the full 2D Gaussian Process model
 #' 
-#' First input `vax_dataset` must be specified. All other inputs are optional.
+#' First input `vax_dataset` must be specified. All other inputs are optional. Function will return a matrix of posterior draws.
 #' Note: x and y are independent variables, with dependent variable z. x is assumed to represent
 #' current age, y province, and z vaccine coverage.
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
@@ -345,13 +345,13 @@ The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`.
 #'          - ksqexp,
 #'          - kexp,
 #'          - kmatern.
-#' @param k_name as above, but written as a character string (character)
+#' @param k_name as above, but written as a character string for use in plot titles (character)
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions
 #' @param show_plots if false, plots are hidden
-run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=NA, k_name=NA, l1=NA, l2=NA, b=1, 
+run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=ksqexp, k_name=NA, l1=NA, l2=NA, b=1, 
                    ndrws=50, show_plots=T) {
   #' define possible x values
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
@@ -364,7 +364,6 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
   names(yvals) <- prov_levels
 
   #' define covariance and related parameters
-  if (is.na(k)) k <- ksqexp
   if (is.na(k_name)) k_name <- "ksqexp"  # for plot titles
   if (is.na(l1)) l1 <- 1.5  # x lengthscale
   if (is.na(l2)) l2 <- 3  # relative lengthscale of x values to y values
@@ -372,7 +371,7 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
 
   #' compute and plot prior
   prior2D <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
-  if (show_plots) prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
+  # if (show_plots) prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
 
   #' observe data (we may wish to use cNICS here instead of vax_clean)
   xobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(age_current)
@@ -388,6 +387,7 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
     filter(!(pt %in% c("SK","YT","NB")))
   if (show_plots) post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k=k_name, k_param1=l1, k_param2=l2, k_param3=b,
                               vax_dataset=vax_clean, last_agecurrent=last_agecurrent, prov_levels=prov_levels) %>% print()
+  return(post2D)
 }
 
 run_GP(vax_clean)
@@ -422,4 +422,70 @@ vax_cNICS <- readr::read_csv(here::here("data", "measles_CNICS.csv"), show_col_t
   filter(!(pt %in% c("SK","YT","NB","CA"))) %>%
   mutate(age_current=current_year - year_birth)
 run_GP(vax_cNICS, b=0.75, ndrws=15)
+```
+
+## Formal model fitting: take-out-one cross validation
+
+We aim to find the optimal choice of model parameters (`k`, `l1`, `l2`, `b`), using take-one-out cross-validation. An example algorithm is as follows:
+
+-   For a given covariance function k and lengthscale parameters l1, l2, b:
+
+    1.  Pull out one data point.
+
+    2.  Run GP model and compute e.g. sum squared error between posterior mean and the missing data point.
+
+    3.  Repeat for every data point (e.g. 157 model runs for the 1+ provincial data). Sum errors.
+
+-   Select the optimal k/ l1/ l2/ b combination.
+
+Option 1 is to work with the posterior mean at each missing age as described. A better option 2 is to work with a richer goodness-of-fit metric such as the (log) *posterior predictive density* at each missing age instead. This makes use of the full richness of our Gaussian Process model. We hence choose the latter metric.
+
+```{r}
+#| label: model_fitting
+
+#' Calculate the lppd for one iteration of our GP model (i.e. for one choice of parameter-set {k, l1, l2, b}).
+#' Note: relation of provinces currently uses GDP data.
+#' 
+#' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
+#' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
+#' @param ndrws specify number of draws to be taken from the prior and posterior distributions
+#' @param k covariance function chosen from the following list: (function) **Functionality not added yet for matern.
+#'          - ksqexp,
+#'          - kexp,
+#'          - kmatern.
+#' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
+#' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
+#' @param b scale for covariance function determining the output variance
+lppd <- function(vax_dataset, last_agecurrent=30, ndrws=50, k=ksqexp, l1=NA, l2=NA, b=1) {
+  #' prepare the multiple training datasets (take-one-out)
+  vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
+  vax_datasets <- map(1:nrow(vax_dataset), ~ vax_dataset[-.x, ])
+  names(vax_datasets) <- paste0("vax_dataset", 1:nrow(vax_dataset))
+  
+  #' run model for each training set and extract the 50 draw estimates of the removed point
+  lppd_value <- rep(NA,nrow(vax_dataset))
+  for (i in 1:nrow(vax_dataset)) {
+    xout <- vax_dataset[i, ] %>% pull(age_current)  # age_current of removed data point
+    yout <- vax_dataset[i, ] %>% pull(location)  # province of removed data point
+    zout <- vax_dataset[i, ] %>% pull(value)  # correct coverage value of removed data point
+    ppd <- run_GP(vax_datasets[[i]], show_plots=F, last_agecurrent=last_agecurrent, ndrws=ndrws, k=k, l1=l1, l2=l2, b=b) %>%
+      filter(x_i==xout & y_label==yout) %>% pull(post2D_constrained) %>% 
+      between(zout - 0.01, zout + 0.01) %>% sum()  # freq of ppd evaluated at true removed value +/-1%
+    lppd_value[i] <- ppd  # not taking logs currently; should be log(ppd) eventually
+  }
+  return(sum(lppd_value))
+}
+
+lppd(vax_clean, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: ~65 seconds
+
+
+#' Fit the full 2D Gaussian Process model -- identify optimal combination of k, l1, l2, b.
+#' 
+#' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
+#' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
+#' @param ndrws specify number of draws to be taken from the prior and posterior distributions
+fit_GP <- function() {
+  
+}
+
 ```
