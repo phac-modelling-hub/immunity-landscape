@@ -371,7 +371,7 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA
 
   #' compute and plot prior
   prior2D <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
-  # if (show_plots) prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
+  if (show_plots) prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
 
   #' observe data (we may wish to use cNICS here instead of vax_clean)
   xobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(age_current)
