@@ -453,7 +453,7 @@ Option 1 is to work with the posterior mean at each missing age as described. A 
 #'          - ksqexp,
 #'          - kexp,
 #'          - kmatern.
-#' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
+#' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and/or kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
 lppd <- function(vax_dataset, last_agecurrent=30, ndrws=50, k=ksqexp, l1=NA, l2=NA, b=1) {
@@ -479,13 +479,37 @@ lppd <- function(vax_dataset, last_agecurrent=30, ndrws=50, k=ksqexp, l1=NA, l2=
 lppd(vax_clean, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: ~65 seconds
 
 
-#' Fit the full 2D Gaussian Process model -- identify optimal combination of k, l1, l2, b.
+#' Fit the full 2D Gaussian Process model -- identify optimal combination of k, l1, l2, b. Outputs a 
+#' tibble detailing each set of model parameters and a goodness-of-fit metric (sum(lppd)) using take-one-out cross validation. 
+#' Large lppd is optimal.
+#' Note: relation of provinces currently uses GDP data and covariance functions can be ksqexp and/or kexp.
 #' 
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
 #' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
-#' @param ndrws specify number of draws to be taken from the prior and posterior distributions
-fit_GP <- function() {
+#' @param ndrws specify number of draws to be taken from the prior and posterior distributions (numeric)
+#' @param k_list a named list of covariance functions, e.g. list(ksqexp = ksqexp, kexp = kexp) (named list)
+#' @param l1 a vector of x-lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
+#' @param l2 a vector of relative lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
+#' @param b a vector of scales for covariance function determining the output variances (vector)
+fit_GP <- function(vax_dataset, last_agecurrent=30, ndrws=50, k_list=list(ksqexp=ksqexp), l1=NA, l2=NA, b=1) {
+  # first separate k_list into functions and names
+  k_tibble <- tibble(k_name = names(k_list), k = unname(k_list))
   
+  # compute lppd_sum for all combinations of parameters
+  combinations <- tidyr::expand_grid(k_tibble, l1, l2, b)  # functions need to be protected in a list
+  combinations <- combinations %>% mutate(lppd_sum = pmap_dbl(list(k, l1, l2, b), ~ lppd(
+    vax_dataset = vax_dataset,
+    last_agecurrent = last_agecurrent,
+    ndrws = ndrws,
+    k = ..1,
+    l1 = ..2,
+    l2 = ..3,
+    b = ..4))) %>% 
+    select(-k) %>% mutate(model_no = row_number(), .before = 1)
+  
+  return(combinations)
 }
 
+combinations <- fit_GP(vax_clean, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
+##need to check if this works with kexp
 ```
