@@ -58,4 +58,6 @@ lppd <- function(vax_dataset, last_agecurrent=30, ndrws=50, k=ksqexp, l1=NA, l2=
 
 # Step 3: Call the function. Currently takes approx 60-70 seconds.
 
+profvis::profvis({
 lppd(vax_clean, k=ksqexp, l1=1.5, l2=3, b=1)
+})
