@@ -20,15 +20,9 @@ compute_prior2D <- function(xvals, yvals, k=ksqexp, l1=NA, ndrws=50, prov_levels
     pull(k) %>% matrix(nrow=npts)
   
   # define prior and take 50 draws
-  xygrid <- expand_grid(x=xvals, y=yvals)
-  prior2D <- tibble() 
-  for(i in 1:ndrws){  # 50 realisations from a 2D gaussian process, with both x, y as independent variables
-    prior2D <- bind_rows(prior2D, tibble(draw=i, x_i=xygrid$x, y_i=xygrid$y, prior2D=rmnorm(1, rep(0,npts), covmat + 1e-6*diag(npts))))
-  }
-  
-  # add y-value names
-  prior2D <- prior2D %>% mutate(y_label = names(yvals)[match(y_i, yvals)]) %>% 
-    mutate(y_label = factor(y_label, levels=prov_levels))
-  
-  return(prior2D)
+  draw_from_rmnorm(
+    n = ndrws, mean = rep(0,npts), varcov = covmat + 1e-6*diag(npts), 
+    xvals = xvals, yvals = yvals,
+    prov_levels = prov_levels) |> 
+    dplyr::rename(prior2D = value)
 }

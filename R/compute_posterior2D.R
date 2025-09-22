@@ -18,7 +18,7 @@
 #' @param prov_levels factor defining the names of provinces e.g. for y-values
 #' @param b optional function scale determining the output variance for k
 compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA, ndrws=50, prov_levels, b=1) {
-  #' calculate covariances between unobserved and observed
+  # calculate covariances between unobserved and observed
   xygrid <- expand_grid(x=xvals, y=yvals)
   xyobs <- tibble(x=xobs,y=yobs)
   
@@ -27,20 +27,21 @@ compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA,
   koo <- generate_2Dksqexp_covmat(xyobs,xyobs,fn=k,l=l1,b=b) + 1e-6*diag(nrow(xyobs))  # protect against non-invertibleness
   kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=k,l=l1,b=b)
   
-  #' calculate posterior mean and posterior cov matrix
+  # calculate posterior mean and posterior cov matrix
   logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # use the logistic-transformed data centred around mean 0
   post_mean <- kuo%*%solve(koo)%*%(logit_zobs_centred)  # conditional mean
   post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
   
-  #' draw from the posterior distribution and record in dataframe post2D
-  post2D <- tibble()
-  for(i in 1:ndrws) {  # take 50 posterior draws
-    post2D <- bind_rows(post2D, tibble(draw=i, x_i=xygrid$x, y_i=xygrid$y, post2D=rmnorm(1, post_mean, post_covmat + 1e-6*diag(nrow(post_covmat)))))  # each rmnorm is a random draw from the (multivariate) posterior
-  }
-  post2D <- post2D %>% mutate(post2D_constrained=invlogit(post2D + mean(logit(zobs)))) %>%  # add column to return mean and transform back to [0,1]
-    mutate(y_label = names(yvals)[match(y_i, yvals)]) %>%  # add column to return province names
-    mutate(y_label = factor(y_label, levels=prov_levels)) %>%  # order provinces
-    select(draw, x_i, y_i, y_label, post2D, post2D_constrained)  # reorder columns
-  
-  return(post2D)
+  # draw from the posterior distribution
+  draw_from_rmnorm(
+    n = ndrws,
+    mean = post_mean,
+    varcov = post_covmat + 1e-6*diag(nrow(post_covmat)),
+    xvals = xvals,
+    yvals = yvals,
+    prov_levels = prov_levels
+  ) |>
+    dplyr::rename(post2D = value) |>
+    dplyr::mutate(post2D_constrained = invlogit(post2D + mean(logit(zobs)))) |>
+    dplyr::relocate(post2D, .after = y_label)
 }
