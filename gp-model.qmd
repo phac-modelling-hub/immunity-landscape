@@ -320,6 +320,7 @@ post2D_new <- post2D %>% ungroup() %>% left_join(data_2dose, by=c("x_i","y_label
 
 # 2D case model extensions
 
+## Functions
 We now wish to improve our basic model by adding information to the prior and experimenting with choice of covariance function and related parameters. First, define helper functions to enable easy running of the 2D model (saved in "R/"):
 
 -   `compute_prior2D()`
@@ -327,73 +328,15 @@ We now wish to improve our basic model by adding information to the prior and ex
 -   `compute_posterior2D()`
 -   `plot_posterior2D()`.
 
-The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`. The prior plot is currently hidden.
+The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`.
 
 ```{r}
 #| label: auto2D
 
-#' Run the full 2D Gaussian Process model
-#' 
-#' First input `vax_dataset` must be specified. All other inputs are optional. Function will return a matrix of posterior draws.
-#' Note: x and y are independent variables, with dependent variable z. x is assumed to represent
-#' current age, y province, and z vaccine coverage.
-#' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
-#' @param first_agecurrent first age for the GP model, i.e. smallest x-variable entry (numeric)
-#' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
-#' @param yvals numeric vector defining possible range of y-values (numeric)  **do not scale
-#' @param k covariance function chosen from the following list: (function) **Functionality not added yet for matern.
-#'          - ksqexp,
-#'          - kexp,
-#'          - kmatern.
-#' @param k_name as above, but written as a character string for use in plot titles (character)
-#' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
-#' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
-#' @param b scale for covariance function determining the output variance
-#' @param ndrws specify number of draws to be taken from the prior and posterior distributions
-#' @param show_plots if false, plots are hidden
-run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=ksqexp, k_name=NA, l1=NA, l2=NA, b=1, 
-                   ndrws=50, show_plots=T) {
-  #' define possible x values
-  xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
-
-  #' define possible y values
-  province_relation <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
-    filter(location %in% unique(vax_clean$location))  # province GDP data from StatCan
-  prov_levels <- (province_relation %>% pull(location))  # useful shortcut for defining province factors
-  if (is.na(yvals)) yvals <- log(province_relation %>% pull(Dollars))  # a vector of provinces -- currently log(GDP)
-  names(yvals) <- prov_levels
-
-  #' define covariance and related parameters
-  if (is.na(k_name)) k_name <- "ksqexp"  # for plot titles
-  if (is.na(l1)) l1 <- 1.5  # x lengthscale
-  if (is.na(l2)) l2 <- 3  # relative lengthscale of x values to y values
-  yvals <- yvals*l2  # scale y values to the x lengthscale
-
-  #' compute and plot prior
-  prior2D <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
-  if (show_plots) prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
-
-  #' observe data (we may wish to use cNICS here instead of vax_clean)
-  xobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(age_current)
-  yobs <- yvals[vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(location)]  # this includes scaling by l2
-  zobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(value)
-  logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # apply logistic transform and centre the data around mean 0
-  if (show_plots) tibble(xobs, yobs, zobs, logit_zobs_centred) %>% print()
-
-  #' compute and plot posterior
-  post2D <- compute_posterior2D(xvals=xvals, yvals=yvals, xobs=xobs, yobs=yobs, zobs=zobs,
-                              k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
-  vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2.csv"), show_col_types = FALSE) %>%  #added for cNICS comparison
-    filter(!(pt %in% c("SK","YT","NB")))
-  if (show_plots) post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k=k_name, k_param1=l1, k_param2=l2, k_param3=b,
-                              vax_dataset=vax_clean, last_agecurrent=last_agecurrent, prov_levels=prov_levels) %>% print()
-  return(post2D)
-}
-
 run_GP(vax_clean)
 ```
 
-From a quick by-eye model selection, current best GP model parameter values are approximately `l1=1.5, l2=3, b=0.75` for `k=ksqexp`. A more formal model selection (i.e. choosing of parameter values) could also be done, using for example take-one-out cross-validation with log posterior predictive density (lppd) as the 'error' metric (\*\*functionality not yet added).
+From a quick by-eye model selection, current best GP model parameter values are approximately `l1=1.5, l2=3, b=0.75` for `k=ksqexp`.
 
 ```{r}
 #| label: fit_byeye
@@ -434,51 +377,27 @@ We aim to find the optimal choice of model (parameter values `k`, `l1`, `l2`, `b
 
     2.  Run GP model and compute e.g. sum squared error between posterior mean and the missing data point.
 
-    3.  Repeat for every data point (e.g. 157 model runs for the 1+ provincial data). Sum errors.
+    3.  Repeat for every data point (e.g. 137 model runs for the 1+ provincial data). Sum errors.
 
 -   Select the optimal k/ l1/ l2/ b combination.
 
-Option 1 is to work with the posterior mean at each missing age as described. A better option 2 is to work with a richer goodness-of-fit metric such as the (log) *posterior predictive density* at each missing age instead. This makes use of the full richness of our Gaussian Process model. We hence choose the latter metric.
+One option is to work with the posterior mean at each missing age as described. A better option is to work with a richer goodness-of-fit metric such as the (log) *posterior predictive density* at each missing age instead. This makes use of the full richness of our Gaussian Process model. We hence choose the latter metric.
+
+`estimate_lppd()` estimates the posterior predictive density from a sample, in a similar way to the algorithm described above. `compute_lppd()` calculates the full log posterior predictive density analytically. See the [GitHub Issue #4](https://github.com/phac-modelling-hub/immunity-landscape/issues/4) for a discussion of methodology.
 
 ```{r}
 #| label: model_selection
 
-#' ESTIMATE the lppd for one GP model (i.e. for one choice of parameter values of {k, l1, l2, b}).
-#' Note: relation of provinces currently uses GDP data.
-#' 
-#' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
-#' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
-#' @param ndrws specify number of draws to be taken from the prior and posterior distributions
-#' @param k covariance function chosen from the following list: (function) **Functionality not added yet for matern.
-#'          - ksqexp,
-#'          - kexp,
-#'          - kmatern.
-#' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and/or kexp
-#' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
-#' @param b scale for covariance function determining the output variance
-estimate_lppd <- function(vax_dataset, last_agecurrent=30, ndrws=50, k=ksqexp, l1=NA, l2=NA, b=1) {
-  # prepare the multiple training datasets (take-one-out)
-  vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
-  vax_datasets <- map(1:nrow(vax_dataset), ~ vax_dataset[-.x, ])
-  names(vax_datasets) <- paste0("vax_dataset", 1:nrow(vax_dataset))
-  
-  # run model for each training set and extract 50 draw estimates at the removed (test) point
-  lppd_value <- rep(NA,nrow(vax_dataset))
-  for (i in 1:nrow(vax_dataset)) {
-    xout <- vax_dataset[i, ] %>% pull(age_current)  # age_current of removed data point
-    yout <- vax_dataset[i, ] %>% pull(location)  # province of removed data point
-    zout <- vax_dataset[i, ] %>% pull(value)  # correct coverage value of removed data point
-    ppd <- run_GP(vax_datasets[[i]], show_plots=F, last_agecurrent=last_agecurrent, ndrws=ndrws, k=k, l1=l1, l2=l2, b=b) %>%
-      filter(x_i==xout & y_label==yout) %>% pull(post2D_constrained) %>% 
-      between(zout - 0.02, zout + 0.02) %>% sum()  # freq of ppd evaluated at true removed value +/-2%
-    lppd_value[i] <- ppd  # not taking logs currently; should be log(ppd) eventually
-  }
-  
-  # sum lppd values from each test
-  return(sum(lppd_value))
-}
+#' code for defining province relation (prov_values)
+province_relation <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
+  filter(location %in% unique(vax_clean$location))  # province GDP data from StatCan
+prov_levels <- (province_relation %>% pull(location))  # useful shortcut for defining province factors
+prov_values <- log(province_relation %>% pull(Dollars))
+names(prov_values) <- prov_levels
 
-example <- estimate_lppd(vax_clean, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: ~65 seconds
+#' examples of estimating/ calculating lppd
+example1 <- estimate_lppd(vax_clean, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: ~15 seconds
+example2 <- compute_lppd(vax_dataset, prov_values=prov_values, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: <1 second
 
 
 #' GP model selection -- identify optimal combination of k, l1, l2, b. Outputs a tibble detailing 
@@ -489,20 +408,29 @@ example <- estimate_lppd(vax_clean, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: ~6
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
 #' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions (numeric)
+#' @param prov_values named ordered vector giving numerical y-axis values associated to each province, unscaled (named vector)
 #' @param k_list a named list of covariance functions, e.g. list(ksqexp = ksqexp, kexp = kexp) (named list)
 #' @param l1 a vector of x-lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
 #' @param l2 a vector of relative lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
 #' @param b a vector of scales for covariance function determining the output variances (vector)
-fit_GP <- function(vax_dataset, last_agecurrent=30, ndrws=100, k_list=list(ksqexp=ksqexp), l1=NA, l2=NA, b=1) {
+fit_GP <- function(vax_dataset, last_agecurrent=30, prov_values, ndrws=100, k_list=list(ksqexp=ksqexp), l1=NA, l2=NA, b=1) {
   # first separate k_list into functions and names
   k_tibble <- tibble(k_name = names(k_list), k = unname(k_list))
   
   # compute lppd_sum for all combinations of parameters
   combinations <- tidyr::expand_grid(k_tibble, l1, l2, b)  # functions need to be protected in a list
-  combinations <- combinations %>% mutate(lppd_sum = pmap_dbl(list(k, l1, l2, b), ~ estimate_lppd(
+  combinations <- combinations %>% mutate(lppd_sum_estimate = pmap_dbl(list(k, l1, l2, b), ~ estimate_lppd(  # method 1: estimate (l)ppd
     vax_dataset = vax_dataset,
     last_agecurrent = last_agecurrent,
     ndrws = ndrws,
+    k = ..1,
+    l1 = ..2,
+    l2 = ..3,
+    b = ..4)))
+  combinations <- combinations %>% mutate(lppd_sum_exact = pmap_dbl(list(k, l1, l2, b), ~ compute_lppd(
+    vax_dataset = vax_dataset,
+    last_agecurrent = last_agecurrent,
+    prov_values = prov_values,
     k = ..1,
     l1 = ..2,
     l2 = ..3,
@@ -512,6 +440,6 @@ fit_GP <- function(vax_dataset, last_agecurrent=30, ndrws=100, k_list=list(ksqex
   return(combinations)
 }
 
-combinations <- fit_GP(vax_clean, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
+combinations <- fit_GP(vax_clean, prov_values=prov_values, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
 ##need to check if this works with kexp
 ```
