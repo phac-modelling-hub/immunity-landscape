@@ -369,7 +369,7 @@ run_GP(vax_cNICS, b=0.75, ndrws=15)
 
 ## Model selection and validation: take-out-one cross validation
 
-We aim to find the optimal choice of model (parameter values `k`, `l1`, `l2`, `b`), and validate with take-one-out cross-validation. An example algorithm is as follows:
+We aim to find the optimal choice of model (hyperparameter values `k`, `l1`, `l2`, `b`), and validate with take-one-out cross-validation. An example algorithm is as follows:
 
 -   For a given covariance function k and lengthscale parameters l1, l2, b:
 
@@ -383,63 +383,33 @@ We aim to find the optimal choice of model (parameter values `k`, `l1`, `l2`, `b
 
 One option is to work with the posterior mean at each missing age as described. A better option is to work with a richer goodness-of-fit metric such as the (log) *posterior predictive density* at each missing age instead. This makes use of the full richness of our Gaussian Process model. We hence choose the latter metric.
 
-`estimate_lppd()` estimates the posterior predictive density from a sample, in a similar way to the algorithm described above. `compute_lppd()` calculates the full log posterior predictive density analytically. See the [GitHub Issue #4](https://github.com/phac-modelling-hub/immunity-landscape/issues/4) for a discussion of methodology.
+`estimate_lppd()` estimates the posterior predictive density from a sample, in a similar way to the algorithm described above. `compute_lppd()` calculates the full log posterior predictive density analytically. See the [GitHub Issue #4](https://github.com/phac-modelling-hub/immunity-landscape/issues/4) for a discussion of methodology. `select_GP()` then ca does a search of hyperparameter space and returns the lppd for each hyperparameter set. The 'optimal' model (with largest absolute lppd) is also printed to the console.
 
 ```{r}
 #| label: model_selection
 
 #' code for defining province relation (prov_values)
-province_relation <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
-  filter(location %in% unique(vax_clean$location))  # province GDP data from StatCan
-prov_levels <- (province_relation %>% pull(location))  # useful shortcut for defining province factors
-prov_values <- log(province_relation %>% pull(Dollars))
+province_relation_data <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
+  filter(location %in% unique(vax_clean$location)) %>% mutate(value = log(Dollars))  # province GDP data from StatCan (log)
+prov_levels <- province_relation_data %>% pull(location)  # useful shortcut for defining province factors
+prov_values <- province_relation_data %>% pull(value)
 names(prov_values) <- prov_levels
 
 #' examples of estimating/ calculating lppd
 example1 <- estimate_lppd(vax_clean, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: ~15 seconds
-example2 <- compute_lppd(vax_dataset, prov_values=prov_values, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: <1 second
+example2 <- compute_lppd(vax_clean, prov_values=prov_values, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: <1 second
 
+#' example model selection
+example <- select_GP(vax_clean, prov_values=prov_values, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))  # prov_values defined above
 
-#' GP model selection -- identify optimal combination of k, l1, l2, b. Outputs a tibble detailing 
-#' each set of model parameters and a goodness-of-fit metric (sum(lppd)) using take-one-out cross validation. 
-#' Large lppd is optimal.
-#' Note: relation of provinces currently uses GDP data and covariance functions can be ksqexp and/or kexp.
-#' 
-#' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
-#' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
-#' @param ndrws specify number of draws to be taken from the prior and posterior distributions (numeric)
-#' @param prov_values named ordered vector giving numerical y-axis values associated to each province, unscaled (named vector)
-#' @param k_list a named list of covariance functions, e.g. list(ksqexp = ksqexp, kexp = kexp) (named list)
-#' @param l1 a vector of x-lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
-#' @param l2 a vector of relative lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
-#' @param b a vector of scales for covariance function determining the output variances (vector)
-fit_GP <- function(vax_dataset, last_agecurrent=30, prov_values, ndrws=100, k_list=list(ksqexp=ksqexp), l1=NA, l2=NA, b=1) {
-  # first separate k_list into functions and names
-  k_tibble <- tibble(k_name = names(k_list), k = unname(k_list))
-  
-  # compute lppd_sum for all combinations of parameters
-  combinations <- tidyr::expand_grid(k_tibble, l1, l2, b)  # functions need to be protected in a list
-  combinations <- combinations %>% mutate(lppd_sum_estimate = pmap_dbl(list(k, l1, l2, b), ~ estimate_lppd(  # method 1: estimate (l)ppd
-    vax_dataset = vax_dataset,
-    last_agecurrent = last_agecurrent,
-    ndrws = ndrws,
-    k = ..1,
-    l1 = ..2,
-    l2 = ..3,
-    b = ..4)))
-  combinations <- combinations %>% mutate(lppd_sum_exact = pmap_dbl(list(k, l1, l2, b), ~ compute_lppd(
-    vax_dataset = vax_dataset,
-    last_agecurrent = last_agecurrent,
-    prov_values = prov_values,
-    k = ..1,
-    l1 = ..2,
-    l2 = ..3,
-    b = ..4))) %>% 
-    select(-k) %>% mutate(model_no = row_number(), .before = 1)
-  
-  return(combinations)
-}
+#' exhaustive search of reasonable hyperparameter space (provinical dataset)
+GPcombinations_GDP <- select_GP(vax_clean, prov_values=prov_values, k_list=list(ksqexp=ksqexp), l1=c(0.5,1,1.5,2,2.5), l2=c(0.5,1,2,3,4), b=c(0.5,1,1.5,2))
+GPcombinations_GDP %>% readr::write_csv(here::here("results", "GPcombinations_GDP.csv"))
 
-combinations <- fit_GP(vax_clean, prov_values=prov_values, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
-##need to check if this works with kexp
+#' exhaustive search of reasonable hyperparameter space (cNICS dataset)
+vax_cNICS <- readr::read_csv(here::here("data", "measles_CNICS.csv"), show_col_types = FALSE) %>% filter(!(pt %in% c("SK","YT","NB","CA"))) %>%
+  mutate(age_current = current_year - year_birth)
+GPcombinations_GDP_cNICS <- select_GP(vax_cNICS, prov_values=prov_values, k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(0.5,1,1.5,2,2.5), l2=c(0.5,1,2,3,4), b=c(0.5,1,1.5,2))
+GPcombinations_GDP_cNICS %>% readr::write_csv(here::here("results", "GPcombinations_GDP_cNICS.csv"))
+
 ```

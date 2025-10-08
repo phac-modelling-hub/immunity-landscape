@@ -59,7 +59,7 @@ key-points:
   - ...hightlight 2
   - ...
 funding: "Funding text to be stated here."
-conflict-of-interest: "SMK has received consulting fees from Moderna Therapeutics. All other authors declare no conflicts of interest. Edit as needed."
+conflict-of-interest: "SMK has received consulting fees from Moderna Therapeutics. All other authors declare XXX. Edit as needed."
 bibliography: []
 number-sections: true
 ---
@@ -92,9 +92,48 @@ Discuss ageing of estimates.
 
 ### Model 1: Gaussian Process model
 
+Hyperparameters used in the Gaussian Process model are shown in @tbl-gp-modelparameters. These were chosen from hyperparameter optimisation using leave-one-out cross-validation (see @tbl-gp-modelselectionresults for model selection results).
+
+```{r}
+#| label: tbl-gp-modelparameters
+#| tbl-cap: "Hyperparameters used in the GP model."
+#| tbl-number: 1
+#| echo: FALSE
+
+GPmodelparameters_table <- data.frame(
+  Hyperparameter = c("Covariance function", "Age lengthscale", "Relative province lengthscale", "Weight"),
+  Notation = c("k", "l1", "l2", "b"),
+  Value = c("Squared Exponential", 2.0, 0.5, 2.0)  # example values
+)
+
+knitr::kable(GPmodelparameters_table)
+```
+
 ### Model 2: GLM with XXX
 
-### Model fitting procedures
+### Model fitting, selection, and validation procedures
+
+For the (non-parametric) Gaussian process model, there is no model fitting stage. Model selection and validation were performed using leave-one-out cross-validation, with log posterior predictive density (lppd) as the error metric at test points. Model selection and validation were first performed on the provincial dataset (@tbl-gp-modelselectionresults). The combination of hyperparameter values with largest absolute lppd were used in analysis (@tbl-gp-modelparameters). Model selection was also repeated with the national cNICS dataset (@tbl-gp-modelselectionresults2).
+
+```{r}
+#| label: tbl-gp-modelselectionresults
+#| tbl-cap: "text"
+#| tbl-number: 2
+#| echo: FALSE
+
+GPcombinations_GDP <- readr::read_csv(here::here("results", "GPcombinations_GDP.csv"), show_col_types = F)
+knitr::kable(GPcombinations_GDP)  # could move to supplementary?
+```
+
+```{r}
+#| label: tbl-gp-modelselectionresults2
+#| tbl-cap: "text"
+#| tbl-number: 3
+#| echo: FALSE
+
+GPcombinations_GDP_cNICS <- readr::read_csv(here::here("results", "GPcombinations_GDP_cNICS.csv"), show_col_types = F)
+knitr::kable(GPcombinations_GDP_cNICS)  # could move to supplementary?
+```
 
 ### Model comparison
 
@@ -108,6 +147,8 @@ Plot/s showing the curated data.
 ```
 
 ### Vaccine coverage estimates
+
+Optimal hyperparameters for the Gaussian Process model are noted in Table X.
 
 ### Model comparison
 

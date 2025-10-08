@@ -11,13 +11,13 @@
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and/or kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
-estimate_lppd <- function(vax_dataset, last_agecurrent=30, ndrws=50, k=ksqexp, l1=NA, l2=NA, b=1) {
+estimate_lppd <- function(vax_dataset, last_agecurrent=30, ndrws=100, k=ksqexp, l1=NA, l2=NA, b=1) {
   # prepare the multiple training datasets (take-one-out)
   vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
   vax_datasets <- map(1:nrow(vax_dataset), ~ vax_dataset[-.x, ])
   names(vax_datasets) <- paste0("vax_dataset", 1:nrow(vax_dataset))
   
-  # run model for each training set and extract 50 draw estimates at the removed (test) point
+  # run model for each training set and extract 100 draw estimates at the removed (test) point
   lppd_value <- rep(NA,nrow(vax_dataset))
   for (i in 1:nrow(vax_dataset)) {
     xout <- vax_dataset[i, ] %>% pull(age_current)  # age_current of removed data point
