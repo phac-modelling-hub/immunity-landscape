@@ -328,7 +328,7 @@ We now wish to improve our basic model by adding information to the prior and ex
 -   `compute_posterior2D()`
 -   `plot_posterior2D()`.
 
-The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`.
+The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`. All functions work with multiple province relation datasets.
 
 ```{r}
 #| label: auto2D
@@ -388,15 +388,11 @@ One option is to work with the posterior mean at each missing age as described. 
 ```{r}
 #| label: model_selection
 
-#' code for defining province relation (prov_values)
-province_relation_data <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
-  filter(location %in% unique(vax_clean$location)) %>% mutate(value = log(Dollars))  # province GDP data from StatCan (log)
-prov_levels <- province_relation_data %>% pull(location)  # useful shortcut for defining province factors
-prov_values <- province_relation_data %>% pull(value)
-names(prov_values) <- prov_levels
+#' define province relation (prov_values)
+prov_values <- extract_province_relation("GDP", vax_dataset=vax_clean)
 
 #' examples of estimating/ calculating lppd
-example1 <- estimate_lppd(vax_clean, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: ~15 seconds
+example1 <- estimate_lppd(vax_clean, prov_values=prov_values, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: ~15 seconds
 example2 <- compute_lppd(vax_clean, prov_values=prov_values, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: <1 second
 
 #' example model selection
@@ -411,5 +407,16 @@ vax_cNICS <- readr::read_csv(here::here("data", "measles_CNICS.csv"), show_col_t
   mutate(age_current = current_year - year_birth)
 GPcombinations_GDP_cNICS <- select_GP(vax_cNICS, prov_values=prov_values, k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(0.5,1,1.5,2,2.5), l2=c(0.5,1,2,3,4), b=c(0.5,1,1.5,2))
 GPcombinations_GDP_cNICS %>% readr::write_csv(here::here("results", "GPcombinations_GDP_cNICS.csv"))
-
 ```
+
+## Experimenting with relation of provinces
+
+Relation of provinces is encoded in `prov_values` and can be extracted from the function `extract_province_relation()`. This function has a number of socioecomonic datasets preloaded in a standardised format for use in the GP model.
+
+```{r}
+#| label: province_relation_examples
+
+prov_values <- extract_province_relation("GDP", vax_dataset=vax_clean)
+prov_values <- extract_province_relation("HIDT", vax_dataset=vax_clean)
+```
+

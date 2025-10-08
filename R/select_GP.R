@@ -6,7 +6,10 @@
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
 #' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions (numeric)
-#' @param prov_values named ordered vector giving numerical y-axis values associated to each province, unscaled (named vector)
+#' @param prov_values named ordered vector giving numerical y-axis values associated to each province, unscaled
+#' OR a character from the following list:
+#'          - "GDP"
+#'          - ""
 #' @param k_list a named list of covariance functions, e.g. list(ksqexp = ksqexp, kexp = kexp) (named list)
 #' @param l1 a vector of x-lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
 #' @param l2 a vector of relative lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
@@ -20,6 +23,7 @@ select_GP <- function(vax_dataset, last_agecurrent=30, prov_values, ndrws=100, k
   combinations <- combinations %>% mutate(lppd_estimate = pmap_dbl(list(k, l1, l2, b), ~ estimate_lppd(  # method 1: estimate (l)ppd
     vax_dataset = vax_dataset,
     last_agecurrent = last_agecurrent,
+    prov_values = prov_values,
     ndrws = ndrws,
     k = ..1,
     l1 = ..2,

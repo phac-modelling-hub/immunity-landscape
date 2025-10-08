@@ -6,28 +6,33 @@
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
 #' @param first_agecurrent first age for the GP model, i.e. smallest x-variable entry (numeric)
 #' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
-#' @param yvals numeric vector defining possible range of y-values (numeric)  **do not scale
-#' @param k covariance function chosen from the following list: (function) **Functionality not added yet for matern.
+#' @param prov_values any named ordered vector giving numerical y-axis values associated to each province, unscaled
+#' OR a character from the following list:
+#'          - "GDP"
+#'          - ""
+#' @param k covariance function chosen from the following list: (function)
 #'          - ksqexp,
-#'          - kexp,
-#'          - kmatern.
+#'          - kexp.
 #' @param k_name as above, but written as a character string for use in plot titles (character)
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions
 #' @param show_plots if false, plots are hidden
-run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, yvals=NA, k=ksqexp, k_name=NA, l1=NA, l2=NA, b=1, 
+run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, prov_values=NA, k=ksqexp, k_name=NA, l1=NA, l2=NA, b=1, 
                    ndrws=50, show_plots=T) {
   #' define possible x values
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
   
-  #' define possible y values
-  province_relation <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
-    filter(location %in% unique(vax_clean$location))  # province GDP data from StatCan
-  prov_levels <- (province_relation %>% pull(location))  # useful shortcut for defining province factors
-  if (is.na(yvals)) yvals <- log(province_relation %>% pull(Dollars))  # a vector of provinces -- currently log(GDP)
-  names(yvals) <- prov_levels
+  #' define possible y values / province values
+  if (all(is.na(prov_values))) {
+    prov_values <- extract_province_relation("GDP", vax_dataset=vax_dataset) 
+    print("yes")
+  } else {
+    prov_values <- extract_province_relation(prov_values, vax_dataset=vax_dataset)
+  }
+  yvals <- prov_values
+  prov_levels <- names(prov_values)
   
   #' define covariance and related parameters
   if (is.na(k_name)) k_name <- "ksqexp"  # for plot titles

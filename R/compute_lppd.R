@@ -4,7 +4,10 @@
 #' 
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
 #' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
-#' @param prov_values named ordered vector giving numerical y-axis values associated to each province, unscaled (named vector)
+#' @param prov_values named ordered vector giving numerical y-axis values associated to each province, unscaled
+#' OR a character from the following list:
+#'          - "GDP"
+#'          - ""
 #' @param k covariance function chosen from the following list: (function) **Functionality not added yet for matern.
 #'          - ksqexp,
 #'          - kexp,
@@ -17,6 +20,7 @@ compute_lppd <- function(vax_dataset, last_agecurrent=30, prov_values, k=ksqexp,
   # prepare observed data (training+test)
   vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
   xobs <- vax_dataset %>% pull(age_current)
+  prov_values <- extract_province_relation(prov_values, vax_dataset=vax_dataset)
   prov_values <- prov_values*l2  # scale province values by l2
   yobs <- prov_values[vax_dataset %>% pull(location)]  # this includes scaling by l2
   zobs <- vax_dataset %>% pull(value)
@@ -33,8 +37,6 @@ compute_lppd <- function(vax_dataset, last_agecurrent=30, prov_values, k=ksqexp,
   ppd_vars <- rep(NA,nrow(vax_dataset))
   lppds <- rep(NA,nrow(vax_dataset))
   for (i in 1:nrow(vax_dataset)) {
-    xout <- vax_dataset[i, ] %>% pull(age_current)  # age_current of removed data point
-    yout <- vax_dataset[i, ] %>% pull(location)  # province of removed data point
     zout <- vax_dataset[i, ] %>% pull(value)  # correct coverage value of removed data point
     ppd_means[i] <- zout - (top[i] / bottom[i,i])
     ppd_vars[i] <- 1 / (bottom[i,i])
