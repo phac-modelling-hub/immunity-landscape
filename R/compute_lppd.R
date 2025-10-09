@@ -1,6 +1,6 @@
 #' COMPUTE the lppd analytically for one GP model (i.e. for one choice of parameter values of {k, l1, l2, b}). 
 #' See GitHub Issue #4 for details of method.
-#' Note: relation of provinces currently uses GDP data. Scaling by l2 happens inside the function.
+#' Note: scaling by l2 happens inside the function.
 #' 
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
 #' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
@@ -38,9 +38,10 @@ compute_lppd <- function(vax_dataset, last_agecurrent=30, prov_values, k=ksqexp,
   lppds <- rep(NA,nrow(vax_dataset))
   for (i in 1:nrow(vax_dataset)) {
     zout <- vax_dataset[i, ] %>% pull(value)  # correct coverage value of removed data point
-    ppd_means[i] <- zout - (top[i] / bottom[i,i])
+    logit_zout_centred <- logit(zout) - mean(logit(zobs))
+    ppd_means[i] <- logit_zout_centred - (top[i] / bottom[i,i])
     ppd_vars[i] <- 1 / (bottom[i,i])
-    lppds[i] <- -(0.5*log(ppd_vars[i])) - (((zout - ppd_means[i])^2)/(2*ppd_vars[i])) - (0.5*log(2*pi))
+    lppds[i] <- -(0.5*log(ppd_vars[i])) - (((logit_zout_centred - ppd_means[i])^2)/(2*ppd_vars[i])) - (0.5*log(2*pi))
   }
 
   # sum lppd values from each test
