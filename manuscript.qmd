@@ -92,7 +92,7 @@ Discuss ageing of estimates.
 
 ### Model 1: Gaussian Process model
 
-Hyperparameters used in the Gaussian Process model are shown in @tbl-gp-modelparameters. These were chosen from hyperparameter optimisation using leave-one-out cross-validation (see @tbl-gp-modelselectionresults for model selection results).
+Hyperparameters used in the Gaussian Process model are shown in @tbl-gp-modelparameters. These were chosen from hyperparameter optimisation using leave-one-out cross-validation (see @sec-fitting for details).
 
 ```{r}
 #| label: tbl-gp-modelparameters
@@ -111,9 +111,9 @@ knitr::kable(GPmodelparameters_table)
 
 ### Model 2: GLM with XXX
 
-### Model fitting, selection, and validation procedures
+### Model fitting, selection, and validation procedures {#sec-fitting}
 
-For the (non-parametric) Gaussian process model, there is no model fitting stage. Model selection and validation were performed using leave-one-out cross-validation, with log posterior predictive density (lppd) as the error metric at test points. Model selection and validation were first performed on the provincial dataset (@tbl-gp-modelselectionresults). The combination of hyperparameter values with largest absolute lppd were used in analysis (@tbl-gp-modelparameters). Model selection was also repeated with the national cNICS dataset (@tbl-gp-modelselectionresults2).
+For the (non-parametric) Gaussian process model, there is no model fitting stage. Model selection and validation were performed using leave-one-out cross-validation, with log posterior predictive density (lppd) as the error metric at test points. Model selection and validation were first performed on the provincial dataset (@tbl-gp-modelselectionresults). The combination of plausible hyperparameter values with largest absolute lppd were used in analysis (@tbl-gp-modelparameters). Model selection was also repeated with the national cNICS dataset (@tbl-gp-modelselectionresults2) and different indicators for relation of provinces ().
 
 ```{r}
 #| label: tbl-gp-modelselectionresults
@@ -122,7 +122,7 @@ For the (non-parametric) Gaussian process model, there is no model fitting stage
 #| echo: FALSE
 
 GPcombinations_GDP <- readr::read_csv(here::here("results", "GPcombinations_GDP.csv"), show_col_types = F)
-knitr::kable(GPcombinations_GDP)  # could move to supplementary?
+knitr::kable(GPcombinations_GDP)  # move to supplementary?
 ```
 
 ```{r}
@@ -132,7 +132,17 @@ knitr::kable(GPcombinations_GDP)  # could move to supplementary?
 #| echo: FALSE
 
 GPcombinations_GDP_cNICS <- readr::read_csv(here::here("results", "GPcombinations_GDP_cNICS.csv"), show_col_types = F)
-knitr::kable(GPcombinations_GDP_cNICS)  # could move to supplementary?
+knitr::kable(GPcombinations_GDP_cNICS)  # move to supplementary?
+```
+
+```{r}
+#| label: tbl-gp-modelselectionresults3
+#| tbl-cap: "text"
+#| tbl-number: 3
+#| echo: FALSE
+
+GPcombinations_lowincome <- readr::read_csv(here::here("results", "GPcombinations_lowincome.csv"), show_col_types = F)
+knitr::kable(GPcombinations_lowincome)  # move to supplementary?
 ```
 
 ### Model comparison
@@ -144,11 +154,20 @@ knitr::kable(GPcombinations_GDP_cNICS)  # could move to supplementary?
 Plot/s showing the curated data.
 
 ```{r}
+
 ```
 
 ### Vaccine coverage estimates
 
 Optimal hyperparameters for the Gaussian Process model are noted in Table X.
+
+Example results plots.
+
+![GP model results, using provincial 1+ dose vaccine coverage data. GDP data is used for relation of provinces. Plots are overlaid with national cNICS data in green (unobserved by the model).](plots/bestGPmodel_GDP.pdf)  
+
+![GP model results, using national cNICS vaccine coverage data. GDP data is used for relation of provinces. Plots are overlaid with provincial coverage data (unobserved by the model), 1+ and 2-dose, in green.](plots/bestGPmodel_GDP_cNICS.pdf)
+
+![GP model results, using provincial 1+ dose vaccine coverage data. Health inequalities data is used for relation of provinces (percentage of children in low-income families). Plots are overlaid with national cNICS data in green (unobserved by the model).](plots/bestGPmodel_lowincome.pdf)
 
 ### Model comparison
 
