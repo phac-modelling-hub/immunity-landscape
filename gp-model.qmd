@@ -426,7 +426,7 @@ GPcombinations_lowincome<- select_GP(vax_clean, prov_values="low_income_families
 GPcombinations_lowincome %>% readr::write_csv(here::here("results", "GPcombinations_lowincome.csv"))
 
 #' plots of final model (using best parameter values)
-run_GP(vax_clean, prov_values="low_income_families", l1=1.5, l2=3, b=0.75)
+run_GP(vax_clean, prov_values="low_income_families", l1=1.5, l2=0.5, b=1)
 #ggsave(paste0("plots/bestmodel",l1,"_l2",l2,"_ksqexp","_lowincome",".pdf"), height=4.51, width=7.29)
 run_GP(vax_cNICS, prov_values="low_income_families", l1=1.5, l2=3, b=0.75)
 #ggsave(paste0("plots/cNICSmodel",l1,"_l2",l2,"_ksqexp","_lowincome",".pdf"), height=4.51, width=7.29)
