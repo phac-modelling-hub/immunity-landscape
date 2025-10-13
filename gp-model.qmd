@@ -323,7 +323,7 @@ post2D_new <- post2D %>% ungroup() %>% left_join(data_2dose, by=c("x_i","y_label
 
 # 2D case model extensions
 
-## Functions
+## Model functions
 
 We now wish to improve our basic model by adding information to the prior and experimenting with choice of covariance function and related parameters. First, define helper functions to enable easy running of the 2D model (saved in "R/"):
 
@@ -436,7 +436,7 @@ run_GP(vax_clean, prov_values="low_income_families", l1=1.75, l2=2, b=1)
 ggsave(paste0("plots/bestGPmodel_lowincome",".pdf"), height=4.51, width=7.29)
 ```
 
-A new dataset on vaccine hesitancy requires some manipulation to use.
+A new dataset on vaccine hesitancy requires some manipulation to use (condensing coverage data for Atlantic provinces and Northern provinces):
 
 ```{r}
 #| label: province_relation_hesitancy
@@ -453,4 +453,3 @@ vax_regional <- vax_clean %>% filter(n_doses!="2") %>%
 run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=1.75, l2=2, b=1)
 
 ```
-

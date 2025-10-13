@@ -21,8 +21,8 @@ author:
     affiliations:
       - id: phac
         name: Public Health Agency of Canada
-        city: Toronto?
-        state: ON?
+        city: Ottawa
+        state: ON
         country: Canada
         postal-code:
   - name: Valerie Hongoh
@@ -163,7 +163,7 @@ Optimal hyperparameters for the Gaussian Process model are noted in Table X.
 
 Example results plots.
 
-![GP model results, using provincial 1+ dose vaccine coverage data. GDP data is used for relation of provinces. Plots are overlaid with national cNICS data in green (unobserved by the model).](plots/bestGPmodel_GDP.pdf)  
+![GP model results, using provincial 1+ dose vaccine coverage data. GDP data is used for relation of provinces. Plots are overlaid with national cNICS data in green (unobserved by the model).](plots/bestGPmodel_GDP.pdf)
 
 ![GP model results, using national cNICS vaccine coverage data. GDP data is used for relation of provinces. Plots are overlaid with provincial coverage data (unobserved by the model), 1+ and 2-dose, in green.](plots/bestGPmodel_GDP_cNICS.pdf)
 

@@ -28,7 +28,7 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
       
     } else if (data=="vaccine_hesitancy") {  # vaccine hesitancy among parents (cNICS, refuse all + hesitant)
       province_relation_data <- readr::read_csv(here::here("data", "cNICS-vaccine-hesitancy.csv"), show_col_types = F) %>%
-        mutate(value = refuse_all + hesitant)
+        mutate(value = refuse_all + hesitant) %>% arrange(value)
       
     }
     
