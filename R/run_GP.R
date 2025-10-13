@@ -9,7 +9,8 @@
 #' @param prov_values any named ordered vector giving numerical y-axis values associated to each province, unscaled
 #' OR a character from the following list:
 #'          - "GDP"
-#'          - ""
+#'          - "low_income_families"
+#'          - "vaccine_hesitancy".
 #' @param k covariance function chosen from the following list: (function)
 #'          - ksqexp,
 #'          - kexp.

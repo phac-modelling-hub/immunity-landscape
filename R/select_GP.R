@@ -10,6 +10,7 @@
 #' OR a character from the following list:
 #'          - "GDP"
 #'          - "low_income_families"
+#'          - "vaccine_hesitancy".
 #' @param k_list a named list of covariance functions, e.g. list(ksqexp = ksqexp, kexp = kexp) (named list)
 #' @param l1 a vector of x-lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
 #' @param l2 a vector of relative lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
