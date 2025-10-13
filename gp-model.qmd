@@ -22,6 +22,7 @@ library(stringr)
 library(stringi)
 library(scales)
 library(purrr)
+library(tibble)
 library(mnormt) # for multivariate normal
 library(LaplacesDemon) # for logistic transform
 
@@ -41,9 +42,9 @@ vax_cNICS <- readr::read_csv(here::here("data", "measles_CNICS.csv"), show_col_t
 
 Model fitting is done using Gaussian distributions, whose domain is the entire real line. However, the vaccine coverage data is restricted to $[0,1]$ (though in practice, they're not on the boundaries of this interval). Thus, we transform the vaccine coverage data using a logit function to map it from $(0,1)$ to $(-\infty, \infty)$, perform the model fitting on the real line, and then transform the predictions back from $(-\infty, \infty)$ to $(0,1)$.
 
-## A note on assumptions
+## A note on assumptions 
 
-A Gaussian Process model assumes relation of the independent variable(s), i.e. that ages which are 'close-by' (defined however we wish with parameter l) will have similar vaccination coverage. We can test if this is a plausible assumption for our dataset. ...
+A Gaussian Process model assumes relation of the independent variable(s), i.e. that ages which are 'related / close-by' (defined however we wish with lengthscale parameter l) will have similar vaccination coverage. Equally, we assume that 'related' provinces will also have similar coverage. Some tests of this assumption are the 2D model extensions section.
 
 # 1D case (current age)
 
@@ -370,7 +371,7 @@ Plausible range (by-eye) is `1 <= l1 <= 4`, `l1 < l2 <= 50*l1`, and `0.5 <= b <=
 run_GP(vax_cNICS, l1=3.5, l2=4, b=0.5)
 ```
 
-## Model selection and validation: take-out-one cross validation
+## Model selection and validation
 
 We aim to find the optimal choice of model (hyperparameter values `k`, `l1`, `l2`, `b`), and validate with take-one-out cross-validation. An example algorithm is as follows:
 
@@ -453,3 +454,51 @@ vax_regional <- vax_clean %>% filter(n_doses!="2") %>%
 run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=1.75, l2=2, b=1)
 
 ```
+
+
+## Assumptions tests 
+
+A Gaussian Process model assumes relation of the independent variable(s), i.e. that 'related' ages (defined however we wish with lengthscale parameter l1) will have similar vaccination coverage and that 'related' provinces will also have similar coverage. Some test of this assumption are the 2D model extensions section.
+
+To visualise relation of provinces, we can plot `province_relation_data` on a axis. One could compare to for example the mean cNICS coverage estimate for each province. Inspecting `provinces_test` (or looking at the example plots), we see that these are terrible -- suggesting either that all of our province relation data are poor OR that the cNICS data is poor? We also consider aNICS data but unfortunately this was no better. We should consider a better dataset for testing the assumption of relation of provinces.
+
+```{r}
+#| label: assumption_test_provinces
+
+#' load province relation values as tibbles
+prov_valuesGDP <- enframe(extract_province_relation("GDP", vax_dataset=vax_clean), name="location", value="prov_valuesGDP")  # GDP
+prov_valuesLI <- enframe(extract_province_relation("low_income_families", vax_dataset=vax_clean), name="location", value="prov_valuesLI")  # low_income
+prov_valuesVH <- enframe(extract_province_relation("vaccine_hesitancy", vax_dataset=vax_regional), name="location", value="prov_valuesVH")  # vaccine_hesitancy
+ARval <- prov_valuesVH %>% filter(location=="Atlantic region") %>% pull(prov_valuesVH)
+NRval <- prov_valuesVH %>% filter(location=="Northern region") %>% pull(prov_valuesVH)
+prov_valuesVH <- prov_valuesVH %>% rbind(c("Newfoundland and Labrador", ARval)) %>% rbind(c("Prince Edward Island", ARval)) %>%  # this is very crude code!
+  rbind(c("Nova Scotia", ARval)) %>% rbind(c("Nunavut", NRval)) %>% rbind(c("Northwest Territories", NRval)) %>% mutate(prov_valuesVH=as.numeric(prov_valuesVH))
+
+#' load cNICS means as tibbles
+cNICS_2021 <- vax_cNICS %>% filter(year_report==2021) %>% select(location, "cNICS_2021"=value)
+cNICS_2017 <- vax_cNICS %>% filter(year_report==2017) %>% select(location, "cNICS_2017"=value)
+cNICS_2013a <- vax_cNICS %>% filter(year_report==2013 & age==2) %>% select(location, "cNICS_2013a"=value)
+cNICS_2013b <- vax_cNICS %>% filter(year_report==2013 & age==7) %>% select(location, "cNICS_2013b"=value)
+cNICS_2013c <- vax_cNICS %>% filter(year_report==2013 & age==17) %>% select(location, "cNICS_2013c"=value)
+
+#' combine into one
+provinces_test <- prov_valuesGDP %>% left_join(prov_valuesLI, by="location") %>% left_join(prov_valuesVH, by="location") %>%
+  left_join(cNICS_2021, by="location") %>% left_join(cNICS_2017, by="location") %>% left_join(cNICS_2013a, by="location") %>% 
+  left_join(cNICS_2013b, by="location") %>% left_join(cNICS_2013c, by="location") %>% 
+  mutate(cNICS_mean=(cNICS_2021 + cNICS_2017 + cNICS_2013a + cNICS_2013b + cNICS_2013c)/5)
+
+#' plot
+plot(x=provinces_test$prov_valuesGDP, y=provinces_test$cNICS_2021)
+plot(x=provinces_test$prov_valuesLI, y=provinces_test$cNICS_2021)
+plot(x=provinces_test$prov_valuesVH, y=provinces_test$cNICS_2021)
+library(ggrepel)
+ggplot(provinces_test, aes(x = prov_valuesLI, y = cNICS_2021)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
+ggplot(provinces_test, aes(x = prov_valuesVH, y = cNICS_mean)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
+
+#' instead consider aNICS data over cNICS
+vax_aNICS <- vax_clean %>% filter(age_current == max(age_current)) %>% select(location, "aNICS"=value) # simple hack to extract an adult estimate
+provinces_test <- provinces_test %>% left_join(vax_aNICS, by="location")
+ggplot(provinces_test, aes(x = prov_valuesLI, y = aNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
+```
+
+
