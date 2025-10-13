@@ -92,6 +92,10 @@ Discuss ageing of estimates.
 
 ### Model 1: Gaussian Process model
 
+Introduce the model (2D, current age & province etc). Discuss relation of provinces. Our chosen province relation values against cNICS data is shown in Figure X.
+
+![Province relation values against national cNICS data.](plots/bestprovrelation.pdf)
+
 Hyperparameters used in the Gaussian Process model are shown in @tbl-gp-modelparameters. These were chosen from hyperparameter optimisation using leave-one-out cross-validation (see @sec-fitting for details).
 
 ```{r}

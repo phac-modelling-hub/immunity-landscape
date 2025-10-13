@@ -42,7 +42,7 @@ vax_cNICS <- readr::read_csv(here::here("data", "measles_CNICS.csv"), show_col_t
 
 Model fitting is done using Gaussian distributions, whose domain is the entire real line. However, the vaccine coverage data is restricted to $[0,1]$ (though in practice, they're not on the boundaries of this interval). Thus, we transform the vaccine coverage data using a logit function to map it from $(0,1)$ to $(-\infty, \infty)$, perform the model fitting on the real line, and then transform the predictions back from $(-\infty, \infty)$ to $(0,1)$.
 
-## A note on assumptions 
+## A note on assumptions
 
 A Gaussian Process model assumes relation of the independent variable(s), i.e. that ages which are 'related / close-by' (defined however we wish with lengthscale parameter l) will have similar vaccination coverage. Equally, we assume that 'related' provinces will also have similar coverage. Some tests of this assumption are the 2D model extensions section.
 
@@ -455,8 +455,7 @@ run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=1.75, l2=2, b=1)
 
 ```
 
-
-## Assumptions tests 
+## Assumptions tests
 
 A Gaussian Process model assumes relation of the independent variable(s), i.e. that 'related' ages (defined however we wish with lengthscale parameter l1) will have similar vaccination coverage and that 'related' provinces will also have similar coverage. Some test of this assumption are the 2D model extensions section.
 
@@ -499,6 +498,5 @@ ggplot(provinces_test, aes(x = prov_valuesVH, y = cNICS_mean)) + geom_point(colo
 vax_aNICS <- vax_clean %>% filter(age_current == max(age_current)) %>% select(location, "aNICS"=value) # simple hack to extract an adult estimate
 provinces_test <- provinces_test %>% left_join(vax_aNICS, by="location")
 ggplot(provinces_test, aes(x = prov_valuesLI, y = aNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
+ggsave(paste0("plots/bestprovrelation",".pdf"), height=4.51, width=7.29)  # example code to save best plot
 ```
-
-
