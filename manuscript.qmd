@@ -92,7 +92,11 @@ Discuss ageing of estimates.
 
 ### Model 1: Gaussian Process model
 
-Introduce the model (2D, current age & province etc). Discuss relation of provinces. Our chosen province relation values against cNICS data is shown in Figure X.
+Introduce the model (2D, current age & province, underlying assumptions of a GP model etc). Discuss relation of provinces. Our chosen province relation values against cNICS data is shown in Figure X.
+
+![Testing relationship between ages on the provincial 1+ dose data. Adjacent ages on average have a lower absolute pairwise difference in coverage.](plots/testing_age_assumption1.pdf)
+
+![Testing relationship between ages on the provincial 2 dose data. Adjacent ages again on average have a lower absolute pairwise difference in coverage.](plots/testing_age_assumption2.pdf)
 
 ![Province relation values against national cNICS data.](plots/bestprovrelation.pdf)
 
