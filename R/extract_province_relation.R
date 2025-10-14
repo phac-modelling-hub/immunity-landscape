@@ -2,6 +2,7 @@
 #' 
 #' Outputs a named ordered vector giving numerical y-axis values associated to each province, unscaled.
 #' Each metric is coded such that large values are optimal i.e. we expect a positive correlation with vaccination coverage (by taking 1-x where necessary).
+#' Note that "low_income_families" does not have data for NT, NU, YT.
 #' 
 #' @param data Choice of: (character/ named numeric vector)
 #'              - "GDP", for log(GDP) data from StatCan;
@@ -20,11 +21,6 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
     } else if (data=="low_income_families") {  # % children in low-income families (Health Inequalities Data Tool, Market Basket Measure, age-standardized rate)
       province_relation_data <- readr::read_csv(here::here("data", "health-ineq-data-tool-children-in-low-income-families-MBM-ASR.csv"), show_col_types = F) %>%
         filter(Sex == "Both sexes") %>% mutate(value = (100 - `Age-standardized rate`), location = stri_trans_general(Region, "latin-ascii")) %>% select(location, value)  # 100-X for positive trend
-      mean <- province_relation_data %>% filter(location == "Canada") %>% pull(value)  # use the national average for provinces not listed?
-      NT <- c("Northwest Territories", mean)
-      NU <- c("Nunavut", mean+0.01)  # the model can't fit if NT==NU and coverage data not identical
-      YT <- c("Yukon", mean)
-      province_relation_data <- rbind(province_relation_data, NT, NU, YT) 
       province_relation_data <- province_relation_data %>% mutate(value = as.numeric(value)) %>% arrange(value)
       
     } else if (data=="vaccine_hesitancy") {  # vaccine hesitancy among parents (cNICS, refuse all + hesitant)
