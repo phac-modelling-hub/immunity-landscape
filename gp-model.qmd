@@ -514,6 +514,10 @@ ggplot(provinces_test, aes(x = prov_valuesLI, y = vax_means_withaNICS)) + geom_p
 ggplot(provinces_test, aes(x = prov_valuesLI, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
 ggplot(provinces_test, aes(x = prov_valuesGDP, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
 ggplot(provinces_test, aes(x = prov_valuesVH, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
+
+#' for fun, plot provincial data against cNICS and aNICS
+ggplot(provinces_test, aes(x = vax_means_noaNICS, y = cNICS_mean)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
+ggplot(provinces_test, aes(x = vax_means_noaNICS, y = aNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
 ```
 
 To test relation of ages, we can compute pairwise differences in absolute coverage for all data points and observe if pairs of adjacent ages have a lower difference on average:
