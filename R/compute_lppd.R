@@ -16,7 +16,8 @@
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and/or kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
-compute_lppd <- function(vax_dataset, last_agecurrent=30, prov_values, k=ksqexp, l1=NA, l2=NA, b=1) {
+#' @param meas_error if specified, measurement error is included (numeric)
+compute_lppd <- function(vax_dataset, last_agecurrent=30, prov_values, k=ksqexp, l1=NA, l2=NA, b=1, meas_error=NA) {
   # start from here
   # prepare observed data (training+test)
   vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
@@ -32,7 +33,12 @@ compute_lppd <- function(vax_dataset, last_agecurrent=30, prov_values, k=ksqexp,
   koo <- generate_2Dksqexp_covmat(xyobs,xyobs,fn=k,l=l1,b=b) + 1e-12*diag(nrow(xyobs))  # protect against non-invertibleness
   
   # calculate mean and variance of the ppd at each test point a
-  bottom <- solve(koo)
+  if (is.na(meas_error)) {
+    bottom <- solve(koo)
+  } else if (!is.na(meas_error)) {
+    errmat <- diag((meas_error^2), nrow(koo))
+    bottom <- solve(koo + errmat)
+  }
   top <- bottom%*%(logit_zobs_centred)
   ppd_means <- rep(NA,nrow(vax_dataset))
   ppd_vars <- rep(NA,nrow(vax_dataset))

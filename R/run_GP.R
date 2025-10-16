@@ -18,10 +18,11 @@
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
+#' @param meas_error if specified, measurement error is included (numeric)
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions
 #' @param show_plots if false, plots are hidden
 run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, prov_values=NA, k=ksqexp, k_name=NA, l1=NA, l2=NA, b=1, 
-                   ndrws=50, show_plots=T) {
+                   meas_error=NA, ndrws=50, show_plots=T) {
   #' define possible x values
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
   
@@ -54,7 +55,7 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, prov_val
   
   #' compute and plot posterior
   post2D <- compute_posterior2D(xvals=xvals, yvals=yvals, xobs=xobs, yobs=yobs, zobs=zobs,
-                                k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
+                                k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b, meas_error=meas_error)
   vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2.csv"), show_col_types = FALSE) %>%  #added for cNICS comparison
     filter(!(pt %in% c("SK","YT","NB")))
   if (show_plots) post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k=k_name, k_param1=l1, k_param2=l2, k_param3=b,

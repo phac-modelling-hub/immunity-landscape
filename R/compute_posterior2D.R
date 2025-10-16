@@ -17,7 +17,8 @@
 #' @param ndrws optional specify number of draws from the prior distribution
 #' @param prov_levels factor defining the names of provinces e.g. for y-values
 #' @param b optional function scale determining the output variance for k
-compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA, ndrws=50, prov_levels, b=1) {
+#' @param meas_error if specified, measurement error is included (numeric)
+compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA, ndrws=50, prov_levels, b=1, meas_error=NA) {
   # calculate covariances between unobserved and observed
   xygrid <- expand_grid(x=xvals, y=yvals)
   xyobs <- tibble(x=xobs,y=yobs)
@@ -29,8 +30,14 @@ compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA,
   
   # calculate posterior mean and posterior cov matrix
   logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # use the logistic-transformed data centred around mean 0
-  post_mean <- kuo%*%solve(koo)%*%(logit_zobs_centred)  # conditional mean
-  post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
+  if (is.na(meas_error)) {
+    post_mean <- kuo%*%solve(koo)%*%(logit_zobs_centred)  # conditional mean
+    post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
+  } else if (!is.na(meas_error)) {
+    errmat <- diag((meas_error^2), nrow(koo))
+    post_mean <- kuo%*%solve(koo + errmat)%*%(logit_zobs_centred)  # conditional mean
+    post_covmat <- kuu - (kuo%*%solve(koo + errmat)%*%kou)  # conditional variance
+  }
   
   # draw from the posterior distribution
   draw_from_rmnorm(

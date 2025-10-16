@@ -354,7 +354,7 @@ From a quick by-eye model selection with GDP province relation, current best GP 
 #   }
 # }
 
-run_GP(vax_clean,l1=1.5,l2=3,b=1)
+run_GP(vax_clean,l1=1.5,l2=3,b=0.75)
 ```
 
 ## Running with cNICS data
@@ -368,12 +368,29 @@ Plausible range (by-eye) is `1 <= l1 <= 4`, `l1 < l2 <= 50*l1`, and `0.5 <= b <=
 ```{r}
 #| label: run_cNICS
 
-run_GP(vax_cNICS, l1=3.5, l2=4, b=0.5)
+run_GP(vax_cNICS, l1=3.5, l2=4, b=1)
 ```
+
+
+## Measurement error
+
+Our GP model currently treats the observed data as exact estimates - posterior draws are forced to cross through all observed data points. We hence add measurement error. For this, the posterior mean and covariance matrix are modified when a parameter `meas_error` is specified in `run_GP()`:
+
+```{r}
+#| label: meas_error
+
+run_GP(vax_clean,l1=1.5,l2=3,b=0.75)  # exact
+run_GP(vax_clean,l1=1.5,l2=3,b=0.75,meas_error=0.01,ndrws=10)  # with measurement error
+run_GP(vax_clean,l1=1.5,l2=3,b=0.75,meas_error=0.1,ndrws=10)  # with measurement error
+run_GP(vax_clean,l1=1.5,l2=3,b=0.75,meas_error=0.5,ndrws=10)  # with measurement error
+
+```
+
+See the [GitHub Issue #3](https://github.com/phac-modelling-hub/immunity-landscape/issues/3) for a discussion of methodology.
 
 ## Model selection and validation
 
-We aim to find the optimal choice of model (hyperparameter values `k`, `l1`, `l2`, `b`), and validate with take-one-out cross-validation. An example algorithm is as follows:
+We aim to find the optimal choice of model (hyperparameter values `k`, `l1`, `l2`, `b`), and validate with take-one-out cross-validation. First assume no measurement error. An example algorithm is as follows:
 
 -   For a given covariance function k and lengthscale parameters l1, l2, b:
 
@@ -390,7 +407,7 @@ One option is to work with the posterior mean at each missing age as described. 
 `estimate_lppd()` estimates the posterior predictive density from a sample, in a similar way to the algorithm described above. `compute_lppd()` calculates the full log posterior predictive density analytically. See the [GitHub Issue #4](https://github.com/phac-modelling-hub/immunity-landscape/issues/4) for a discussion of methodology. `select_GP()` then ca does a search of hyperparameter space and returns the lppd for each hyperparameter set. The 'optimal' model (with largest absolute lppd) is also printed to the console.
 
 ```{r}
-#| label: model_selection
+#| label: model_selection_noerror
 
 #' define province relation (prov_values)
 prov_values <- extract_province_relation("GDP", vax_dataset=vax_clean)
@@ -411,7 +428,24 @@ GPcombinations_GDP_cNICS <- select_GP(vax_cNICS, prov_values="GDP", k_list=list(
 GPcombinations_GDP_cNICS %>% readr::write_csv(here::here("results", "GPcombinations_GDP_cNICS.csv"))
 ```
 
-## Experimenting with relation of provinces
+This 'best' hyperparameters result in spiky and overfitted estimates. Instead re-run model selection and validation with measurement error, to relax the model.
+
+```{r}
+#| label: model_selection_witherror
+
+example3 <- compute_lppd(vax_clean, prov_values="GDP", k=ksqexp, l1=1.5, l2=3, b=1, meas_error=0.1)
+example4 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1), meas_error=0.1)
+
+#' exhaustive search of reasonable hyperparameter space (provinical dataset) with error
+GPcombinations_GDP2 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75), l2=c(1.5,2,2.5,3.0,3.5,4.0,4.5,5.0), b=c(0.5,1,1.5), meas_error=c(0.1,0.05))
+GPcombinations_GDP2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_witherror.csv"))
+
+#' exhaustive search of reasonable hyperparameter space (cNICS dataset) with error
+GPcombinations_GDP_cNICS2 <- select_GP(vax_cNICS, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.5,2,2.5,3,3.25,3.5,4), l2=c(1.5,2,3,3.5,4,4.5,5,6,10,50,100), b=c(0.5,1,1.5), meas_error=c(0.1,0.05))
+GPcombinations_GDP_cNICS2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_cNICS_witherror.csv"))
+```
+
+## Relation of provinces
 
 Relation of provinces is encoded in `prov_values` and can be extracted from the function `extract_province_relation()`. This function has a number of socioecomonic datasets preloaded in a standardised format for use in the GP model. Examples include "GDP" and "low_income_families". \*Note that for "low_income_families" there is currently no data for NU, NT, and YT.
 
@@ -429,12 +463,16 @@ example2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=lis
 GPcombinations_lowincome<- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2), l2=c(1,2,3,4,6,8,10), b=c(0.5,1,1.5))
 GPcombinations_lowincome %>% readr::write_csv(here::here("results", "GPcombinations_lowincome.csv"))
 
+#' with error
+GPcombinations_lowincome2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2), l2=c(1,2,3,4,6,8,10), b=c(0.5,1,1.5), meas_error=c(0.1, 0.05))
+GPcombinations_lowincome2 %>% readr::write_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))
+
 #' plots of final model (using best parameter values)
 run_GP(vax_clean, prov_values="GDP", l1=1.75, l2=2, b=1)
 ggsave(paste0("plots/bestGPmodel_GDP",".pdf"), height=4.51, width=7.29)
 run_GP(vax_cNICS, prov_values="GDP", l1=3.25, l2=3.5, b=1)
 ggsave(paste0("plots/bestGPmodel_GDP_cNICS",".pdf"), height=4.51, width=7.29)
-run_GP(vax_cleanLI, prov_values="low_income_families", l1=1.75, l2=2, b=1)
+run_GP(vax_cleanLI, prov_values="low_income_families", l1=1, l2=2, b=1)
 ggsave(paste0("plots/bestGPmodel_lowincome",".pdf"), height=4.51, width=7.29)
 ```
 
@@ -454,10 +492,13 @@ vax_regional <- vax_clean %>% filter(n_doses!="2") %>%
 #' run with vax_regional
 run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=2, l2=1, b=1)  # l1>l2 looks ok here, but l1>4*l2 is spiky. And true l2 (l1*l2) meaningful when >1?
 
-#' exhaustive search of reasonable hyperparameter space (provincial dataset, children in low-income families province relation metric)
-GPcombinations_VH<- select_GP(vax_regional, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2), l2=c(0.25,0.5,1,2,3,4,5), b=c(0.5,1,1.5))
+#' exhaustive search of reasonable hyperparameter space (provincial dataset, vaccine hesitancy province relation metric)
+GPcombinations_VH <- select_GP(vax_regional, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2), l2=c(0.25,0.5,1,2,3,4,5), b=c(0.5,1,1.5))
 GPcombinations_VH %>% readr::write_csv(here::here("results", "GPcombinations_vaccinehesitancy.csv"))
 
+#' with error
+GPcombinations_VH2 <- select_GP(vax_regional, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2), l2=c(0.25,0.5,1,2,3,4,5), b=c(0.5,1,1.5), meas_error=c(0.1, 0.05))
+GPcombinations_VH2 %>% readr::write_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv"))
 ```
 
 ## Assumptions tests

@@ -16,7 +16,8 @@
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and/or kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
-estimate_lppd <- function(vax_dataset, last_agecurrent=30, prov_values, ndrws=100, k=ksqexp, l1=NA, l2=NA, b=1) {
+#' @param meas_error if specified, measurement error is included (numeric)
+estimate_lppd <- function(vax_dataset, last_agecurrent=30, prov_values, ndrws=100, k=ksqexp, l1=NA, l2=NA, b=1, meas_error=NA) {
   # prepare the multiple training datasets (take-one-out)
   vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
   vax_datasets <- map(1:nrow(vax_dataset), ~ vax_dataset[-.x, ])
@@ -28,7 +29,7 @@ estimate_lppd <- function(vax_dataset, last_agecurrent=30, prov_values, ndrws=10
     xout <- vax_dataset[i, ] %>% pull(age_current)  # age_current of removed data point
     yout <- vax_dataset[i, ] %>% pull(location)  # province of removed data point
     zout <- vax_dataset[i, ] %>% pull(value)  # correct coverage value of removed data point
-    ppd <- run_GP(vax_datasets[[i]], show_plots=F, last_agecurrent=last_agecurrent, prov_values=prov_values, ndrws=ndrws, k=k, l1=l1, l2=l2, b=b) %>%
+    ppd <- run_GP(vax_datasets[[i]], show_plots=F, last_agecurrent=last_agecurrent, prov_values=prov_values, ndrws=ndrws, k=k, l1=l1, l2=l2, b=b, meas_error=meas_error) %>%
       filter(x_i==xout & y_label==yout) %>% pull(post2D_constrained) %>% 
       between(zout - 0.02, zout + 0.02) %>% sum()  # freq of ppd evaluated at true removed value +/-2%
     lppd_value[i] <- ppd  # not taking logs currently; should be log(ppd) eventually
