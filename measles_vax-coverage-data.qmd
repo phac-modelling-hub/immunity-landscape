@@ -841,16 +841,20 @@ plot_coverage(vax_NS)
 
 ## Nunavut
 
+We omit the 2021 estimate, which is exceedingly low and includes [the following footnote](https://www.canada.ca/en/public-health/services/immunization-vaccines/vaccination-coverage/2021-highlights-childhood-national-immunization-coverage-survey.html#tbl2anE):
+
+> Estimates and confidence intervals are of marginal quality due to high sampling variability and should be used with caution.
+
 ```{r}
 #| label: vax_NU
 
 vax_NU <- tibble::tibble(
   pt = "NU", 
   location = "Nunavut",
-  year_report  = c(2017, 2021),
+  year_report  = 2017,
   age = "2",
   n_doses = "1+" , 
-  value =  c(0.887, 0.346)
+  value =  0.887
 )
 
 DT::datatable(vax_NU)
