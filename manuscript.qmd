@@ -72,7 +72,7 @@ Introductory paragraph
 
 Background on Measles/ Measles in Canada
 
-Paragraph on the research problem - limited serological data, vaccine data only by province & very heterogeneous. Flag susceptibility vs vaccination. Flag the need for modelling (preliminary linear stuff didn't work/ datasets all have different methodology!).
+Paragraph on the research problem - imited serological data, vaccine data only by province & very heterogeneous. Flag susceptibility vs vaccination. Flag the need for modelling (preliminary linear stuff didn't work/ datasets all have different methodology!). Here's a very real need and here's how we have tried to solve the problem.
 
 Paragraph outlining what this article adds ("Using XXX, this article estimates ...")
 
@@ -90,10 +90,13 @@ Flag nuances in the data, perhaps as a table: 1/2 vs 1+/2+ dose, differing vacci
 
 Discuss ageing of estimates.
 
-### Model 1: Gaussian Process model
+### Gaussian Process model
 
-Introduce the model (2D, current age & province, underlying assumptions of a GP model etc). Discuss relation of provinces. Our chosen province relation values against cNICS data is shown in Figure X.
+Introduce the model (2D, current age & province, underlying assumptions of a GP model etc). 
 
+Discuss way to relate one province to another (three models). 
+
+Our chosen province relation values against cNICS data is shown in Figure X...
 ![Testing relationship between ages on the provincial 1+ dose data. Adjacent ages on average have a lower absolute pairwise difference in coverage.](plots/testing_age_assumption1.pdf)
 
 ![Testing relationship between ages on the provincial 2 dose data. Adjacent ages again on average have a lower absolute pairwise difference in coverage.](plots/testing_age_assumption2.pdf)
@@ -117,11 +120,9 @@ GPmodelparameters_table <- data.frame(
 knitr::kable(GPmodelparameters_table)
 ```
 
-### Model 2: GLM with XXX
-
 ### Model fitting, selection, and validation procedures {#sec-fitting}
 
-For the (non-parametric) Gaussian process model, there is no model fitting stage. Model selection and validation were performed using leave-one-out cross-validation, with log posterior predictive density (lppd) as the error metric at test points. Model selection and validation were first performed on the provincial dataset (@tbl-gp-modelselectionresults). The combination of plausible hyperparameter values with largest absolute lppd were used in analysis (@tbl-gp-modelparameters). Model selection was also repeated with the national cNICS dataset (@tbl-gp-modelselectionresults2) and different indicators for relation of provinces ().
+For our (non-parametric) Gaussian process models, there is no model fitting stage. Model selection and validation were performed using leave-one-out cross-validation, with log posterior predictive density (lppd) as the error metric at test points. Model selection and validation were first performed on the provincial dataset (@tbl-gp-modelselectionresults). The combination of plausible hyperparameter values with largest absolute lppd were used in analysis (@tbl-gp-modelparameters). Model selection was also repeated with the national cNICS dataset (@tbl-gp-modelselectionresults2) and different indicators for relation of provinces ().
 
 ```{r}
 #| label: tbl-gp-modelselectionresults
@@ -152,8 +153,6 @@ knitr::kable(GPcombinations_GDP_cNICS)  # move to supplementary?
 GPcombinations_lowincome <- readr::read_csv(here::here("results", "GPcombinations_lowincome.csv"), show_col_types = F)
 knitr::kable(GPcombinations_lowincome)  # move to supplementary?
 ```
-
-### Model comparison
 
 ## Results
 
@@ -192,3 +191,7 @@ Miscellaneous discussion points - list here as we think of them: Immunity vs Vac
 Limitations paragraph: note older ages not explicitly considered/note the assumptions on older ages; some discussion of relation of provinces; ageing of estimates.
 
 Conclusions paragraph
+
+## Supplementary
+
+Supplementary can include anything that backs up our assumptions, including the testing assumptions for age and province.
