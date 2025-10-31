@@ -381,7 +381,7 @@ Our GP model currently treats the observed data as exact estimates - posterior d
 run_GP(vax_clean,l1=1.5,l2=3,b=0.75)  # exact
 run_GP(vax_clean,l1=1.5,l2=3,b=0.75,meas_error=0.01,ndrws=50)  # with measurement error
 run_GP(vax_clean,l1=1.5,l2=3,b=0.75,meas_error=0.1,ndrws=50)  # with measurement error
-run_GP(vax_clean,l1=1.5,l2=3,b=0.75,meas_error=0.5,ndrws=50)  # with measurement error
+run_GP(vax_clean,l1=1.25,l2=1,b=1.5,meas_error=0.01,ndrws=50)  # with measurement error
 
 ```
 
@@ -436,15 +436,56 @@ example3 <- compute_lppd(vax_clean, prov_values="GDP", k=ksqexp, l1=1.5, l2=3, b
 example4 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1), meas_error=0.1)
 
 #' exhaustive search of reasonable hyperparameter space (provinical dataset) with error
-GPcombinations_GDP2 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3.0,3.5,4.0), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0.05,0))
+GPcombinations_GDP2 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3.0,3.5,4.0), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
 GPcombinations_GDP2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_witherror.csv"))
 
 #' exhaustive search of reasonable hyperparameter space (cNICS dataset) with error
 GPcombinations_GDP_cNICS2 <- select_GP(vax_cNICS, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.5,2,2.5,3,3.25,3.5,4), l2=c(1.5,2,3,3.5,4,4.5,5,6,10,50,100), b=c(0.5,1,1.5), meas_error=c(0.1,0.05,0.01))
 GPcombinations_GDP_cNICS2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_cNICS_witherror.csv"))
 
-run_GP(vax_clean,l1=2.5,l2=3,b=0.5,meas_error=0.01,ndrws=50)  # with measurement error
+run_GP(vax_clean,l1=1.25,l2=1,b=1,meas_error=0.01,ndrws=50)
+run_GP(vax_clean,l1=1,l2=4,b=1,meas_error=0.01,ndrws=50)
 ```
+
+We can also explore if there are local maximums in the model selection, rather than only considering the model with largest lppd.
+
+```{r}
+#| label: model_selection_heatmaps
+
+my_tibble_GDP2 <- read_csv(here::here("results", "GPcombinations_GDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1) %>% filter(meas_error %in% c(0.01, 0.05, 0.1, 0.5))
+my_tibble_LI2 <- read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1) %>% filter(meas_error %in% c(0.01, 0.05, 0.1, 0.5))
+my_tibble_VH2 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1) %>% filter(meas_error %in% c(0.01, 0.05, 0.1, 0.5))
+head(my_tibble_GDP2)
+max_lppd_all <- max(c(my_tibble_GDP2$lppd_exact,my_tibble_LI2$lppd_exact,my_tibble_VH2$lppd_exact))
+min_lppd_all <- min(c(my_tibble_GDP2$lppd_exact,my_tibble_LI2$lppd_exact,my_tibble_VH2$lppd_exact))
+
+#' plot l1 against l2, colouring by lppd, for several meas_error values
+my_tibble_GDP2 %>% ggplot(aes(x = l1, y = l2, fill = lppd_exact)) +
+  geom_tile() +
+  scale_fill_gradient2(limits = c(min_lppd_all, max_lppd_all),
+                       breaks = scales::pretty_breaks(n = 5)) +
+  facet_wrap(~ meas_error) +
+  labs(title = "lppd heatmaps for GDP model, varying measurement error",
+       x = "l1", y = "l2", fill = "lppd")
+
+my_tibble_LI2 %>% ggplot(aes(x = l1, y = l2, fill = lppd_exact)) +
+  geom_tile() +
+  scale_fill_gradient2(limits = c(min_lppd_all, max_lppd_all),
+                       breaks = scales::pretty_breaks(n = 5)) +
+  facet_wrap(~ meas_error) +
+  labs(title = "lppd heatmaps for Low-Income model, varying measurement error",
+       x = "l1", y = "l2", fill = "lppd")
+
+my_tibble_VH2 %>% ggplot(aes(x = l1, y = l2, fill = lppd_exact)) +
+  geom_tile() +
+  scale_fill_gradient2(limits = c(min_lppd_all, max_lppd_all),
+                       breaks = scales::pretty_breaks(n = 5)) +
+  facet_wrap(~ meas_error) +
+  labs(title = "lppd heatmaps for Vaccine Hesitancy model, varying measurement error",
+       x = "l1", y = "l2", fill = "lppd")
+```
+
+
 
 ## Relation of provinces
 
@@ -465,8 +506,8 @@ example2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=lis
 # GPcombinations_lowincome %>% readr::write_csv(here::here("results", "GPcombinations_lowincome.csv"))
 
 #' with error
-GPcombinations_lowincome2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3,2.5,4), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
-GPcombinations_lowincome2 %>% readr::write_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))
+GPcombinations_LI2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3,3.5,4), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_LI2 %>% readr::write_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))
 
 #' plots of final model (using best parameter values)
 # run_GP(vax_clean, prov_values="GDP", l1=1.25, l2=1.5, b=0.5, meas_error=0.01)
