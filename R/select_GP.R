@@ -42,7 +42,7 @@ select_GP <- function(vax_dataset, last_agecurrent=30, prov_values, ndrws=100, k
     meas_error = ..5))) %>% 
     select(-k) %>% mutate(model_no = row_number(), .before = 1)
   
-  optimal_model <- combinations %>% slice_max(abs(lppd_exact)) %>% select(k_name, l1, l2, b)
+  optimal_model <- combinations %>% slice_max(lppd_exact) %>% select(k_name, l1, l2, b)
   print(c("Optimal hyperparameters:", optimal_model))
   return(combinations)
 }

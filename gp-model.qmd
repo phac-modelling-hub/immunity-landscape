@@ -403,7 +403,7 @@ We aim to find the optimal choice of model (hyperparameter values `k`, `l1`, `l2
 
 One option is to work with the posterior mean at each missing age as described. A better option is to work with a richer goodness-of-fit metric such as the (log) *posterior predictive density* at each missing age instead. This makes use of the full richness of our Gaussian Process model. We hence choose the latter metric.
 
-`estimate_lppd()` estimates the posterior predictive density from a sample, in a similar way to the algorithm described above. `compute_lppd()` calculates the full log posterior predictive density analytically. See the [GitHub Issue #4](https://github.com/phac-modelling-hub/immunity-landscape/issues/4) for a discussion of methodology. `select_GP()` then does a search of hyperparameter space and returns the lppd for each hyperparameter set. The 'optimal' model (with largest absolute lppd) is also printed to the console.
+`estimate_lppd()` estimates the posterior predictive density from a sample, in a similar way to the algorithm described above. `compute_lppd()` calculates the full log posterior predictive density analytically. See the [GitHub Issue #4](https://github.com/phac-modelling-hub/immunity-landscape/issues/4) for a discussion of methodology. `select_GP()` then does a search of hyperparameter space and returns the lppd for each hyperparameter set. The 'optimal' model (with max lppd) is also printed to the console.
 
 ```{r}
 #| label: model_selection_noerror
@@ -452,37 +452,37 @@ We can also explore if there are local maximums in the model selection, rather t
 ```{r}
 #| label: model_selection_heatmaps
 
-my_tibble_GDP2 <- read_csv(here::here("results", "GPcombinations_GDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1) %>% filter(meas_error %in% c(0.01, 0.05, 0.1, 0.5))
-my_tibble_LI2 <- read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1) %>% filter(meas_error %in% c(0.01, 0.05, 0.1, 0.5))
-my_tibble_VH2 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1) %>% filter(meas_error %in% c(0.01, 0.05, 0.1, 0.5))
-head(my_tibble_GDP2)
-max_lppd_all <- max(c(my_tibble_GDP2$lppd_exact,my_tibble_LI2$lppd_exact,my_tibble_VH2$lppd_exact))
-min_lppd_all <- min(c(my_tibble_GDP2$lppd_exact,my_tibble_LI2$lppd_exact,my_tibble_VH2$lppd_exact))
+my_tibble_GDP2 <- read_csv(here::here("results", "GPcombinations_GDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
+my_tibble_LI2 <- read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
+my_tibble_VH2 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
 
 #' plot l1 against l2, colouring by lppd, for several meas_error values
-my_tibble_GDP2 %>% ggplot(aes(x = l1, y = l2, fill = lppd_exact)) +
+my_tibble_GDP2 %>%
+  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-500, 100, length.out = 7))) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_bin)) +
   geom_tile() +
-  scale_fill_gradient2(limits = c(min_lppd_all, max_lppd_all),
-                       breaks = scales::pretty_breaks(n = 5)) +
+  scale_fill_brewer(name = "lppd > -500") +
   facet_wrap(~ meas_error) +
   labs(title = "lppd heatmaps for GDP model, varying measurement error",
-       x = "l1", y = "l2", fill = "lppd")
+       x = "l1", y = "l2", fill = "lppd > -500")
 
-my_tibble_LI2 %>% ggplot(aes(x = l1, y = l2, fill = lppd_exact)) +
+my_tibble_LI2 %>%
+  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-500, 100, length.out = 7))) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_bin)) +
   geom_tile() +
-  scale_fill_gradient2(limits = c(min_lppd_all, max_lppd_all),
-                       breaks = scales::pretty_breaks(n = 5)) +
+  scale_fill_brewer(name = "lppd > -500") +
   facet_wrap(~ meas_error) +
   labs(title = "lppd heatmaps for Low-Income model, varying measurement error",
-       x = "l1", y = "l2", fill = "lppd")
+       x = "l1", y = "l2", fill = "lppd > -500")
 
-my_tibble_VH2 %>% ggplot(aes(x = l1, y = l2, fill = lppd_exact)) +
+my_tibble_VH2 %>% 
+  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-500, 100, length.out = 7))) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_bin)) +
   geom_tile() +
-  scale_fill_gradient2(limits = c(min_lppd_all, max_lppd_all),
-                       breaks = scales::pretty_breaks(n = 5)) +
+  scale_fill_brewer(name = "lppd > -500") +
   facet_wrap(~ meas_error) +
   labs(title = "lppd heatmaps for Vaccine Hesitancy model, varying measurement error",
-       x = "l1", y = "l2", fill = "lppd")
+       x = "l1", y = "l2", fill = "lppd > -500")
 ```
 
 
