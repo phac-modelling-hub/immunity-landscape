@@ -485,8 +485,6 @@ my_tibble_VH2 %>%
        x = "l1", y = "l2", fill = "lppd > -500")
 ```
 
-
-
 ## Relation of provinces
 
 Relation of provinces is encoded in `prov_values` and can be extracted from the function `extract_province_relation()`. This function has a number of socioecomonic datasets preloaded in a standardised format for use in the GP model. Examples include "GDP" and "low_income_families". \*Note that for "low_income_families" there is currently no data for NU, NT, and YT.
@@ -548,7 +546,7 @@ GPcombinations_VH2 %>% readr::write_csv(here::here("results", "GPcombinations_va
 
 A Gaussian Process model assumes relation of the independent variable(s), i.e. that 'related' ages (defined however we wish with lengthscale parameter l1) will have similar vaccination coverage and that 'related' provinces will also have similar coverage.
 
-To visualise relation of provinces, we can plot `province_relation_data` on an axis. One could compare to for example the mean cNICS coverage estimate for each province. Inspecting `provinces_test` (or looking at the example plots), we see that these are terrible -- suggesting either that all of our province relation data are poor OR that the cNICS data is poor? We also consider aNICS data but unfortunately this is no better. A better dataset is needed for testing the assumption of relation of provinces.
+To visualise relation of provinces, we can plot `province_relation_data` on an axis. One could compare to for example the mean cNICS coverage estimate for each province. A range of plots are plotted.
 
 ```{r}
 #| label: assumption_test_provinces
@@ -610,7 +608,7 @@ To test relation of ages, we can compute pairwise differences in absolute covera
 #| label: assumption_test_ages
 
 #' 1+ dose provincial data, no aNICS
-# read in provincial data with aNICS removed
+#' read in provincial data with aNICS removed
 vax_dataset1 <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2-noadults.csv"), show_col_types = FALSE) %>%
   filter(n_doses %in% c("1", "1+"))
 
@@ -621,14 +619,18 @@ compute_pairwise_diffs <- function(df) {
   expand_grid(age1 = df$age_current, age2 = df$age_current) %>% filter(age1 < age2) %>%
     left_join(df %>% select(age1 = age_current, cov1 = value), by = "age1") %>%
     left_join(df %>% select(age2 = age_current, cov2 = value), by = "age2") %>%
-    mutate(diff = abs(cov1 - cov2), adjacent = (age2 - age1 == 1))
+    mutate(diff = abs(cov1 - cov2), adjacent = (age2 - age1 == 1),
+           age_gap = age2 - age1, gap_group = case_when(age_gap == 1 ~ "1 year apart",
+                                                        age_gap == 2 ~ "2 years apart",
+                                                        age_gap == 3 ~ "3 years apart",
+                                                        age_gap > 3 ~ ">3 years apart"))
 }
 
 #' compute pairwise for e.g. Alberta
 alberta_pairs <- vax_dataset1 %>% filter(location=="Alberta") %>% compute_pairwise_diffs()
 
 #' plot histogram for e.g. Alberta
-ggplot(alberta_pairs, aes(x = diff, fill = adjacent)) + geom_histogram() +
+ggplot(alberta_pairs, aes(x = diff*100, fill = gap_group)) + geom_histogram() +
   labs(title = "Pairwise Coverage Differences — Alberta (1+ dose)",
     x = "Absolute Difference in Coverage (%)",
     y = "Count",
@@ -636,9 +638,9 @@ ggplot(alberta_pairs, aes(x = diff, fill = adjacent)) + geom_histogram() +
 
 #' compute pairwise and plot histogram for remaining provinces
 province_pairs <- vax_dataset1 %>% group_by(location) %>% group_modify(~ compute_pairwise_diffs(.x))
-ggplot(province_pairs, aes(x = diff, fill = adjacent)) + geom_histogram() + 
+ggplot(province_pairs, aes(x = diff*100, fill = gap_group)) + geom_histogram() +  # use fill=adjacent for only adjacent ages OR fill=gap_group otherwise
   facet_wrap(~ location) + labs(title = "Pairwise Coverage Differences — By Province (1+ dose)",
-                                x = "Absolute Difference in Coverage (%)", y = "Count", fill = "Adjacent ages")
+                                x = "Absolute Difference in Coverage (%)", y = "Count", fill = "Age gap")
 ggsave(paste0("plots/testing_age_assumption1",".pdf"), height=4.51, width=7.29)  # example code to save plot
 
 #' 2 dose provincial data
@@ -646,9 +648,9 @@ ggsave(paste0("plots/testing_age_assumption1",".pdf"), height=4.51, width=7.29) 
 vax_dataset2 <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2-noadults.csv"), show_col_types = FALSE) %>%
   filter(n_doses %in% c("2", "2+"))
 province_pairs2 <- vax_dataset2 %>% group_by(location) %>% group_modify(~ compute_pairwise_diffs(.x))
-ggplot(province_pairs2, aes(x = diff, fill = adjacent)) + geom_histogram() + 
+ggplot(province_pairs2, aes(x = diff*100, fill = gap_group)) + geom_histogram() + 
   facet_wrap(~ location) + labs(title = "Pairwise Coverage Differences — By Province (2 dose)",
-                                x = "Absolute Difference in Coverage (%)", y = "Count", fill = "Adjacent ages")
+                                x = "Absolute Difference in Coverage (%)", y = "Count", fill = "Age gap")
 ggsave(paste0("plots/testing_age_assumption2",".pdf"), height=4.51, width=7.29)  # example code to save plot
 
 #' Aggregated provincial data
@@ -657,8 +659,13 @@ country_pairs <- expand_grid(id1 = vax_dataset3$id, id2 = vax_dataset3$id) %>%
   filter(id1 < id2) %>%
   left_join(vax_dataset3 %>% select(id1 = id, age1 = age_current, cov1 = value), by = "id1") %>%
   left_join(vax_dataset3 %>% select(id2 = id, age2 = age_current, cov2 = value), by = "id2") %>%
-  mutate(diff = abs(cov1 - cov2), adjacent = (abs(age2 - age1) == 1))
-ggplot(country_pairs, aes(x = diff, fill = adjacent)) + geom_histogram() + 
+  mutate(diff = abs(cov1 - cov2), adjacent = (abs(age2 - age1) == 1),
+         age_gap = age2 - age1, gap_group = case_when(age_gap == 1 ~ "1 year apart",
+                                                      age_gap == 2 ~ "2 years apart",
+                                                      age_gap == 3 ~ "3 years apart",
+                                                      age_gap > 3 ~ ">3 years apart",
+                                                      age_gap == 0 ~ "0 years apart"))
+ggplot(country_pairs, aes(x = diff*100, fill = gap_group)) + geom_histogram() + 
   labs(title = "Pairwise Coverage Differences — All provincial data (1+ dose)")
 
 vax_dataset4 <- vax_dataset2 %>% mutate(id = row_number()) %>% select(-location)
@@ -666,8 +673,13 @@ country_pairs2 <- expand_grid(id1 = vax_dataset4$id, id2 = vax_dataset4$id) %>%
   filter(id1 < id2) %>%
   left_join(vax_dataset4 %>% select(id1 = id, age1 = age_current, cov1 = value), by = "id1") %>%
   left_join(vax_dataset4 %>% select(id2 = id, age2 = age_current, cov2 = value), by = "id2") %>%
-  mutate(diff = abs(cov1 - cov2), adjacent = (abs(age2 - age1) == 1))
-ggplot(country_pairs2, aes(x = diff, fill = adjacent)) + geom_histogram() + 
+  mutate(diff = abs(cov1 - cov2), adjacent = (abs(age2 - age1) == 1),
+          age_gap = age2 - age1, gap_group = case_when(age_gap == 1 ~ "1 year apart",
+                                                       age_gap == 2 ~ "2 years apart",
+                                                       age_gap == 3 ~ "3 years apart",
+                                                       age_gap > 3 ~ ">3 years apart",
+                                                       age_gap == 0 ~ "0 years apart"))
+ggplot(country_pairs2, aes(x = diff*100, fill = gap_group)) + geom_histogram() + 
   labs(title = "Pairwise Coverage Differences — All provincial data (2 dose)")
 ```
 
