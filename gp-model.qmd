@@ -444,16 +444,16 @@ GPcombinations_GDP_cNICS2 <- select_GP(vax_cNICS, prov_values="GDP", k_list=list
 GPcombinations_GDP_cNICS2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_cNICS_witherror.csv"))
 
 #' smallest lppd fit (spiky)
-run_GP(vax_clean,l1=1.75,l2=0.5,b=1.5,meas_error=0,ndrws=50)
+run_GP(vax_clean,l1=2.5,l2=0.5,b=0.5,meas_error=0,ndrws=50)
 vax_loo_test <- vax_clean %>% filter(!(location == "Alberta" & age_current == 8))
-run_GP(vax_loo_test,l1=1.75,l2=0.5,b=1.5,meas_error=0,ndrws=50)
+run_GP(vax_loo_test,l1=2.5,l2=0.5,b=0.5,meas_error=0,ndrws=50)
 vax_loo_test2 <- vax_clean %>% filter(!(location == "Nova Scotia" & age_current == 10))
-run_GP(vax_loo_test2,l1=1.75,l2=0.5,b=1.5,meas_error=0,ndrws=50)
+run_GP(vax_loo_test2,l1=2.5,l2=0.5,b=0.5,meas_error=0,ndrws=50)
 
 #' largest lppd fit (noisy)
-run_GP(vax_clean,l1=2.5,l2=0.5,b=0.5,meas_error=0.5,ndrws=50)
-run_GP(vax_loo_test,l1=2.5,l2=0.5,b=0.5,meas_error=0.5,ndrws=50)
-run_GP(vax_loo_test2,l1=2.5,l2=0.5,b=0.5,meas_error=0.5,ndrws=50)
+run_GP(vax_clean,l1=1.75,l2=4,b=0.5,meas_error=0.5,ndrws=50)
+run_GP(vax_loo_test,l1=1.75,l2=4,b=0.5,meas_error=0.5,ndrws=50)
+run_GP(vax_loo_test2,l1=1.75,l2=4,b=0.5,meas_error=0.5,ndrws=50)
 ```
 
 We can also explore if there are local maximums in the model selection, rather than only considering the model with largest lppd.
@@ -467,31 +467,31 @@ my_tibble_VH2 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy
 
 #' plot l1 against l2, colouring by lppd, for several meas_error values
 my_tibble_GDP2 %>%
-  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-500, 100, length.out = 7))) %>%
+  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-100, 100, length.out = 9))) %>%
   ggplot(aes(x = l1, y = l2, fill = lppd_bin)) +
   geom_tile() +
-  scale_fill_brewer(name = "lppd > -500") +
+  scale_fill_brewer(name = "lppd > -100") +
   facet_wrap(~ meas_error) +
   labs(title = "lppd heatmaps for GDP model, varying measurement error",
-       x = "l1", y = "l2", fill = "lppd > -500")
+       x = "l1", y = "l2", fill = "lppd > -200")
 
 my_tibble_LI2 %>%
-  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-500, 100, length.out = 7))) %>%
+  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-100, 100, length.out = 9))) %>%
   ggplot(aes(x = l1, y = l2, fill = lppd_bin)) +
   geom_tile() +
-  scale_fill_brewer(name = "lppd > -500") +
+  scale_fill_brewer(name = "lppd > -100") +
   facet_wrap(~ meas_error) +
   labs(title = "lppd heatmaps for Low-Income model, varying measurement error",
-       x = "l1", y = "l2", fill = "lppd > -500")
+       x = "l1", y = "l2", fill = "lppd > -100")
 
 my_tibble_VH2 %>% 
-  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-500, 100, length.out = 7))) %>%
+  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-100, 100, length.out = 9))) %>%
   ggplot(aes(x = l1, y = l2, fill = lppd_bin)) +
   geom_tile() +
-  scale_fill_brewer(name = "lppd > -500") +
+  scale_fill_brewer(name = "lppd > -100") +
   facet_wrap(~ meas_error) +
   labs(title = "lppd heatmaps for Vaccine Hesitancy model, varying measurement error",
-       x = "l1", y = "l2", fill = "lppd > -500")
+       x = "l1", y = "l2", fill = "lppd > -100")
 ```
 
 ## Relation of provinces
@@ -517,13 +517,13 @@ GPcombinations_LI2 <- select_GP(vax_cleanLI, prov_values="low_income_families", 
 GPcombinations_LI2 %>% readr::write_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))
 
 #' plots of final model (using best parameter values)
-# run_GP(vax_clean, prov_values="GDP", l1=1.25, l2=1.5, b=0.5, meas_error=0.01)
-# ggsave(paste0("plots/bestGPmodel_GDP",".pdf"), height=4.51, width=7.29)
+run_GP(vax_clean, prov_values="GDP", l1=1.75, l2=4.0, b=0.5, meas_error=0.5)
+ggsave(paste0("plots/bestGPmodel_GDP",".pdf"), height=4.51, width=7.29)
 # run_GP(vax_cNICS, prov_values="GDP", l1=2.5, l2=1.5, b=1.5, meas_error=0.01)
 # ggsave(paste0("plots/bestGPmodel_GDP_cNICS",".pdf"), height=4.51, width=7.29)
-# run_GP(vax_cleanLI, prov_values="low_income_families", l1=1.5, l2=1, b=0.5, meas_error=0.01)
-# run_GP(vax_cleanLI, prov_values="low_income_families", l1=1.75, l2=2, b=0.5, meas_error=0.01)
-# ggsave(paste0("plots/bestGPmodel_lowincome",".pdf"), height=4.51, width=7.29)
+run_GP(vax_cleanLI, prov_values="low_income_families", l1=1.25, l2=4, b=1.5, meas_error=0.0)
+ggsave(paste0("plots/bestGPmodel_lowincome",".pdf"), height=4.51, width=7.29)
+run_GP(vax_cleanLI, prov_values="low_income_families", l1=2.5, l2=0.5, b=1.0, meas_error=0.0)
 ```
 
 A new dataset on vaccine hesitancy requires some manipulation to use (condensing coverage data for Atlantic provinces and Northern provinces):
@@ -540,7 +540,8 @@ vax_regional <- vax_clean %>% filter(n_doses!="2") %>%
   group_by(across(-value)) %>% summarise(value = mean(value), .groups = "drop")
 
 #' run with vax_regional
-run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=2, l2=1, b=1)  # l1>l2 looks ok here, but l1>4*l2 is spiky. And true l2 (l1*l2) meaningful when >1?
+run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=2.5, l2=4, b=0.5, meas_error=0.1)
+run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=2.5, l2=0.5, b=0.5, meas_error=0)
 
 #' exhaustive search of reasonable hyperparameter space (provincial dataset, vaccine hesitancy province relation metric)
 # GPcombinations_VH <- select_GP(vax_regional, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3,3.5,4), b=c(0.5,1,1.5))
@@ -687,3 +688,18 @@ ggplot(country_pairs2, aes(x = diff*100, fill = gap_group)) + geom_histogram() +
 ```
 
 We see a good relationship between coverage at adjacent ages, both in the 1+ and 2 dose data.
+
+## UK comparison
+
+```{r}
+#| label: uk
+
+vax_uk <- read_csv("data/ukhsa-chart-download-mmr1-uk-comparison.csv") %>%  # data for MMR1 coverage aged 5y from UKHSA
+  mutate(age = 5, n_doses="1+") %>% mutate(value=metric_value, location=geography, year_report=year) %>%
+  mutate(age_current = current_year - year_report + age) %>% select(location, year_report, age, n_doses, value, age_current)
+
+vax_uk %>% ggplot() + geom_point(aes(x=age_current, y=value/100), col="red") +
+  scale_x_continuous(breaks=xvals, name="current age x_i", limits=c(1,28)) + scale_y_continuous(limits=c(0,1)) +
+  facet_wrap(~ location)
+```
+

@@ -1,0 +1,49 @@
+theme,sub_theme,topic,geography_type,geography,metric,sex,age,stratum,year,date,metric_value,in_reporting_delay_period
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2025,31/03/2025,95.4,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2024,31/03/2024,95.11,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2023,31/03/2023,95.48,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2022,31/03/2022,96.35,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2021,31/03/2021,97.01,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2020,31/03/2020,96.83,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2019,31/03/2019,96.63,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2018,31/03/2018,97.16,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2017,31/03/2017,97.55,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2016,31/03/2016,97.3,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2015,31/03/2015,96.55,FALSE
+immunisation,childhood-vaccines,MMR1,Region,North East,MMR1_coverage_coverageByYear,all,all,5y,2014,31/03/2014,96.75,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2025,31/03/2025,92.8,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2024,31/03/2024,93.21,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2023,31/03/2023,93.73,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2022,31/03/2022,94.72,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2021,31/03/2021,95.8,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2020,31/03/2020,95.84,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2019,31/03/2019,95.82,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2018,31/03/2018,95.87,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2017,31/03/2017,96.65,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2016,31/03/2016,96.75,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2015,31/03/2015,96.23,FALSE
+immunisation,childhood-vaccines,MMR1,Region,Yorkshire and The Humber,MMR1_coverage_coverageByYear,all,all,5y,2014,31/03/2014,95.95,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2025,31/03/2025,91.9,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2024,31/03/2024,91.93,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2023,31/03/2023,92.55,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2022,31/03/2022,93.58,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2021,31/03/2021,94.4,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2020,31/03/2020,95.05,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2019,31/03/2019,95.3,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2018,31/03/2018,95.67,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2017,31/03/2017,96.7,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2016,31/03/2016,95.63,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2015,31/03/2015,95.65,FALSE
+immunisation,childhood-vaccines,MMR1,Region,West Midlands,MMR1_coverage_coverageByYear,all,all,5y,2014,31/03/2014,95.46,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2025,31/03/2025,84.4,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2024,31/03/2024,85.22,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2023,31/03/2023,86.63,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2022,31/03/2022,87.8,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2021,31/03/2021,88.82,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2020,31/03/2020,89.82,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2019,31/03/2019,90.38,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2018,31/03/2018,91.45,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2017,31/03/2017,91.11,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2016,31/03/2016,91.06,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2015,31/03/2015,90.7,FALSE
+immunisation,childhood-vaccines,MMR1,Region,London,MMR1_coverage_coverageByYear,all,all,5y,2014,31/03/2014,90.64,FALSE
