@@ -21,7 +21,7 @@
 #' @param meas_error if specified, measurement error is included (numeric)
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions
 #' @param show_plots if false, plots are hidden
-run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=32, prov_values=NA, k=ksqexp, k_name=NA, l1=NA, l2=NA, b=1, 
+run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=28, prov_values=NA, k=ksqexp, k_name=NA, l1=NA, l2=NA, b=1, 
                    meas_error=NA, ndrws=50, show_plots=T) {
   #' define possible x values
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages

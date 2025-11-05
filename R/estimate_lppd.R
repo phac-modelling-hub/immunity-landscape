@@ -17,7 +17,7 @@
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
 #' @param meas_error if specified, measurement error is included (numeric)
-estimate_lppd <- function(vax_dataset, last_agecurrent=30, prov_values, ndrws=100, k=ksqexp, l1=NA, l2=NA, b=1, meas_error=NA) {
+estimate_lppd <- function(vax_dataset, last_agecurrent=28, prov_values, ndrws=100, k=ksqexp, l1=NA, l2=NA, b=1, meas_error=NA) {
   # prepare the multiple training datasets (take-one-out)
   vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
   vax_datasets <- map(1:nrow(vax_dataset), ~ vax_dataset[-.x, ])
