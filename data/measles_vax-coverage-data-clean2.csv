@@ -75,15 +75,14 @@ QC,Quebec,2021,2008,13,2,0.92,17
 QC,Quebec,2021,2007,14,2,0.92,18
 QC,Quebec,2021,2006,15,2,0.92,19
 QC,Quebec,2021,2005,16,2,0.92,20
-BC,British Columbia,2023,2000,23,1+,0.867,25
-MB,Manitoba,2023,2000,23,1+,0.874,25
-NB,New Brunswick,2023,2000,23,1+,0.858,25
-NL,Newfoundland and Labrador,2023,2000,23,1+,0.897,25
-NS,Nova Scotia,2023,2000,23,1+,0.887,25
-NT,Northwest Territories,2023,2000,23,1+,0.864,25
-NU,Nunavut,2023,2000,23,1+,0.68,25
-ON,Ontario,2023,2000,23,1+,0.874,25
-PE,Prince Edward Island,2023,2000,23,1+,0.899,25
-QC,Quebec,2023,2000,23,1+,0.864,25
-SK,Saskatchewan,2023,2000,23,1+,0.898,25
-YT,Yukon,2023,2000,23,1+,0.853,25
+BC,British Columbia,2023,2005,18,1+,0.867,20
+MB,Manitoba,2023,2005,18,1+,0.874,20
+NB,New Brunswick,2023,2005,18,1+,0.858,20
+NL,Newfoundland and Labrador,2023,2005,18,1+,0.897,20
+NS,Nova Scotia,2023,2005,18,1+,0.887,20
+NT,Northwest Territories,2023,2005,18,1+,0.864,20
+NU,Nunavut,2023,2005,18,1+,0.68,20
+ON,Ontario,2023,2005,18,1+,0.874,20
+PE,Prince Edward Island,2023,2005,18,1+,0.899,20
+SK,Saskatchewan,2023,2005,18,1+,0.898,20
+YT,Yukon,2023,2005,18,1+,0.853,20

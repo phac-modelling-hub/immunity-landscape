@@ -341,7 +341,7 @@ The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`. A
 run_GP(vax_clean)
 ```
 
-From a quick by-eye model selection with GDP province relation, current best GP model parameter values are approximately `l1=1.5, l2=3, b=0.75` for `k=ksqexp`. Plausible range (by-eye) is `1 <= l1 < 2`, `l1 < l2 < 3*l1`, and `0.5 <= b <= 1.5` (GDP, provincial data, no measurement error). This hyperparameter space can be searched with`select_GP()` below.
+From a quick by-eye model selection with GDP province relation, current best GP model parameter values are approximately `l1=1.5, l2=3, b=0.75` for `k=ksqexp`. Plausible range (by-eye) was previously `1 <= l1 < 2`, `l1 < l2 < 3*l1`, and `0.5 <= b <= 1.5` (GDP, provincial data, no measurement error). This hyperparameter space can be searched with`select_GP()` below.
 
 ```{r}
 #| label: fit_byeye
@@ -363,7 +363,7 @@ Note that the provincial estimates collected in `vax_clean` are from multiple so
 
 Note: Nunavut youngest estimate is described as "treat with caution" in the cNICS online dataset.
 
-Plausible range (by-eye) is `1 <= l1 <= 4`, `l1 < l2 <= 50*l1`, and `0.5 <= b <= 1.5` (GDP, cNICS data, no measurement error). This hyperparameter space can be searched with`select_GP()` below.
+Plausible range (by-eye) was previously `1 <= l1 <= 4`, `l1 < l2 <= 50*l1`, and `0.5 <= b <= 1.5` (GDP, cNICS data, no measurement error). This hyperparameter space can be searched with`select_GP()` below.
 
 ```{r}
 #| label: run_cNICS
@@ -409,14 +409,14 @@ One option is to work with the posterior mean at each missing age as described. 
 #| label: model_selection_noerror
 
 #' define province relation (prov_values)
-prov_values <- extract_province_relation("GDP", vax_dataset=vax_clean)
+#prov_values <- extract_province_relation("GDP", vax_dataset=vax_clean)
 
 #' examples of estimating/ calculating lppd
 #example1 <- estimate_lppd(vax_clean, prov_values=prov_values, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: ~15 seconds
 #example2 <- compute_lppd(vax_clean, prov_values=prov_values, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: <1 second
 
 #' example model selection
-example <- select_GP(vax_clean, prov_values=prov_values, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))  # prov_values defined above
+#example <- select_GP(vax_clean, prov_values=prov_values, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))  # prov_values defined above
 
 #' exhaustive search of reasonable hyperparameter space (provinical dataset)
 GPcombinations_GDP <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1.0,1.5,2,2.5,3.0,3.5,4.0), b=c(0.5,1,1.5))
@@ -432,28 +432,28 @@ This 'best' hyperparameters result in spiky and overfitted estimates. Instead re
 ```{r}
 #| label: model_selection_witherror
 
-example3 <- compute_lppd(vax_clean, prov_values="GDP", k=ksqexp, l1=1.5, l2=3, b=1, meas_error=0.1)
-example4 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1), meas_error=0.1)
+#example3 <- compute_lppd(vax_clean, prov_values="GDP", k=ksqexp, l1=1.5, l2=3, b=1, meas_error=0.1)
+#example4 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1), meas_error=0.1)
 
 #' exhaustive search of reasonable hyperparameter space (provinical dataset) with error
 GPcombinations_GDP2 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3.0,3.5,4.0), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
 GPcombinations_GDP2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_witherror.csv"))
 
 #' exhaustive search of reasonable hyperparameter space (cNICS dataset) with error
-GPcombinations_GDP_cNICS2 <- select_GP(vax_cNICS, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.5,2,2.5,3,3.25,3.5,4), l2=c(1.5,2,3,3.5,4,4.5,5,6,10,50,100), b=c(0.5,1,1.5), meas_error=c(0.1,0.05,0.01))
+GPcombinations_GDP_cNICS2 <- select_GP(vax_cNICS, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.5,2,2.5,3,3.5,4), l2=c(1.5,2,3,3.5,4,4.5,5,6,10,50,100), b=c(0.5,1,1.5), meas_error=c(0.1,0.05,0.01))
 GPcombinations_GDP_cNICS2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_cNICS_witherror.csv"))
 
 #' smallest lppd fit (spiky)
-run_GP(vax_clean,l1=1.75,l2=0.5,b=0.5,meas_error=0,ndrws=50)
+run_GP(vax_clean,l1=1.75,l2=0.5,b=1.5,meas_error=0,ndrws=50)
 vax_loo_test <- vax_clean %>% filter(!(location == "Alberta" & age_current == 8))
-run_GP(vax_loo_test,l1=1.75,l2=0.5,b=0.5,meas_error=0,ndrws=50)
+run_GP(vax_loo_test,l1=1.75,l2=0.5,b=1.5,meas_error=0,ndrws=50)
 vax_loo_test2 <- vax_clean %>% filter(!(location == "Nova Scotia" & age_current == 10))
-run_GP(vax_loo_test2,l1=1.75,l2=0.5,b=0.5,meas_error=0,ndrws=50)
+run_GP(vax_loo_test2,l1=1.75,l2=0.5,b=1.5,meas_error=0,ndrws=50)
 
 #' largest lppd fit (noisy)
-run_GP(vax_clean,l1=2.5,l2=4,b=0.5,meas_error=0.5,ndrws=50)
-run_GP(vax_loo_test,l1=2.5,l2=4,b=0.5,meas_error=0.5,ndrws=50)
-run_GP(vax_loo_test2,l1=2.5,l2=4,b=0.5,meas_error=0.5,ndrws=50)
+run_GP(vax_clean,l1=2.5,l2=0.5,b=0.5,meas_error=0.5,ndrws=50)
+run_GP(vax_loo_test,l1=2.5,l2=0.5,b=0.5,meas_error=0.5,ndrws=50)
+run_GP(vax_loo_test2,l1=2.5,l2=0.5,b=0.5,meas_error=0.5,ndrws=50)
 ```
 
 We can also explore if there are local maximums in the model selection, rather than only considering the model with largest lppd.

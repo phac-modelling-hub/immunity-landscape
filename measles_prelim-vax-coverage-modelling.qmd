@@ -418,7 +418,7 @@ vax_deduped |>
 # fill in year_birth where it is missing and assume 2+ = 2 doses for now (as same vaccine efficacy used currently)
 vax_clean1 <- vax_deduped %>% ungroup() %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth)) %>%
   mutate(n_doses = ifelse(n_doses=="2+", "2", n_doses)) %>% select(-`2`) %>%
-  bind_rows(vax_aNICS_full %>% filter(age_current==25)) %>%  # attach one adult estimate from aNICS for each province (e.g. age 25)
+  bind_rows(vax_aNICS_full %>% filter(age==18)) %>%  # attach one adult estimate from aNICS for each province (e.g. age 18)
   group_by(pt, location, age_current) %>% filter(value == max(value)) # keep largest estimate if there are duplicates (as aNICS likely underreports?)
 
 # export -- vax_clean1 is the cleaned data set for take 1
@@ -604,7 +604,7 @@ vax_dedupe |>
 # fill in year_birth where it is missing and assume 2+ = 2 doses for now (as same vaccine efficacy used currently)
 vax_clean2_noadults <- vax_dedupe %>% ungroup() %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth)) %>%
   mutate(n_doses = ifelse(n_doses=="2+", "2", n_doses)) %>% mutate(n_doses = ifelse(n_doses=="dose_new", "1+", n_doses)) %>% select(-n_doses_new) 
-vax_clean2 <- vax_clean2_noadults %>% bind_rows(vax_aNICS_full %>% filter(age_current==25)) %>%  # attach one adult estimate from aNICS for each province (e.g. age 25)
+vax_clean2 <- vax_clean2_noadults %>% bind_rows(vax_aNICS_full %>% filter(age==18)) %>%  # attach one adult estimate from aNICS for each province (e.g. age 18)
   group_by(pt, location, age_current) %>% filter(value == max(value)) # keep largest estimate if there are duplicates (as aNICS likely underreports?, and for estimates with 1+ and 2 dose we wish to keep the larger)
 
 # export -- vax_clean2 is the cleaned data set for take 2
