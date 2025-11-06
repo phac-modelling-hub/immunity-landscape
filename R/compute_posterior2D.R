@@ -29,7 +29,8 @@ compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA,
   kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=k,l=l1,b=b)
   
   # calculate posterior mean and posterior cov matrix
-  logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # use the logistic-transformed data centred around mean 0
+  centring_term <- mean(logit(zobs))
+  logit_zobs_centred <- logit(zobs) - centring_term  # use the logistic-transformed data centred around mean 0
   if (is.na(meas_error)) {
     post_mean <- kuo%*%solve(koo)%*%(logit_zobs_centred)  # conditional mean
     post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
@@ -49,6 +50,6 @@ compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA,
     prov_levels = prov_levels
   ) |>
     dplyr::rename(post2D = value) |>
-    dplyr::mutate(post2D_constrained = invlogit(post2D + mean(logit(zobs)))) |>
+    dplyr::mutate(post2D_constrained = invlogit(post2D + centring_term)) |>
     dplyr::relocate(post2D, .after = y_label)
 }

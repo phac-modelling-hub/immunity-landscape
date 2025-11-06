@@ -46,11 +46,12 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=28, prov_val
   prior2D <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
   if (show_plots) prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
   
-  #' observe data (we may wish to use cNICS here instead of vax_clean)
+  #' observe data and print to console (we may wish to use cNICS here instead of vax_clean)
   xobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(age_current)
   yobs <- yvals[vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(location)]  # this includes scaling by l2
-  zobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(value)
-  logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # apply logistic transform and centre the data around mean 0
+  zobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(value)  # note: data is transformed & centred inside compute_posterior2D
+  centring_term <- mean(logit(zobs))
+  logit_zobs_centred <- logit(zobs) - centring_term  # apply logistic transform and centre the data around mean 0
   if (show_plots) tibble(xobs, yobs, zobs, logit_zobs_centred) %>% print()
   
   #' compute and plot posterior

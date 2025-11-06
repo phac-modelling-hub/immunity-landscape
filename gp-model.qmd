@@ -691,6 +691,8 @@ We see a good relationship between coverage at adjacent ages, both in the 1+ and
 
 ## UK comparison
 
+We can plot UK vaccine coverage data as a comparison. Data are for at least one measles dose, aged 5 years. Four example regions are shown for 2013-2025 data, but more time-series data is available on the UKHSA dashboard: https://ukhsa-dashboard.data.gov.uk/cover/childhood-vaccinations.
+
 ```{r}
 #| label: uk
 
@@ -703,3 +705,12 @@ vax_uk %>% ggplot() + geom_point(aes(x=age_current, y=value/100), col="red") +
   facet_wrap(~ location)
 ```
 
+## Sensitivity analysis 1 - prior means
+
+One sensitivity analysis consideration is in exploring the choice of prior mean. Our main model uses a prior mean equivalent to the mean of the observed multi-province dataset (\~90%). \[Technically our main model assumes a global prior mean of zero; each data point is (transformed and) centred by subtracting the mean of the observed data (in logit space)\]. We wish to instead set a different prior mean for each province.
+
+```{r}
+#| label: sens_anal_mean
+
+
+```

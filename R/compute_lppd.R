@@ -26,7 +26,8 @@ compute_lppd <- function(vax_dataset, last_agecurrent=28, prov_values, k=ksqexp,
   prov_values <- prov_values*l2  # scale province values by l2
   yobs <- prov_values[vax_dataset %>% pull(location)]  # this includes scaling by l2
   zobs <- vax_dataset %>% pull(value)
-  logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # apply logistic transform and centre the data around mean 0
+  centring_term <- mean(logit(zobs))
+  logit_zobs_centred <- logit(zobs) - centring_term  # apply logistic transform and centre the data around mean 0
   
   # calculate koo, the covariance matrix of training+test points
   xyobs <- tibble(x=xobs,y=yobs)
@@ -45,7 +46,8 @@ compute_lppd <- function(vax_dataset, last_agecurrent=28, prov_values, k=ksqexp,
   lppds <- rep(NA,nrow(vax_dataset))
   for (i in 1:nrow(vax_dataset)) {
     zout <- vax_dataset[i, ] %>% pull(value)  # correct coverage value of removed data point
-    logit_zout_centred <- logit(zout) - mean(logit(zobs))
+    centring_term_i <- if (length(centring_term) == 1) centring_term else centring_term[i]  # for centring the removed data point
+    logit_zout_centred <- logit(zout) - centring_term_i
     ppd_means[i] <- logit_zout_centred - (top[i] / bottom[i,i])
     ppd_vars[i] <- 1 / (bottom[i,i])
     lppds[i] <- -(0.5*log(ppd_vars[i])) - (((logit_zout_centred - ppd_means[i])^2)/(2*ppd_vars[i])) - (0.5*log(2*pi))
