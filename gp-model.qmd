@@ -285,6 +285,29 @@ post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(d
   geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red") +
   scale_x_continuous(breaks=xvals, name="current age x_i") + scale_y_continuous(limits=c(0,1)) +
   facet_wrap(~ y_label)
+
+
+#' to plot only the data, as facets
+post2D %>% ggplot() +
+  geom_point(data=tibble(x=xobs, y=zobs*100, y_label=yobs_factors), aes(x=x, y=y), col="red") +
+  scale_x_continuous(limits=c(0,25), breaks=seq(0, 25, by=5), name="current age") + 
+  scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
+  facet_wrap(~ y_label)
+ggsave(paste0("plots/2dose_data_plot",".jpeg"), height=4.51, width=7.29)
+
+#' to plot only the data, as separate image files
+province_levels <- levels(yobs_factors)
+walk(province_levels, function(prov) {
+  # subset observations for this province
+  idx <- which(yobs_factors == prov)
+  df_obs <- tibble(x = xobs[idx], y = zobs[idx]*100, y_label = prov)
+  p <- ggplot() +
+    geom_point(data=df_obs, aes(x=x, y=y), col="red") +
+    scale_x_continuous(limits=c(0,25), breaks=seq(0, 25, by=5), name="current age") +
+    scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
+    ggtitle(paste("Province:", prov))
+  ggsave(filename = paste0("plots/1+dose_data_plot_", prov, ".jpeg"), plot=p, height=4.51, width=7.29)
+})
 ```
 
 As before, we can compare performance by adding back in data points that the model has not seen in green (including for example 2-dose data):
