@@ -501,11 +501,11 @@ Relation of provinces is encoded in `prov_values` and can be extracted from the 
 ```{r}
 #| label: province_relation_examples
 
-prov_values <- extract_province_relation("GDP", vax_dataset=vax_clean)
+prov_valuesGDP <- extract_province_relation("GDP", vax_dataset=vax_clean)
 vax_cleanLI <- vax_clean %>% filter(!(pt %in% c("NU","YT","NT")))  # "low_income_families" has no data for NU, NT, YT
-prov_values <- extract_province_relation("low_income_families", vax_dataset=vax_cleanLI)
+prov_valuesLI <- extract_province_relation("low_income_families", vax_dataset=vax_cleanLI)
 
-example <- select_GP(vax_cleanLI, prov_values=prov_values, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
+example <- select_GP(vax_cleanLI, prov_values=prov_valuesLI, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
 example2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
 
 #' exhaustive search of reasonable hyperparameter space (provincial dataset, children in low-income families province relation metric)
