@@ -292,8 +292,9 @@ post2D %>% ggplot() +
   geom_point(data=tibble(x=xobs, y=zobs*100, y_label=yobs_factors), aes(x=x, y=y), col="red") +
   scale_x_continuous(limits=c(0,25), breaks=seq(0, 25, by=5), name="current age") + 
   scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
-  facet_wrap(~ y_label)
-ggsave(paste0("plots/2dose_data_plot",".jpeg"), height=4.51, width=7.29)
+  facet_wrap(~ y_label) +
+  theme(axis.text=element_text(size=12), axis.title=element_text(size=20), plot.title = element_text(size=25), strip.text.x = element_text(size=9))
+ggsave(paste0("plots/1+dose_data_plot",".jpeg"), height=4.51, width=7.29)
 
 #' to plot only the data, as separate image files
 province_levels <- levels(yobs_factors)
@@ -541,11 +542,11 @@ GPcombinations_LI2 %>% readr::write_csv(here::here("results", "GPcombinations_lo
 
 #' plots of final model (using best parameter values)
 run_GP(vax_clean, prov_values="GDP", l1=1.75, l2=4.0, b=0.5, meas_error=0.5)
-ggsave(paste0("plots/bestGPmodel_GDP",".pdf"), height=4.51, width=7.29)
+ggsave(paste0("plots/bestGPmodel_GDP",".jpeg"), height=4.51, width=7.29)
 # run_GP(vax_cNICS, prov_values="GDP", l1=2.5, l2=1.5, b=1.5, meas_error=0.01)
 # ggsave(paste0("plots/bestGPmodel_GDP_cNICS",".pdf"), height=4.51, width=7.29)
 run_GP(vax_cleanLI, prov_values="low_income_families", l1=1.25, l2=4, b=1.5, meas_error=0.0)
-ggsave(paste0("plots/bestGPmodel_lowincome",".pdf"), height=4.51, width=7.29)
+ggsave(paste0("plots/bestGPmodel_lowincome",".jpeg"), height=4.51, width=7.29)
 run_GP(vax_cleanLI, prov_values="low_income_families", l1=2.5, l2=0.5, b=1.0, meas_error=0.0)
 ```
 
@@ -624,9 +625,8 @@ ggplot(provinces_test, aes(x = prov_valuesLI, y = vax_means_noaNICS)) + geom_poi
 ggplot(provinces_test, aes(x = prov_valuesVH, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
   xlim(70,100) + ylim(70,100) + labs(title="Comparing province relation datasets to coverage", x="% of parents who are not vaccine hesitant", y = "vaccine coverage, provincial data (%)")
 
-#' for fun, plot provincial data against cNICS and aNICS
+#' for fun, plot provincial data against cNICS
 ggplot(provinces_test, aes(x = vax_means_noaNICS, y = cNICS_mean)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
-ggplot(provinces_test, aes(x = vax_means_noaNICS, y = aNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
 ```
 
 To test relation of ages, we can compute pairwise differences in absolute coverage for all data points and observe if pairs of adjacent ages have a lower difference on average:
@@ -693,7 +693,11 @@ country_pairs <- expand_grid(id1 = vax_dataset3$id, id2 = vax_dataset3$id) %>%
                                                       age_gap > 3 ~ ">3 years apart",
                                                       age_gap == 0 ~ "0 years apart"))
 ggplot(country_pairs, aes(x = diff*100, fill = gap_group)) + geom_histogram() + 
-  labs(title = "Pairwise Coverage Differences — All provincial data (1+ dose)")
+  labs(title = "Pairwise Coverage Differences: All provincial data",
+  x = "Absolute Difference in Coverage (%)", y = "Count", fill = "Age gap") +
+  theme(axis.text=element_text(size=18), axis.title=element_text(size=20), plot.title = element_text(size=25))
+ggsave(paste0("plots/testing_age_assumption3",".jpeg"), height=4.51, width=7.29)  # example code to save plot
+
 
 vax_dataset4 <- vax_dataset2 %>% mutate(id = row_number()) %>% select(-location)
 country_pairs2 <- expand_grid(id1 = vax_dataset4$id, id2 = vax_dataset4$id) %>%

@@ -43,7 +43,8 @@ plot_posterior2D <- function(df, xobs, yobs, zobs, k_name=NA, k_param1=NA, k_par
     scale_x_continuous(limits=c(0, last_agecurrent), breaks=seq(0, last_agecurrent, by=5), name="current age") + 
     scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
     ggtitle(paste0("k=", k_name, "; k_param1=", k_param1, ", k_param2=", k_param2)) +
-    facet_wrap(~ y_label)
+    facet_wrap(~ y_label) +
+    theme(axis.text=element_text(size=12), axis.title=element_text(size=20), plot.title = element_text(size=25), strip.text.x = element_text(size=9))
   
   #' plot 3
   p3 <- df %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained*100, group=factor(draw)), alpha=0.1) +
@@ -59,5 +60,5 @@ plot_posterior2D <- function(df, xobs, yobs, zobs, k_name=NA, k_param1=NA, k_par
     facet_wrap(~ y_label)
   
   list(p2,p3)
-  #list(p1,p2,p3)
+  #list(p2)
 }
