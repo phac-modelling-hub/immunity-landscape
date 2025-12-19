@@ -55,8 +55,8 @@ abstract: |
   
   Implications: We develop methodology for estimating vaccination coverage in the absence of population immunity data, to support the ongoing measles outbreak modelling response work. While this is primarily a measles epidemiology project, we build the associated code/tools such that the methodology can be applied to other vaccine-preventable diseases for use in future outbreak settings.
 key-points:
-  - ...All Vaccine articles need a 'highlights'. 3-5 key points, 85 characters each.
-  - ...hightlight 2
+  - All Vaccine articles need a 'highlights'. 3-5 key points, 85 characters each.
+  - ...
   - ...
 funding: "Funding text to be stated here."
 conflict-of-interest: "SMK has received consulting fees from Moderna Therapeutics. All other authors declare XXX. Edit as needed."
@@ -70,41 +70,47 @@ number-sections: true
 
 Introductory paragraph
 
+Figure 1 - map of Canada illustrating heterogeneties both in demography and data
+
 Background on Measles/ Measles in Canada
 
-Paragraph on the research problem - imited serological data, vaccine data only by province & very heterogeneous. Flag susceptibility vs vaccination. Flag the need for modelling (preliminary linear stuff didn't work/ datasets all have different methodology!). Here's a very real need and here's how we have tried to solve the problem.
+Paragraph on the research problem - limited serological data, vaccine data only by province & very heterogeneous. Flag susceptibility vs vaccination. Flag the need for modelling (preliminary linear stuff didn't work/ datasets all have different methodology!). Here's a very real need and here's how we have tried to solve the problem.
 
-Paragraph outlining what this article adds ("Using XXX, this article estimates ...")
+Paragraph outlining what this article does ("Using XXX, this article estimates ...")
 
 ## Material and methods
 
-### Data
+### Vaccine coverage data
 
 #### Provincial data sources
 
-Explain data sources and standardisation. Will we make the standardised dataset available on GitHub?
+Explain data sources and standardisation. Will we make the standardised dataset available on GitHub? Flag nuances in the data, perhaps as a table: 1/2 vs 1+/2+ dose, differing vaccination schedules between provinces (second dose administered at 18mnths vs 4-6y), level of reporting, methodology (whether self-reported or from GP data if known?). Mention that only 1+ data is used in modelling. Note that the Nunvaut low point is omitted.
 
 #### National data sources
 
-Flag nuances in the data, perhaps as a table: 1/2 vs 1+/2+ dose, differing vaccination schedules between provinces (second dose administered at 18mnths vs 4-6y), level of reporting, methodology (whether self-reported or from GP data if known?).
+Discuss cNICS/aNICS.
 
-Discuss ageing of estimates.
+All birth cohort data is naively 'aged' to present day (year 2025). Our work hence does not account for any catch-up immunisations that may have occurred after data collection, and does not incorporate migration between provinces or into/out of Canada.
 
-### Gaussian Process model
+### Model
 
-Introduce the model (2D, current age & province, underlying assumptions of a GP model etc). 
+Introduce the Gaussian Process model (2D, current age & province, underlying assumptions of a GP model, covariance functions used etc). Note the logit transformation somewhere.
 
-Discuss way to relate one province to another (three models). 
+Figure 1 - make a model flowchart
 
-Our chosen province relation values against cNICS data is shown in Figure X...
-![Testing relationship between ages on the provincial 1+ dose data. Adjacent ages on average have a lower absolute pairwise difference in coverage.](plots/testing_age_assumption1.pdf)
+Discuss methods for relation of ages.
 
-![Testing relationship between ages on the provincial 2 dose data. Adjacent ages again on average have a lower absolute pairwise difference in coverage.](plots/testing_age_assumption2.pdf)
+Discuss methods for relating one province to another (three model frameworks - GDP, % of children in low-income families, % of vaccine hesitancy among parents).
 
-![Province relation values against national cNICS data.](plots/bestprovrelation.pdf)
+Table 1 - the three modelling frameworks
 
-Hyperparameters used in the Gaussian Process model are shown in @tbl-gp-modelparameters. These were chosen from hyperparameter optimisation using leave-one-out cross-validation (see @sec-fitting for details).
+#### Model fitting, selection, and validation procedures {#sec-fitting}
 
+Hyperparameters used in the Gaussian Process model are shown in @tbl-gp-modelparameters. These were chosen from hyperparameter optimisation using leave-one-out cross-validation (see @sec-fitting for details). Add a description of each in text and note the units of meas_error. 
+
+Table 2 - model parameters (definitions and the range that was searched by select_GP())
+
+Table 3 - model parameters (values used)
 ```{r}
 #| label: tbl-gp-modelparameters
 #| tbl-cap: "Hyperparameters used in the GP model."
@@ -112,26 +118,28 @@ Hyperparameters used in the Gaussian Process model are shown in @tbl-gp-modelpar
 #| echo: FALSE
 
 GPmodelparameters_table <- data.frame(
-  Hyperparameter = c("Covariance function", "Age lengthscale", "Relative province lengthscale", "Weight"),
-  Notation = c("k", "l1", "l2", "b"),
-  Value = c("Squared Exponential", 2.0, 0.5, 2.0)  # example values
+  Hyperparameter = c("Covariance function", "Age lengthscale", "Relative province lengthscale", "Variance", "Measurement error"),
+  Notation = c("k", "l1", "l2", "b", "meas_error"),
+  GDP_model = c("Squared Exponential", 2.0, 0.5, 2.0, 1.0),  # example values
+  LI_model = c("Squared Exponential", 2.0, 0.5, 2.0, 1.0),  # example values
+  VH_model = c("Squared Exponential", 2.0, 0.5, 2.0, 1.0)  # example values
 )
 
 knitr::kable(GPmodelparameters_table)
 ```
 
-### Model fitting, selection, and validation procedures {#sec-fitting}
+For our (non-parametric) Gaussian process models, there is no model fitting stage. Model selection and validation were performed using leave-one-out cross-validation, with log posterior predictive density (lppd) as the error metric at test points. Model selection and validation were performed on the provincial 1+ dose dataset (@tbl-gp-modelselectionresults). The combination of plausible hyperparameter values with largest absolute lppd were used in analysis (@tbl-gp-modelparameters). Model selection was repeated for each of the three modelling frameworks (GDP, % of children in low-income families, % of vaccine hesitancy among parents). Full results are listed in the Supplementary.
 
-For our (non-parametric) Gaussian process models, there is no model fitting stage. Model selection and validation were performed using leave-one-out cross-validation, with log posterior predictive density (lppd) as the error metric at test points. Model selection and validation were first performed on the provincial dataset (@tbl-gp-modelselectionresults). The combination of plausible hyperparameter values with largest absolute lppd were used in analysis (@tbl-gp-modelparameters). Model selection was also repeated with the national cNICS dataset (@tbl-gp-modelselectionresults2) and different indicators for relation of provinces ().
-
+Table 3 - range of values searched
 ```{r}
 #| label: tbl-gp-modelselectionresults
 #| tbl-cap: "text"
 #| tbl-number: 2
 #| echo: FALSE
+#| include: FALSE
 
 GPcombinations_GDP <- readr::read_csv(here::here("results", "GPcombinations_GDP.csv"), show_col_types = F)
-knitr::kable(GPcombinations_GDP)  # move to supplementary?
+knitr::kable(GPcombinations_GDP)  # move to supplementary and summarise?
 ```
 
 ```{r}
@@ -139,9 +147,10 @@ knitr::kable(GPcombinations_GDP)  # move to supplementary?
 #| tbl-cap: "text"
 #| tbl-number: 3
 #| echo: FALSE
+#| include: FALSE
 
 GPcombinations_GDP_cNICS <- readr::read_csv(here::here("results", "GPcombinations_GDP_cNICS.csv"), show_col_types = F)
-knitr::kable(GPcombinations_GDP_cNICS)  # move to supplementary?
+knitr::kable(GPcombinations_GDP_cNICS)  # cut?
 ```
 
 ```{r}
@@ -149,16 +158,19 @@ knitr::kable(GPcombinations_GDP_cNICS)  # move to supplementary?
 #| tbl-cap: "text"
 #| tbl-number: 3
 #| echo: FALSE
+#| include: FALSE
 
 GPcombinations_lowincome <- readr::read_csv(here::here("results", "GPcombinations_lowincome.csv"), show_col_types = F)
-knitr::kable(GPcombinations_lowincome)  # move to supplementary?
+knitr::kable(GPcombinations_lowincome)  # move to supplementary and summarise?
 ```
+
+Mention the UK comparison and refer to supplementary for details.
 
 ## Results
 
 ### Vaccine coverage data
 
-Plot/s showing the curated data.
+Plot/s summarising the curated data.
 
 ```{r}
 
@@ -168,7 +180,7 @@ Plot/s showing the curated data.
 
 Optimal hyperparameters for the Gaussian Process model are noted in Table X.
 
-Example results plots.
+Example results plots. 50 random draws from the posterior distribution are presented in each plot.
 
 ![GP model results, using provincial 1+ dose vaccine coverage data. GDP data is used for relation of provinces. Plots are overlaid with national cNICS data in green (unobserved by the model).](plots/bestGPmodel_GDP.pdf)
 
@@ -176,22 +188,22 @@ Example results plots.
 
 ![GP model results, using provincial 1+ dose vaccine coverage data. Health inequalities data is used for relation of provinces (percentage of children in low-income families). Plots are overlaid with national cNICS data in green (unobserved by the model).](plots/bestGPmodel_lowincome.pdf)
 
-### Model comparison
+<!-- ![GP model results, using provincial 1+ dose vaccine coverage data. Here vaccine hesitancy data is used for relation of provinces (percentage of parents who are vaccine hesitant, as reported by the 2023 cNICS survey). Plots are overlaid with national cNICS data in green (unobserved by the model).](plots/bestGPmodel_vaccinehesitancy.pdf) -->
 
-### Additional sensitivity analysis and uncertainty quantification
+### Additional sensitivity analysis
+
+Show additional plots for: results with zero measurement error?; results using "next best" hyperparameter values/ local maxima; one model framework run on cNICS data.
+
+If time, sensitivity analysis on choice of prior mean.
 
 ## Discussion
 
-Paragraphs to discuss findings
+Paragraphs to discuss findings and interpretation -- this paper focuses on methodology rather than results/prediction.
 
 Paragraph/s to compare to other literature
 
-Miscellaneous discussion points - list here as we think of them: Immunity vs Vaccination (they are not the same); flag that we haven't tested the model on other countries/pathogens;
+Miscellaneous discussion points - list here as we think of them: Immunity vs Vaccination (they are not the same); flag that we haven't tested the model on other countries/pathogens; flag that each indicator covers different provinces (only GDP covers all 10 provinces); other indicators that could be explored in future work (rural v urban, % investment in public health by province).
 
-Limitations paragraph: note older ages not explicitly considered/note the assumptions on older ages; some discussion of relation of provinces; ageing of estimates.
+Limitations paragraph: note older ages not explicitly considered/note the assumptions on older ages; some discussion of relation of provinces; ageing of estimates; only 1 or 2 data points for some provinces; Validity of fitting a model to data from numerous different sources.
 
 Conclusions paragraph
-
-## Supplementary
-
-Supplementary can include anything that backs up our assumptions, including the testing assumptions for age and province.

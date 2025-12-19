@@ -1,0 +1,24 @@
+---
+title: "supplementary-material"
+editor: visual
+---
+
+Supplementary can include anything that backs up our assumptions, including the testing assumptions for age and province.
+
+## Data analysis
+
+### Testing relationship between ages
+
+![Testing relationship between ages on the provincial 1+ dose data. Adjacent ages on average have a lower absolute pairwise difference in coverage.](plots/testing_age_assumption1.pdf)
+
+![Testing relationship between ages on the provincial 2 dose data. Adjacent ages again on average have a lower absolute pairwise difference in coverage. The equivalent plot for 1+ dose data is shown above.](plots/testing_age_assumption2.pdf)
+
+### Testing relationship between provinces
+
+![Province relation values against national cNICS data.](plots/bestprovrelation.pdf)
+
+## Model selection and validation
+
+Add the lppd heatmaps.
+
+Describe the UK comparison and add plots and references to data sources.
