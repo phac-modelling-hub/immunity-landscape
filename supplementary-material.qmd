@@ -11,7 +11,7 @@ Supplementary can include anything that backs up our assumptions, including the 
 
 ![Testing relationship between ages on the provincial 1+ dose data. Adjacent ages on average have a lower absolute pairwise difference in coverage.](plots/testing_age_assumption1.pdf)
 
-![Testing relationship between ages on the provincial 2 dose data. Adjacent ages again on average have a lower absolute pairwise difference in coverage. The equivalent plot for 1+ dose data is shown above.](plots/testing_age_assumption2.pdf)
+![Testing relationship between ages on the provincial 2 dose data, for scientific interest. 2 dose data is not used in the model. However, adjacent ages again on average have a lower absolute pairwise difference in coverage.](plots/testing_age_assumption2.pdf)
 
 ### Testing relationship between provinces
 
