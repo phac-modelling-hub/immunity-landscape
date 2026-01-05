@@ -460,24 +460,11 @@ This 'best' hyperparameters result in spiky and overfitted estimates. Instead re
 #example4 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1), meas_error=0.1)
 
 #' exhaustive search of reasonable hyperparameter space (provinical dataset) with error
-GPcombinations_GDP2 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3.0,3.5,4.0), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_GDP2 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
 GPcombinations_GDP2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_witherror.csv"))
 
-#' exhaustive search of reasonable hyperparameter space (cNICS dataset) with error
-GPcombinations_GDP_cNICS2 <- select_GP(vax_cNICS, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.5,2,2.5,3,3.5,4), l2=c(1.5,2,3,3.5,4,4.5,5,6,10,50,100), b=c(0.5,1,1.5), meas_error=c(0.1,0.05,0.01))
-GPcombinations_GDP_cNICS2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_cNICS_witherror.csv"))
-
-#' smallest lppd fit (spiky)
-run_GP(vax_clean,l1=2.5,l2=0.5,b=0.5,meas_error=0,ndrws=50)
-vax_loo_test <- vax_clean %>% filter(!(location == "Alberta" & age_current == 8))
-run_GP(vax_loo_test,l1=2.5,l2=0.5,b=0.5,meas_error=0,ndrws=50)
-vax_loo_test2 <- vax_clean %>% filter(!(location == "Nova Scotia" & age_current == 10))
-run_GP(vax_loo_test2,l1=2.5,l2=0.5,b=0.5,meas_error=0,ndrws=50)
-
 #' largest lppd fit (noisy)
-run_GP(vax_clean,l1=1.75,l2=4,b=0.5,meas_error=0.5,ndrws=50)
-run_GP(vax_loo_test,l1=1.75,l2=4,b=0.5,meas_error=0.5,ndrws=50)
-run_GP(vax_loo_test2,l1=1.75,l2=4,b=0.5,meas_error=0.5,ndrws=50)
+run_GP(vax_clean,l1=2,l2=250,b=1,meas_error=0.5,ndrws=50)
 ```
 
 We can also explore if there are local maximums in the model selection, rather than only considering the model with largest lppd.
@@ -491,31 +478,37 @@ my_tibble_VH2 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy
 
 #' plot l1 against l2, colouring by lppd, for several meas_error values
 my_tibble_GDP2 %>%
-  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-100, 100, length.out = 9))) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_bin)) +
+  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
+  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
   geom_tile() +
-  scale_fill_brewer(name = "lppd > -100") +
+  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
   facet_wrap(~ meas_error) +
+    #ylim(0,101) +
   labs(title = "lppd heatmaps for GDP model, varying measurement error",
-       x = "l1", y = "l2", fill = "lppd > -200")
+       x = "l1", y = "l2")
 
 my_tibble_LI2 %>%
-  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-100, 100, length.out = 9))) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_bin)) +
+  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
+  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
   geom_tile() +
-  scale_fill_brewer(name = "lppd > -100") +
+  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
   facet_wrap(~ meas_error) +
+    #ylim(0,101) +
   labs(title = "lppd heatmaps for Low-Income model, varying measurement error",
-       x = "l1", y = "l2", fill = "lppd > -100")
+       x = "l1", y = "l2")
 
-my_tibble_VH2 %>% 
-  mutate(lppd_bin = cut(lppd_exact, breaks = seq(-100, 100, length.out = 9))) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_bin)) +
+my_tibble_VH2 %>%
+  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
+  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
   geom_tile() +
-  scale_fill_brewer(name = "lppd > -100") +
+  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
   facet_wrap(~ meas_error) +
+    #ylim(0,101) +
   labs(title = "lppd heatmaps for Vaccine Hesitancy model, varying measurement error",
-       x = "l1", y = "l2", fill = "lppd > -100")
+       x = "l1", y = "l2")
 ```
 
 ## Relation of provinces
@@ -537,7 +530,7 @@ example2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=lis
 # GPcombinations_lowincome %>% readr::write_csv(here::here("results", "GPcombinations_lowincome.csv"))
 
 #' with error
-GPcombinations_LI2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3,3.5,4), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_LI2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
 GPcombinations_LI2 %>% readr::write_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))
 
 #' plots of final model (using best parameter values)
@@ -572,7 +565,7 @@ run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=2.5, l2=0.5, b=0.5, mea
 # GPcombinations_VH %>% readr::write_csv(here::here("results", "GPcombinations_vaccinehesitancy.csv"))
 
 #' with error
-GPcombinations_VH2 <- select_GP(vax_regional, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3,3.5,4), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_VH2 <- select_GP(vax_regional, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
 GPcombinations_VH2 %>% readr::write_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv"))
 ```
 
