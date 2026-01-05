@@ -1,0 +1,44 @@
+---
+title: "Manuscript figures and tables"
+---
+
+This doc is used to generate figures and tables for the [manuscript](https://docs.google.com/document/d/1CMSp4e_r6As2yim0dHeWNWYWK2msEPtZZl-3ekjgz0I/edit?tab=t.0). Chunk labels should follow a convention of starting with `fig-` or `tbl-`, then the cross-reference label used in the manuscript draft.
+
+# Methods
+
+```{r}
+#| label: tbl-model-parameters-used
+#| tbl-cap: "Hyperparameters used in the GP model."
+#| echo: FALSE
+
+GPmodelparameters_table <- data.frame(
+  Hyperparameter = c("Covariance function", "Age lengthscale", "Relative province lengthscale", "Variance", "Measurement error"),
+  Notation = c("k", "l1", "l2", "b", "meas_error"),
+  GDP_model = c("Squared Exponential", 2.0, 0.5, 2.0, 1.0),  # example values
+  LI_model = c("Squared Exponential", 2.0, 0.5, 2.0, 1.0),  # example values
+  VH_model = c("Squared Exponential", 2.0, 0.5, 2.0, 1.0)  # example values
+)
+
+knitr::kable(GPmodelparameters_table)
+```
+
+```{r}
+#| label: tbl-model-selection-results
+#| tbl-cap: "text"
+#| tbl-number: 2
+#| echo: FALSE
+#| include: FALSE
+
+GPcombinations_GDP <- readr::read_csv(here::here("results", "GPcombinations_GDP.csv"), show_col_types = F)
+knitr::kable(GPcombinations_GDP)  # Need to replace table with lppd heatmaps and move to supplementary
+```
+
+# Results
+
+The location of the source code for the plots below should either be mentioned here, or the code itself should simply be inserted here in chunks for further tweaking. I (Irena) prefer the latter as I think the three figs should be combined into a single multipanel plot.
+
+![Model results, using GDP data for relation of provinces. Model is trained on provincial 1+ dose vaccine coverage data (red points). Plots are overlaid with national cNICS data in green for comparison (unobserved by the model).](plots/bestGPmodel_GDP.pdf)
+
+![Model results, using health inequalities data (% of children in low income families) for relation of provinces. Model is trained on provincial 1+ dose vaccine coverage data (red points). Plots are overlaid with national cNICS data in green for comparison (unobserved by the model).](plots/bestGPmodel_lowincome.pdf)
+
+![Model results, using vaccine hesitancy data for relation of provinces. Model is trained on provincial 1+ dose vaccine coverage data (red points). Plots are overlaid with national cNICS data in green for comparison (unobserved by the model).](plots/bestGPmodel_VH.pdf)
