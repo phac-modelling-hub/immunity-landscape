@@ -711,18 +711,90 @@ We see a good relationship between coverage at adjacent ages, both in the 1+ and
 
 ## UK comparison
 
-We can plot UK vaccine coverage data as a comparison. Data are for at least one measles dose, aged 5 years. Four example regions are shown for 2013-2025 data, but more time-series data is available on the UKHSA dashboard: https://ukhsa-dashboard.data.gov.uk/cover/childhood-vaccinations.
+We can plot UK vaccine coverage data, and run through the model, as a comparison. Data are for 2013-2025, at least one measles dose, aged 5 years. `vax_uk` gives vaccine coverage data for the four nations of the UK (England, Wales, Scotland, Northern Ireland). `vax_england` gives the 10 regions of England (e.g. London, South West, South East etc.). All data is taken from the UKHSA dashboard: https://ukhsa-dashboard.data.gov.uk/cover/childhood-vaccinations.
 
 ```{r}
 #| label: uk
 
-vax_uk <- read_csv("data/ukhsa-chart-download-mmr1-uk-comparison.csv") %>%  # data for MMR1 coverage aged 5y from UKHSA
-  mutate(age = 5, n_doses="1+") %>% mutate(value=metric_value, location=geography, year_report=year) %>%
+#' UK data
+vax_UK <- read_csv("data/ukhsa-chart-download-mmr1-nations.csv") %>%  # data for MMR1 coverage aged 5y from UKHSA (England, Wales, Scotland, NI)
+  mutate(age = 5, n_doses="1+") %>% mutate(value=metric_value/100, location=geography, year_report=year) %>%
+  mutate(age_current = current_year - year_report + age) %>% select(location, year_report, age, n_doses, value, age_current)
+vax_england <- read_csv("data/ukhsa-chart-download-mmr1-regions.csv") %>%  # data for MMR1 coverage aged 5y from UKHSA (regions of England)
+  mutate(age = 5, n_doses="1+") %>% mutate(value=metric_value/100, location=geography, year_report=year) %>%
   mutate(age_current = current_year - year_report + age) %>% select(location, year_report, age, n_doses, value, age_current)
 
-vax_uk %>% ggplot() + geom_point(aes(x=age_current, y=value/100), col="red") +
-  scale_x_continuous(breaks=xvals, name="current age x_i", limits=c(1,28)) + scale_y_continuous(limits=c(0,1)) +
+vax_UK %>% ggplot() + geom_point(aes(x=age_current, y=value), col="red") +
+  scale_x_continuous(name="current age x_i", limits=c(1,20)) + scale_y_continuous(limits=c(0,1)) +
   facet_wrap(~ location)
+vax_england %>% ggplot() + geom_point(aes(x=age_current, y=value), col="red") +
+  scale_x_continuous(name="current age x_i", limits=c(1,20)) + scale_y_continuous(limits=c(0,1)) +
+  facet_wrap(~ location)
+
+#' UK model
+run_GP(vax_UK, prov_values = "UK-GDP")
+run_GP(vax_UK, prov_values = "UK-low_income_families")
+run_GP(vax_england, prov_values = "UK-GDP")
+run_GP(vax_england, prov_values = "UK-low_income_families")
+
+#' UK hyperparams
+GPcombinations_UKGDP <- select_GP(vax_UK, prov_values="UK-GDP", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_UKGDP %>% readr::write_csv(here::here("results", "GPcombinations_UKGDP_witherror.csv"))
+
+GPcombinations_UKLI <- select_GP(vax_UK, prov_values="UK-low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_UKLI %>% readr::write_csv(here::here("results", "GPcombinations_UKLI_witherror.csv"))
+
+GPcombinations_englandGDP <- select_GP(vax_england, prov_values="UK-GDP", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_englandGDP %>% readr::write_csv(here::here("results", "GPcombinations_englandGDP_witherror.csv"))
+
+GPcombinations_englandLI <- select_GP(vax_england, prov_values="UK-low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_englandLI %>% readr::write_csv(here::here("results", "GPcombinations_englandLI_witherror.csv"))
+
+#' UK lppd heatmaps
+my_tibble_a <- read_csv(here::here("results", "GPcombinations_UKGDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
+my_tibble_b <- read_csv(here::here("results", "GPcombinations_UKLI_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
+my_tibble_c <- read_csv(here::here("results", "GPcombinations_englandGDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
+my_tibble_d <- read_csv(here::here("results", "GPcombinations_englandLI_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
+
+my_tibble_a %>%
+  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
+  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%  # ignoring poor model fits
+  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
+  geom_tile() +
+  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
+  facet_wrap(~ meas_error) +
+    #ylim(0,101) +
+  labs(title = "lppd heatmaps for UK GDP model, varying measurement error", x = "l1", y = "l2")
+
+my_tibble_b %>%
+  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
+  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
+  geom_tile() +
+  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
+  facet_wrap(~ meas_error) +
+    #ylim(0,101) +
+  labs(title = "lppd heatmaps for UK Low-Income model, varying measurement error", x = "l1", y = "l2")
+
+my_tibble_c %>%
+  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
+  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
+  geom_tile() +
+  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
+  facet_wrap(~ meas_error) +
+    #ylim(0,101) +
+  labs(title = "lppd heatmaps for England GDP model, varying measurement error", x = "l1", y = "l2")
+
+my_tibble_d %>%
+  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
+  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
+  geom_tile() +
+  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
+  facet_wrap(~ meas_error) +
+    #ylim(0,101) +
+  labs(title = "lppd heatmaps for England Low-Income model, varying measurement error", x = "l1", y = "l2")
 ```
 
 ## Sensitivity analysis 1 - prior means

@@ -27,6 +27,15 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
       province_relation_data <- readr::read_csv(here::here("data", "cNICS-vaccine-hesitancy.csv"), show_col_types = F) %>%
         mutate(value = 100 - (refuse_all + hesitant)) %>% arrange(value)  # 100-X for positive trend
       
+    } else if (data=="UK-GDP") {  # UK GDP 2023 data from ONS (log)
+      province_relation_data <- readr::read_csv(here::here("data", "uk-ONSdownload-regionalgdp.csv"), show_col_types = F, skip=1) %>% # skip title row
+        filter(ITL %in% c("ITL1","Other")) %>% mutate(location = `Region name`, value = log(`2023`)) %>%
+        mutate(location = if_else(location == "East", "East of England", location)) %>%
+        select(location, value) %>% arrange(value)
+    } else if (data=="UK-low_income_families") {  # UK % children in low-income families (DWP Official Statistics, FYE 2023)
+      province_relation_data <- readr::read_csv(here::here("data", "uk-officialstatistics-childreninlowincomefamilies.csv"), show_col_types = F, skip=1) %>% # skip title row
+        add_row(location="England", value=21.296) %>% select(location, value) %>%  # estimated from regions
+        mutate(value = (100 - value)) %>% arrange(value)
     }
     
     # filter provinces with no public coverage data
