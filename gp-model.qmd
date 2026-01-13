@@ -160,7 +160,7 @@ The 2D model adds province as a second dimension. In this model, x_i is current 
 
 ## Covariance and prior
 
-We use the squared exponential covariance function to begin with, with current age lengthscale, `l1`, and *relative* lengthscale of current age to province, `l2`. If the squared exponential is too strong an assumption, we can also increase its variance (i.e. the model uncertainty) with parameter `b`. Relation of provinces currently uses GDP from StatCan (https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610040201) -- this should be updated when a better method is found. Define the prior \~ Normal(0,cov) as before and draw a sample.
+We use the squared exponential covariance function to begin with, with current age lengthscale, `l1`, and *relative* lengthscale of current age to province, `l2`. If the squared exponential is too strong an assumption, we can also increase its variance (i.e. the model uncertainty) with parameter `b`. Relation of provinces currently uses 2024 GDP from StatCan (https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610040201) -- this should be updated when a better method is found. Define the prior \~ Normal(0,cov) as before and draw a sample.
 
 Note that we currently assume a mean of 0. We could specify a non-zero mean here in the prior, or equivalently, we could centre the observed data to mean 0, run the Gaussian Process as normal and then rescale the data back at the end. We will do the latter as it simplifies calculation.
 
