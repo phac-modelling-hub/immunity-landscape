@@ -44,7 +44,7 @@ Model fitting is done using Gaussian distributions, whose domain is the entire r
 
 ## A note on assumptions
 
-A Gaussian Process model assumes relation of the independent variable(s), i.e. that ages which are 'related / close-by' (defined however we wish with lengthscale parameter l) will have similar vaccination coverage. Equally, we assume that 'related' provinces will also have similar coverage. Some tests of this assumption are the 2D model extensions section.
+A Gaussian Process model assumes relation of the independent variable(s), i.e. that ages which are 'related / close-by' (defined however we wish with lengthscale parameter l) will have similar vaccination coverage. Equally, we assume that 'related' provinces will also have similar coverage. Some tests of this assumption are in the 2D model extensions section.
 
 # 1D case (current age)
 
