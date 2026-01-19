@@ -27,7 +27,7 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
       province_relation_data <- readr::read_csv(here::here("data", "cNICS-vaccine-hesitancy.csv"), show_col_types = F) %>%
         mutate(value = 100 - (refuse_all + hesitant)) %>% arrange(value)  # 100-X for positive trend
       
-    } else if (data=="UK-GDP") {  # UK GDP 2023 data from ONS (log)
+    } else if (data=="UK-GDP") {  # UK GDP 2023 data from ONS (log) https://www.ons.gov.uk/datasets/regional-gdp-by-year/editions/time-series/versions/6
       province_relation_data <- readr::read_csv(here::here("data", "uk-ONSdownload-regionalgdp.csv"), show_col_types = F, skip=1) %>% # skip title row
         filter(ITL %in% c("ITL1","Other")) %>% mutate(location = `Region name`, value = log(`2023`)) %>%
         mutate(location = if_else(location == "East", "East of England", location)) %>%

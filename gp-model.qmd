@@ -711,7 +711,7 @@ We see a good relationship between coverage at adjacent ages, both in the 1+ and
 
 ## UK comparison
 
-We can plot UK vaccine coverage data, and run through the model, as a comparison. Data are for 2013-2025, at least one measles dose, aged 5 years. `vax_uk` gives vaccine coverage data for the four nations of the UK (England, Wales, Scotland, Northern Ireland). `vax_england` gives the 10 regions of England (e.g. London, South West, South East etc.). All data is taken from the UKHSA dashboard: https://ukhsa-dashboard.data.gov.uk/cover/childhood-vaccinations.
+We can plot UK vaccine coverage data, and run through the model, as a comparison. Data are for 2013-2025, at least one measles dose, aged 5 years. `vax_uk` gives vaccine coverage data for the four nations of the UK (England, Wales, Scotland, Northern Ireland). `vax_england` gives the 10 regions of England (e.g. London, South West, South East etc.). All vaccine coverage data is taken from the UKHSA dashboard: https://ukhsa-dashboard.data.gov.uk/cover/childhood-vaccinations.
 
 ```{r}
 #| label: uk
