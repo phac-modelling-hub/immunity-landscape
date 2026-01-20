@@ -16,7 +16,7 @@
 #' @param l2 a vector of relative lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
 #' @param b a vector of scales for covariance function determining the output variances (vector)
 #' @param meas_error if specified, measurement error is included (numeric)
-select_GP <- function(vax_dataset, last_agecurrent=28, prov_values, ndrws=100, k_list=list(ksqexp=ksqexp), l1=NA, l2=NA, b=1, meas_error=NA) {
+select_GP <- function(vax_dataset, last_agecurrent=21, prov_values, ndrws=100, k_list=list(ksqexp=ksqexp), l1=NA, l2=NA, b=1, meas_error=NA) {
   # first separate k_list into functions and names
   k_tibble <- tibble(k_name = names(k_list), k = unname(k_list))
   
