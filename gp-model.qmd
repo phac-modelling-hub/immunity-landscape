@@ -170,7 +170,7 @@ Note that we currently assume a mean of 0. We could specify a non-zero mean here
 #' setup
 #' now both x and y are inputs, with output z
 first_agecurrent <- 1  # first age for the GP model
-last_agecurrent <- 32  #age_pre1970-1  # last age for the GP model 
+last_agecurrent <- 21  #age_pre1970-1  # last age for the GP model 
 xvals <- first_agecurrent:last_agecurrent  # a vector of current ages (these x_i's are equally spaced) 
 
 province_relation <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
@@ -534,13 +534,12 @@ GPcombinations_LI2 <- select_GP(vax_cleanLI, prov_values="low_income_families", 
 GPcombinations_LI2 %>% readr::write_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))
 
 #' plots of final model (using best parameter values)
-run_GP(vax_clean, prov_values="GDP", l1=1.75, l2=4.0, b=0.5, meas_error=0.5)
+run_GP(vax_clean, prov_values="GDP", l1=2.5, l2=250, b=0.5, meas_error=0.1)
 ggsave(paste0("plots/bestGPmodel_GDP",".jpeg"), height=4.51, width=7.29)
-# run_GP(vax_cNICS, prov_values="GDP", l1=2.5, l2=1.5, b=1.5, meas_error=0.01)
-# ggsave(paste0("plots/bestGPmodel_GDP_cNICS",".pdf"), height=4.51, width=7.29)
-run_GP(vax_cleanLI, prov_values="low_income_families", l1=1.25, l2=4, b=1.5, meas_error=0.0)
+run_GP(vax_cleanLI, prov_values="low_income_families", l1=2.5, l2=25, b=0.5, meas_error=0.1)
 ggsave(paste0("plots/bestGPmodel_lowincome",".jpeg"), height=4.51, width=7.29)
-run_GP(vax_cleanLI, prov_values="low_income_families", l1=2.5, l2=0.5, b=1.0, meas_error=0.0)
+run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=2.5, l2=6.0, b=0.5, meas_error=0.1)
+ggsave(paste0("plots/bestGPmodel_vaccinehesitancy",".jpeg"), height=4.51, width=7.29)
 ```
 
 A new dataset on vaccine hesitancy requires some manipulation to use (condensing coverage data for Atlantic provinces and Northern provinces):
@@ -630,7 +629,7 @@ To test relation of ages, we can compute pairwise differences in absolute covera
 #' 1+ dose provincial data, no aNICS
 #' read in provincial data with aNICS removed
 vax_dataset1 <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2-noadults.csv"), show_col_types = FALSE) %>%
-  filter(n_doses %in% c("1", "1+"))
+  filter(n_doses %in% c("1", "1+")) %>% filter(age_current <= 21)
 
 #' define a function to compute all pairwise differences
 compute_pairwise_diffs <- function(df) {
@@ -765,6 +764,7 @@ my_tibble_a %>%
   facet_wrap(~ meas_error) +
     #ylim(0,101) +
   labs(title = "lppd heatmaps for UK GDP model, varying measurement error", x = "l1", y = "l2")
+ggsave(paste0("plots/lppdheatmap_UKGDP",".jpeg"), height=4.51, width=7.29)
 
 my_tibble_b %>%
   mutate(l1 = factor(l1), l2 = factor(l2)) %>%
@@ -775,6 +775,7 @@ my_tibble_b %>%
   facet_wrap(~ meas_error) +
     #ylim(0,101) +
   labs(title = "lppd heatmaps for UK Low-Income model, varying measurement error", x = "l1", y = "l2")
+ggsave(paste0("plots/lppdheatmap_UKLI",".jpeg"), height=4.51, width=7.29)
 
 my_tibble_c %>%
   mutate(l1 = factor(l1), l2 = factor(l2)) %>%
@@ -785,6 +786,7 @@ my_tibble_c %>%
   facet_wrap(~ meas_error) +
     #ylim(0,101) +
   labs(title = "lppd heatmaps for England GDP model, varying measurement error", x = "l1", y = "l2")
+ggsave(paste0("plots/lppdheatmap_englandGDP",".jpeg"), height=4.51, width=7.29)
 
 my_tibble_d %>%
   mutate(l1 = factor(l1), l2 = factor(l2)) %>%
@@ -795,6 +797,7 @@ my_tibble_d %>%
   facet_wrap(~ meas_error) +
     #ylim(0,101) +
   labs(title = "lppd heatmaps for England Low-Income model, varying measurement error", x = "l1", y = "l2")
+ggsave(paste0("plots/lppdheatmap_englandLI",".jpeg"), height=4.51, width=7.29)
 ```
 
 ## Sensitivity analysis 1 - prior means
