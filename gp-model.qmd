@@ -809,3 +809,19 @@ One sensitivity analysis consideration is in exploring the choice of prior mean.
 
 
 ```
+
+## Leave-one-province-out (LOPO-CV)
+
+```{r}
+#| label: lopo_cv
+
+#' define province relation (prov_values)
+prov_values <- extract_province_relation("GDP", vax_dataset=vax_clean)
+
+#' example with diagnostics plot
+example <- compute_lppd_lopo(vax_clean, prov_values=prov_values, k=ksqexp, l1=1.5, l2=50, b=1)
+example
+plot(x=prov_values[names(example$mean_lppd_by_province)], y=example$mean_lppd_by_province,
+  xlab = "province value e.g. GDP", ylab = "Mean LOPO lppd")
+```
+

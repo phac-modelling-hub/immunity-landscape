@@ -1,4 +1,5 @@
-#' COMPUTE the lppd analytically for one GP model (i.e. for one choice of parameter values of {k, l1, l2, b}). 
+#' COMPUTE the lppd analytically for one GP model (i.e. for one choice of parameter values of {k, l1, l2, b}) from
+#' leave-one-out cross-validation. 
 #' See GitHub Issue #4 for details of method.
 #' Note: scaling by l2 happens inside the function.
 #' 
@@ -18,7 +19,6 @@
 #' @param b scale for covariance function determining the output variance
 #' @param meas_error if specified, measurement error is included (numeric)
 compute_lppd <- function(vax_dataset, last_agecurrent=21, prov_values, k=ksqexp, l1=NA, l2=NA, b=1, meas_error=NA) {
-  # start from here
   # prepare observed data (training+test)
   vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
   xobs <- vax_dataset %>% pull(age_current)
