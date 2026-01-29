@@ -40,7 +40,7 @@ compute_lppd_lopo <- function(vax_dataset, last_agecurrent=21, prov_values, k=ks
     Kinv <- solve(koo + errmat)
   }
   Kinvz <- Kinv%*%(logit_zobs_centred)
-  # province filtering -- *needs checking*
+  # province filtering
   provinces <- unique(vax_dataset$location)
   n_obs_per_province <- table(vax_dataset$location)
   lppd_by_province   <- setNames(numeric(length(provinces)), provinces)
@@ -52,28 +52,20 @@ compute_lppd_lopo <- function(vax_dataset, last_agecurrent=21, prov_values, k=ks
     # block corresponding to held-out province
     Kinv_AA <- Kinv[idx, idx, drop = FALSE]
     Kinvz_A <- Kinvz[idx, , drop = FALSE]
-    # conditional mean and covariance
-    Sigma_A <- solve(Kinv_AA)
-    mu_A <- logit_zobs_centred[idx] - Sigma_A %*% Kinvz_A
     # observed values for this province
     z_A <- logit_zobs_centred[idx]
+    # conditional mean and covariance
+    ppd_var <- solve(Kinv_AA)
+    ppd_mean <- z_A - ppd_var %*% Kinvz_A
+    
     # multivariate normal log density
-    lppd_p <- -0.5*(length(idx)*log(2*pi) + determinant(Sigma_A, logarithm = TRUE)$modulus + t(z_A - mu_A) %*% solve(Sigma_A) %*% (z_A - mu_A))
+    lppd_p <- -0.5*(length(idx)*log(2*pi) + determinant(ppd_var, logarithm = TRUE)$modulus + t(z_A - ppd_mean) %*% solve(ppd_var) %*% (z_A - ppd_mean))
     lppd_p <- as.numeric(lppd_p)
     lppd_by_province[p] <- lppd_p
     mean_lppd_by_province[p] <- lppd_p / n_p
     lppd_total <- lppd_total + lppd_p
   }
-  
-  # for (i in 1:nrow(vax_dataset)) {
-  #   zout <- vax_dataset[i, ] %>% pull(value)  # correct coverage value of removed data point
-  #   centring_term_i <- if (length(centring_term) == 1) centring_term else centring_term[i]  # for centring the removed data point
-  #   logit_zout_centred <- logit(zout) - centring_term_i
-  #   ppd_means[i] <- logit_zout_centred - (Kinvz[i] / Kinv[i,i])
-  #   ppd_vars[i] <- 1 / (Kinv[i,i])
-  #   lppds[i] <- -(0.5*log(ppd_vars[i])) - (((logit_zout_centred - ppd_means[i])^2)/(2*ppd_vars[i])) - (0.5*log(2*pi))
-  # }
-  
+
   # sum lppd values from each test
   return(list(lppd = lppd_total, lppd_by_province = lppd_by_province,
               mean_lppd_by_province = mean_lppd_by_province, n_obs_per_province = n_obs_per_province))

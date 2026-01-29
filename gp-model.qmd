@@ -440,7 +440,7 @@ One option is to work with the posterior mean at each missing age as described. 
 #example2 <- compute_lppd(vax_clean, prov_values=prov_values, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: <1 second
 
 #' example model selection
-#example <- select_GP(vax_clean, prov_values=prov_values, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))  # prov_values defined above
+example <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))  # prov_values defined above
 
 #' exhaustive search of reasonable hyperparameter space (provinical dataset)
 GPcombinations_GDP <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1.0,1.5,2,2.5,3.0,3.5,4.0), b=c(0.5,1,1.5))
@@ -824,4 +824,3 @@ example
 plot(x=prov_values[names(example$mean_lppd_by_province)], y=example$mean_lppd_by_province,
   xlab = "province value e.g. GDP", ylab = "Mean LOPO lppd")
 ```
-
