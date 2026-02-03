@@ -45,8 +45,8 @@ compute_lppd_lopo <- function(vax_dataset, last_agecurrent=21, prov_values, k=ks
   n_obs_per_province <- table(vax_dataset$location)
   lppd_by_province   <- setNames(numeric(length(provinces)), provinces)
   mean_lppd_by_province <- setNames(numeric(length(provinces)), provinces)
-  lppd_total <- 0
   for (p in provinces) {
+    stopifnot(any(table(vax_dataset$location) > 1))
     idx <- which(vax_dataset$location == p)
     n_p <- length(idx)
     # block corresponding to held-out province
@@ -63,10 +63,10 @@ compute_lppd_lopo <- function(vax_dataset, last_agecurrent=21, prov_values, k=ks
     lppd_p <- as.numeric(lppd_p)
     lppd_by_province[p] <- lppd_p
     mean_lppd_by_province[p] <- lppd_p / n_p
-    lppd_total <- lppd_total + lppd_p
   }
 
   # sum lppd values from each test
+  lppd_total <- sum(lppd_by_province)
   return(list(lppd = lppd_total, lppd_by_province = lppd_by_province,
               mean_lppd_by_province = mean_lppd_by_province, n_obs_per_province = n_obs_per_province))
 }
