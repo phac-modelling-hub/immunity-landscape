@@ -897,20 +897,28 @@ This leads to the question: do any of our modelling frameworks utilise relation 
 ```{r}
 #| label: lopo_investigation3
 
+#' England LI model framework
 #' load England vaccine coverage data
 vax_england <- read_csv("data/ukhsa-chart-download-mmr1-regions.csv") %>%  # data for MMR1 coverage aged 5y from UKHSA (regions of England)
   mutate(age = 5, n_doses="1+") %>% mutate(value=metric_value/100, location=geography, year_report=year) %>%
   mutate(age_current = current_year - year_report + age) %>% select(location, year_report, age, n_doses, value, age_current)
 
-"GPcombinations_englandLI_witherror.csv"
 #' explore province predictability (LOPO lppd) for one model e.g. best model from model selection
-model_1982 <- compute_lppd_lopo(vax_cleanLI, prov_values="low_income_families", k=ksqexp, l1=2.5, l2=25, b=0.5, meas_error=0.1)
-prov_values <- extract_province_relation("low_income_families", vax_dataset=vax_cleanLI)
-plot(x=prov_values[names(model_1982$mean_lppd_by_province)], y=model_1982$mean_lppd_by_province, xlab = "province, by e.g. LI value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1982 (best)")
-max(model_1982$mean_lppd_by_province) - min(model_1982$mean_lppd_by_province)  # small difference == age model
+model_1698 <- compute_lppd_lopo(vax_england, prov_values="UK-low_income_families", k=ksqexp, l1=2.25, l2=3.5, b=0.5, meas_error=0.05)
+prov_values <- extract_province_relation("UK-low_income_families", vax_dataset=vax_england)
+plot(x=prov_values[names(model_1698$mean_lppd_by_province)], y=model_1698$mean_lppd_by_province, xlab = "region of England, by e.g. LI value", ylab = "Mean LOPO lppd", main = "Region predictability for model_1698 (best)")
+max(model_1698$mean_lppd_by_province) - min(model_1698$mean_lppd_by_province)  # small difference == age model
 #' compare to a poor model
-model_1515 <- compute_lppd_lopo(vax_cleanLI, prov_values="low_income_families", k=ksqexp, l1=2.25, l2=0.2, b=1.5, meas_error=0)
-plot(x=prov_values[names(model_1515$mean_lppd_by_province)], y=model_1515$mean_lppd_by_province, xlab = "province, by e.g. LI value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1515 (worst)")
-max(model_1515$mean_lppd_by_province) - min(model_1515$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
+model_950 <- compute_lppd_lopo(vax_england, prov_values="UK-low_income_families", k=ksqexp, l1=1.75, l2=0.1, b=0.5, meas_error=0)
+plot(x=prov_values[names(model_950$mean_lppd_by_province)], y=model_950$mean_lppd_by_province, xlab = "region of England, by e.g. LI value", ylab = "Mean LOPO lppd", main = "Region predictability for model_950 (worst)")
+max(model_950$mean_lppd_by_province) - min(model_950$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
+
+#' load model selection results and plot difference between LOPO and LOO lppd's
+delta_plot4 <- read_csv(here::here("results", "GPcombinations_englandLI_witherror.csv"))  # load a model selection csv file
+delta_plot4 <- delta_plot4 %>% arrange(l2) %>%  # sort by increasing l2
+  mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
+delta_plot4 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
+ scale_x_continuous(breaks = seq(0, max(delta_plot4$l2), by=50))
+
 ```
 
