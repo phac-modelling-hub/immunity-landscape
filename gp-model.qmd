@@ -36,6 +36,10 @@ current_year <- as.integer(format(Sys.Date(), "%Y")) # for ageing estimates
 age_pre1970 <- current_year - 1969 # min age of those born strictly before 1970
 vax_cNICS <- readr::read_csv(here::here("data", "measles_CNICS.csv"), show_col_types = FALSE) %>%
   filter(!(pt %in% c("SK","YT","NB","CA"))) %>% mutate(age_current=current_year - year_birth)
+
+#' cleaned data for use with low-income and vaccine hesitancy province relation indicators
+vax_cleanLI <- vax_clean %>% filter(!(pt %in% c("NU","YT","NT")))  # "low_income_families" has no data for NU, NT, YT
+vax_cleanVH <- vax_clean %>% filter(n_doses!="2") %>% mutate(location = if_else(location %in% c("Newfoundland and Labrador", "Prince Edward Island", "Nova Scotia", "New Brunswick"), "Atlantic region", location)) %>% mutate(location = if_else(location %in% c("Yukon", "Northwest Territories", "Nunavut"), "Northern region", location)) %>%  mutate(pt = if_else(location %in% c("Atlantic region"), "AR", pt)) %>% mutate(pt = if_else(location %in% c("Northern region"), "NR", pt)) %>% group_by(across(-value)) %>% summarise(value = mean(value), .groups = "drop")  # "vaccine_hesitancy" groups Atlantic PTs and Northen PTs
 ```
 
 ## A note on scales
@@ -460,7 +464,7 @@ This 'best' hyperparameters result in spiky and overfitted estimates. Instead re
 #example4 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1), meas_error=0.1)
 
 #' exhaustive search of reasonable hyperparameter space (provinical dataset) with error
-GPcombinations_GDP2 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_GDP2 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
 GPcombinations_GDP2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_witherror.csv"))
 
 #' example lppd fit
@@ -519,18 +523,16 @@ Relation of provinces is encoded in `prov_values` and can be extracted from the 
 #| label: province_relation_examples
 
 prov_valuesGDP <- extract_province_relation("GDP", vax_dataset=vax_clean)
-vax_cleanLI <- vax_clean %>% filter(!(pt %in% c("NU","YT","NT")))  # "low_income_families" has no data for NU, NT, YT
-prov_valuesLI <- extract_province_relation("low_income_families", vax_dataset=vax_cleanLI)
+prov_valuesLI <- extract_province_relation("low_income_families", vax_dataset=vax_cleanLI)  # vac_cleanLI is defined in set_up at beginning of file
 
-example <- select_GP(vax_cleanLI, prov_values=prov_valuesLI, k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
-example2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
+example <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
 
 #' exhaustive search of reasonable hyperparameter space (provincial dataset, children in low-income families province relation metric)
 # GPcombinations_lowincome<- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3,3.5,4), b=c(0.5,1,1.5))
 # GPcombinations_lowincome %>% readr::write_csv(here::here("results", "GPcombinations_lowincome.csv"))
 
 #' with error
-GPcombinations_LI2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_LI2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
 GPcombinations_LI2 %>% readr::write_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))
 
 #' plots of final model (using best parameter values)
@@ -538,7 +540,7 @@ run_GP(vax_clean, prov_values="GDP", l1=2.5, l2=250, b=0.5, meas_error=0.1)
 ggsave(paste0("plots/bestGPmodel_GDP",".jpeg"), height=4.51, width=7.29)
 run_GP(vax_cleanLI, prov_values="low_income_families", l1=2.5, l2=25, b=0.5, meas_error=0.1)
 ggsave(paste0("plots/bestGPmodel_lowincome",".jpeg"), height=4.51, width=7.29)
-run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=2.5, l2=6.0, b=0.5, meas_error=0.1)
+run_GP(vax_cleanVH, prov_values="vaccine_hesitancy", l1=2.5, l2=6.0, b=0.5, meas_error=0.1)
 ggsave(paste0("plots/bestGPmodel_vaccinehesitancy",".jpeg"), height=4.51, width=7.29)
 ```
 
@@ -547,24 +549,19 @@ A new dataset on vaccine hesitancy requires some manipulation to use (condensing
 ```{r}
 #| label: province_relation_hesitancy
 
-#' combine smaller provinces into regions
-vax_regional <- vax_clean %>% filter(n_doses!="2") %>%
-  mutate(location = if_else(location %in% c("Newfoundland and Labrador", "Prince Edward Island", "Nova Scotia", "New Brunswick"), "Atlantic region", location)) %>%
-  mutate(location = if_else(location %in% c("Yukon", "Northwest Territories", "Nunavut"), "Northern region", location)) %>%
-  mutate(pt = if_else(location %in% c("Atlantic region"), "AR", pt)) %>%
-  mutate(pt = if_else(location %in% c("Northern region"), "NR", pt)) %>%
-  group_by(across(-value)) %>% summarise(value = mean(value), .groups = "drop")
+#' use vax_cleanVH which combines smaller provinces into regions
+head(vax_cleanVH)
 
-#' run with vax_regional
-run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=2.5, l2=4, b=0.5, meas_error=0.1)
-run_GP(vax_regional, prov_values="vaccine_hesitancy", l1=2.5, l2=0.5, b=0.5, meas_error=0)
+#' run with vax_cleanVH
+run_GP(vax_cleanVH, prov_values="vaccine_hesitancy", l1=2.5, l2=4, b=0.5, meas_error=0.1)
+run_GP(vax_cleanVH, prov_values="vaccine_hesitancy", l1=2.5, l2=0.5, b=0.5, meas_error=0)
 
 #' exhaustive search of reasonable hyperparameter space (provincial dataset, vaccine hesitancy province relation metric)
-# GPcombinations_VH <- select_GP(vax_regional, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3,3.5,4), b=c(0.5,1,1.5))
+# GPcombinations_VH <- select_GP(vax_cleanVH, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1,1.5,2,2.5,3,3.5,4), b=c(0.5,1,1.5))
 # GPcombinations_VH %>% readr::write_csv(here::here("results", "GPcombinations_vaccinehesitancy.csv"))
 
 #' with error
-GPcombinations_VH2 <- select_GP(vax_regional, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_VH2 <- select_GP(vax_cleanVH, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
 GPcombinations_VH2 %>% readr::write_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv"))
 ```
 
@@ -579,9 +576,8 @@ To visualise relation of provinces, we can plot `province_relation_data` on an a
 
 #' load province relation values as tibbles
 prov_valuesGDP <- enframe(extract_province_relation("GDP", vax_dataset=vax_clean), name="location", value="prov_valuesGDP")  # GDP
-vax_cleanLI <- vax_clean %>% filter(!(pt %in% c("NU","YT","NT")))
 prov_valuesLI <- enframe(extract_province_relation("low_income_families", vax_dataset=vax_cleanLI), name="location", value="prov_valuesLI")  # low_income
-prov_valuesVH <- enframe(extract_province_relation("vaccine_hesitancy", vax_dataset=vax_regional), name="location", value="prov_valuesVH")  # vaccine_hesitancy (vax_regional defined above)
+prov_valuesVH <- enframe(extract_province_relation("vaccine_hesitancy", vax_dataset=vax_cleanVH), name="location", value="prov_valuesVH")  # vaccine_hesitancy
 ARval <- prov_valuesVH %>% filter(location=="Atlantic region") %>% pull(prov_valuesVH)
 NRval <- prov_valuesVH %>% filter(location=="Northern region") %>% pull(prov_valuesVH)
 prov_valuesVH <- prov_valuesVH %>% rbind(c("Newfoundland and Labrador", ARval)) %>% rbind(c("Prince Edward Island", ARval)) %>%  # this is very crude code!
@@ -812,15 +808,87 @@ One sensitivity analysis consideration is in exploring the choice of prior mean.
 
 ## Leave-one-province-out (LOPO-CV)
 
-```{r}
-#| label: lopo_cv
+The function `compute_lppd_lopo` computes lppd for one set of model params from leave-one-province-out cross-validation (same as LOO-CV but leaving out the data points for one whole province at a time). Model selection (`select_GP()`) also computes this for each set of model params and stores the results as a column named `lppd_LOPO`.
 
-#' define province relation (prov_values)
-prov_values <- extract_province_relation("GDP", vax_dataset=vax_clean)
+```{r}
+#| label: lopo
 
 #' example with diagnostics plot
-example <- compute_lppd_lopo(vax_clean, prov_values=prov_values, k=ksqexp, l1=1.5, l2=50, b=1)
+example <- compute_lppd_lopo(vax_clean, prov_values="GDP", k=ksqexp, l1=1.5, l2=0.2, b=1)
 example
-plot(x=prov_values[names(example$mean_lppd_by_province)], y=example$mean_lppd_by_province,
-  xlab = "province value e.g. GDP", ylab = "Mean LOPO lppd")
+plot(x=prov_values[names(example$mean_lppd_by_province)], y=example$mean_lppd_by_province, xlab = "province value e.g. GDP", ylab = "Mean LOPO lppd")
 ```
+
+The above diagnostic plot allows us to explore the relative contribution of each province to the total log posterior predictive density (after scaling by # of observations). For the GDP model framework, we see that for poor models, there is a large contribution from the ?tail-end? provinces to total lppd, whereas with our best models (largest LOO lppd / large l2), the diagnostic plot is fairly flat indicating that each province contributes equally (after scaling by # of observations) and the model essentially collapses to an age model.
+
+```{r}
+#| label: lopo_investigation1
+
+#' GDP model framework
+#' explore province predictability (LOPO lppd) for one model e.g. best model from model selection
+model_2087 <- compute_lppd_lopo(vax_clean, prov_values="GDP", k=ksqexp, l1=2.5, l2=250, b=0.5, meas_error=0.1)
+prov_values <- extract_province_relation("GDP", vax_dataset=vax_clean)
+plot(x=prov_values[names(model_2087$mean_lppd_by_province)], y=model_2087$mean_lppd_by_province, xlab = "province, by e.g. GDP value", ylab = "Mean LOPO lppd", main = "Province predictability for model_2087 (best)")
+max(model_2087$mean_lppd_by_province) - min(model_2087$mean_lppd_by_province)  # small difference == age model
+#' compare to a poor model
+model_1515 <- compute_lppd_lopo(vax_clean, prov_values="GDP", k=ksqexp, l1=2.25, l2=0.2, b=1.5, meas_error=0)
+plot(x=prov_values[names(model_1515$mean_lppd_by_province)], y=model_1515$mean_lppd_by_province, xlab = "province, by e.g. GDP value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1515 (worst)")
+max(model_1515$mean_lppd_by_province) - min(model_1515$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
+
+
+#' LI model framework
+#' explore province predictability (LOPO lppd) for one model e.g. best model from model selection
+model_1982 <- compute_lppd_lopo(vax_cleanLI, prov_values="low_income_families", k=ksqexp, l1=2.5, l2=25, b=0.5, meas_error=0.1)
+prov_values <- extract_province_relation("low_income_families", vax_dataset=vax_cleanLI)
+plot(x=prov_values[names(model_1982$mean_lppd_by_province)], y=model_1982$mean_lppd_by_province, xlab = "province, by e.g. LI value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1982 (best)")
+max(model_1982$mean_lppd_by_province) - min(model_1982$mean_lppd_by_province)  # small difference == age model
+#' compare to a poor model
+model_1515 <- compute_lppd_lopo(vax_cleanLI, prov_values="low_income_families", k=ksqexp, l1=2.25, l2=0.2, b=1.5, meas_error=0)
+plot(x=prov_values[names(model_1515$mean_lppd_by_province)], y=model_1515$mean_lppd_by_province, xlab = "province, by e.g. LI value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1515 (worst)")
+max(model_1515$mean_lppd_by_province) - min(model_1515$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
+
+
+#' VH model framework
+#' explore province predictability (LOPO lppd) for one model e.g. best model from model selection
+model_1937 <- compute_lppd_lopo(vax_cleanVH, prov_values="vaccine_hesitancy", k=ksqexp, l1=2.5, l2=6, b=0.5, meas_error=0.1)
+prov_values <- extract_province_relation("vaccine_hesitancy", vax_dataset=vax_cleanVH)
+plot(x=prov_values[names(model_1937$mean_lppd_by_province)], y=model_1937$mean_lppd_by_province, xlab = "province, by e.g. VH value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1937 (best)")
+max(model_1937$mean_lppd_by_province) - min(model_1937$mean_lppd_by_province)  # small difference == age model
+#' compare to a poor model
+model_1215 <- compute_lppd_lopo(vax_cleanVH, prov_values="vaccine_hesitancy", k=ksqexp, l1=2, l2=0.1, b=1.5, meas_error=0)
+plot(x=prov_values[names(model_1215$mean_lppd_by_province)], y=model_1215$mean_lppd_by_province, xlab = "province, by e.g. VH value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1215 (worst)")
+max(model_1215$mean_lppd_by_province) - min(model_1215$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
+```
+
+We can also explore the difference `delta` between LOO lppd and LOPO lppd. Similar values indicate weak province predictability ie. that provinces are independent and our model is essentially behaving as an age model. From the plots, we see that this happens with large l2.
+
+```{r}
+#| label: lopo_investigation2
+
+#' GDP model framework
+#' load model selection results and plot difference between LOPO and LOO lppd's
+delta_plot <- read_csv(here::here("results", "GPcombinations_GDP_witherror.csv"))  # load a model selection csv file
+delta_plot <- delta_plot %>% arrange(l2) %>%  # sort by increasing l2
+  mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
+delta_plot %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
+ scale_x_continuous(breaks = seq(0, max(delta_plot$l2), by=50))
+
+
+#' LI model framework
+#' load model selection results and plot difference between LOPO and LOO lppd's
+delta_plot2 <- read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))  # load a model selection csv file
+delta_plot2 <- delta_plot2 %>% arrange(l2) %>%  # sort by increasing l2
+  mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
+delta_plot2 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
+ scale_x_continuous(breaks = seq(0, max(delta_plot2$l2), by=50))
+
+
+#' VH model framework
+#' load model selection results and plot difference between LOPO and LOO lppd's
+delta_plot3 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv"))  # load a model selection csv file
+delta_plot3 <- delta_plot3 %>% arrange(l2) %>%  # sort by increasing l2
+  mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
+delta_plot3 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
+ scale_x_continuous(breaks = seq(0, max(delta_plot3$l2), by=50))
+```
+

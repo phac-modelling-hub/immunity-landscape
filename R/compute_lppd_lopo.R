@@ -21,7 +21,7 @@ compute_lppd_lopo <- function(vax_dataset, last_agecurrent=21, prov_values, k=ks
   # prepare observed data (training+test)
   vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
   xobs <- vax_dataset %>% pull(age_current)
-  prov_values <- extract_province_relation(prov_values, vax_dataset=vax_dataset)
+  prov_values <- extract_province_relation(data=prov_values, vax_dataset=vax_dataset)
   prov_values <- prov_values*l2  # scale province values by l2
   yobs <- prov_values[vax_dataset %>% pull(location)]  # this includes scaling by l2
   zobs <- vax_dataset %>% pull(value)
