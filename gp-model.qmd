@@ -892,7 +892,7 @@ delta_plot3 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000
  scale_x_continuous(breaks = seq(0, max(delta_plot3$l2), by=50))
 ```
 
-This leads to the question: do any of our modelling frameworks utilise relation between provinces/regions?  Consider the England LI model.  From model selection, this framework does not favour largest l2 (best LOO lppd currently gives l2=3.5, compared to the plausible upper limit of 25).  Repeat the LOPO analysis for England LI.  Take code from uk code snippet above.
+This leads to the question: do any of our modelling frameworks utilise relation between provinces/regions? Consider the England LI model. From model selection, this framework does not favour largest l2 (best LOO lppd currently gives l2=3.5, compared to the plausible upper limit of 25). Repeat the LOPO analysis for England LI. Take code from uk code snippet above.
 
 ```{r}
 #| label: lopo_investigation3
@@ -922,3 +922,8 @@ delta_plot4 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000
 
 ```
 
+## Simulation-based calibration
+
+```{r}
+
+```
