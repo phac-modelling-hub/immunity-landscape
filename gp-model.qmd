@@ -924,11 +924,13 @@ delta_plot4 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000
 ```
 
 ## Simulation-based calibration (SBC)
+
 For each iteration i, the below code generates a synthetic data set with known hyperparameters and then runs the model selection process to see how well the true hyperparameters can be recovered. The data generation process (Step 1) is as follows: choose values for k, l1, l2, b, and meas_error; compute a GP for this parameter combination and calculate the posteriors; save one random posterior draw and treat this as the synthetic data.
+
 ```{r}
 #| label: sbc
 
-SBC_results <- tibble()
+SBC_results_list <- vector("list", 100)
 k_select <- function(a) {  # quick function to randomly choose ksqexp or kexp
   if (a==1) {
     list(fn=ksqexp, name="ksqexp")
@@ -937,7 +939,7 @@ k_select <- function(a) {  # quick function to randomly choose ksqexp or kexp
   }
 }
 
-for (i in 1:100) {
+for (i in 1:2) {
   #' Step 1: Create synthetic data by randomly drawing one posterior from a GP with known hyperparams
   #' define hyperparams for this iteration
   k_object <- k_select(sample(0:1, 1))
@@ -948,13 +950,15 @@ for (i in 1:100) {
   meas_error <- sample(c(0.5,0.1,0.05,0.01,0), 1)  #runif(1, 0, 0.5)
   params <- list(k=k, k_name=k_object$name, l1=l1, l2=l2, b=b, meas_error=meas_error)  # save param values
   #' run model
-  post <- run_GP(vax_cleanLI, prov_values="low_income_families", k=kexp, l1=l1, l2=l2, b=b, meas_error=meas_error, show_plots=F)
+  post <- run_GP(vax_cleanLI, prov_values="low_income_families", k=kexp, l1=l1, l2=l2, 
+                 b=b, meas_error=meas_error, show_plots=F)
   #' randomly save one posterior draw as the data
   a <- sample(1:50, 1)
   synthetic_data <- post %>% filter(draw == a) %>% select(-draw, -post2D, -y_i)
   #' reformat
   synthetic_data <- synthetic_data %>% mutate(location=as.character(y_label)) %>%
-    rename(age_current=x_i, value=post2D_constrained) %>% select(-y_label) %>% mutate(n_doses="1+")
+    rename(age_current=x_i, value=post2D_constrained) %>% select(-y_label) %>%
+    mutate(n_doses="1+")
   # remove x% missing data
   n <- as.numeric(count(vax_cleanLI %>% filter((age_current<=21) & n_doses!="2")))  # vax_cleanLI has 34/168 data points
   synthetic_data_partial <- synthetic_data %>% mutate(id=row_number()) %>%
@@ -975,7 +979,8 @@ for (i in 1:100) {
   min_lppd <- synthetic_modelselection_LI %>% filter(lppd_exact==min(lppd_exact)) %>% pull(lppd_exact)
   max_lppd <- synthetic_modelselection_LI %>% filter(lppd_exact==max(lppd_exact)) %>% pull(lppd_exact)
   
-  SBC_results <- bind_rows(SBC_results, tibble(i=i, true_model=true_model, min_lppd=min_lppd, max_lppd=max_lppd))
+  SBC_results_list[[i]] <- tibble(i=i, true_model=true_model, min_lppd=min_lppd, max_lppd=max_lppd)
 }
+SBC_results <- bind_rows(SBC_results_list)
 SBC_results %>% saveRDS(here::here("results", "SBC_results_LI.rds"))
 ```
