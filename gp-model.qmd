@@ -929,16 +929,17 @@ For each iteration i, the below code generates a synthetic data set with known h
 #| label: sbc
 
 SBC_results <- tibble()
+k_select <- function(a) {  # quick function to randomly choose ksqexp or kexp
+  if (a==1) {
+    list(fn=ksqexp, name="ksqexp")
+  } else if (a==0) {
+    list(fn=kexp, name="kexp")
+  }
+}
+
 for (i in 1:100) {
   #' Step 1: Create synthetic data by randomly drawing one posterior from a GP with known hyperparams
   #' define hyperparams for this iteration
-  k_select <- function(a) {  # quick function to randomly choose ksqexp or kexp
-    if (a==1) {
-      list(fn=ksqexp, name="ksqexp")
-    } else if (a==0) {
-      list(fn=kexp, name="kexp")
-    }
-  }
   k_object <- k_select(sample(0:1, 1))
   k <- k_object$fn
   l1 <- sample(c(1,1.25,1.5,1.75,2,2.25,2.5), 1)  #runif(1, 1, 2.5)
