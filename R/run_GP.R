@@ -14,14 +14,13 @@
 #' @param k covariance function chosen from the following list: (function)
 #'          - ksqexp,
 #'          - kexp.
-#' @param k_name as above, but written as a character string for use in plot titles (character)
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
 #' @param meas_error if specified, measurement error is included (numeric)
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions
 #' @param show_plots if false, plots are hidden
-run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=21, prov_values=NA, k=ksqexp, k_name=NA, l1=NA, l2=NA, b=1, 
+run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=21, prov_values=NA, k=ksqexp, l1=NA, l2=NA, b=1, 
                    meas_error=NA, ndrws=50, show_plots=T) {
   #' define possible x values
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
@@ -37,14 +36,13 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=21, prov_val
   prov_levels <- names(prov_values)
   
   #' define covariance and related parameters
-  if (is.na(k_name)) k_name <- "ksqexp"  # for plot titles
   if (is.na(l1)) l1 <- 1.5  # x lengthscale
   if (is.na(l2)) l2 <- 3  # relative lengthscale of x values to y values
   yvals <- yvals*l2  # scale y values to the x lengthscale
   
   #' compute and plot prior
   prior2D <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b)
-  if (show_plots) prior2D %>% plot_prior2D(., k=k_name, k_param1=l1, k_param2=l2) %>% print()
+  if (show_plots) prior2D %>% plot_prior2D(., k_param1=l1, k_param2=l2) %>% print()
   
   #' observe data and print to console (we may wish to use cNICS here instead of vax_clean)
   xobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2") %>% pull(age_current)
@@ -59,7 +57,7 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=21, prov_val
                                 k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b, meas_error=meas_error)
   vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2.csv"), show_col_types = FALSE) %>%  #added for cNICS comparison
     filter(!(pt %in% c("SK","YT","NB")))
-  if (show_plots) post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k=k_name, k_param1=l1, k_param2=l2, k_param3=b,
+  if (show_plots) post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k_param1=l1, k_param2=l2, k_param3=b,
                                               vax_dataset=vax_clean, last_agecurrent=last_agecurrent, prov_levels=prov_levels) %>% print()
   return(post2D)
 }

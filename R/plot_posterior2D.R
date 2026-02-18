@@ -13,8 +13,7 @@
 #' @param yobs y-coordinates of observed data, pre-scaled by l2 (named numeric)
 #' @param zobs z-coordinates of observed data (numeric)
 #' 
-#' We can also optionally label the plot with three GP model parameters:
-#' @param k_name covariance function name as a character string (character)
+#' We can also optionally label the plot:
 #' @param k_param1 value of first k parameter e.g. lengthscale (numeric)
 #' @param k_param2 value of second k parameter e.g. relative lengthscale of x to y (numeric)
 #' @param k_param3 value of third k parameter e.g. b (numeric)
@@ -23,7 +22,7 @@
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
 #' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
 #' @param prov_levels factor defining the names of provinces
-plot_posterior2D <- function(df, xobs, yobs, zobs, k_name=NA, k_param1=NA, k_param2=NA, k_param3=NA,
+plot_posterior2D <- function(df, xobs, yobs, zobs, k_param1=NA, k_param2=NA, k_param3=NA,
                              vax_dataset=NA, last_agecurrent=NA, prov_levels=NA) {
   yobs_factors <- factor(names(yobs), levels(df$y_label))  # convert yobs to factors for use in facet_wrap
   logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # recall the logistic-transformed data centred around mean 0 for use in plot 1
@@ -33,7 +32,7 @@ plot_posterior2D <- function(df, xobs, yobs, zobs, k_name=NA, k_param1=NA, k_par
     geom_line(aes(x=x_i, y=post2D, group=factor(draw)), alpha=0.2) +
     geom_point(data=tibble(x=xobs, y=logit_zobs_centred, y_label=yobs_factors), aes(x=x, y=y), col="red") +
     scale_x_continuous(limits=c(0, last_agecurrent), breaks=seq(0, last_agecurrent, by=5), name="current age x_i") +
-    ggtitle(paste0("k=", k_name, "; k_param1=", k_param1, ", k_param2=", k_param2)) +
+    ggtitle(paste0("k_param1=", k_param1, ", k_param2=", k_param2)) +
     facet_wrap(~ y_label)
 
   #' plot 2
@@ -42,7 +41,7 @@ plot_posterior2D <- function(df, xobs, yobs, zobs, k_name=NA, k_param1=NA, k_par
     geom_point(data=tibble(x=xobs, y=zobs*100, y_label=yobs_factors), aes(x=x, y=y), col="red") +
     scale_x_continuous(limits=c(0, last_agecurrent), breaks=seq(0, last_agecurrent, by=5), name="current age") + 
     scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
-    ggtitle(paste0("k=", k_name, "; k_param1=", k_param1, ", k_param2=", k_param2)) +
+    ggtitle(paste0("k_param1=", k_param1, ", k_param2=", k_param2)) +
     facet_wrap(~ y_label) +
     theme(axis.text=element_text(size=12), axis.title=element_text(size=20), plot.title = element_text(size=25), strip.text.x = element_text(size=9))
   
@@ -56,7 +55,7 @@ plot_posterior2D <- function(df, xobs, yobs, zobs, k_name=NA, k_param1=NA, k_par
     geom_point(data=tibble(x=xobs, y=zobs*100, y_label=yobs_factors), aes(x=x, y=y), col="red") +
     scale_x_continuous(limits=c(0, last_agecurrent), breaks=seq(0, last_agecurrent, by=5), name="current age") + 
     scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
-    ggtitle(paste0("k=", k_name, "; k_param1=", k_param1, ", k_param2=", k_param2, ", k_param3=", k_param3)) +
+    ggtitle(paste0("k_param1=", k_param1, ", k_param2=", k_param2, ", k_param3=", k_param3)) +
     facet_wrap(~ y_label)
   
   list(p2,p3)
