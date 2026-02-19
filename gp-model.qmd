@@ -25,7 +25,6 @@ library(purrr)
 library(tibble)
 library(mnormt) # for multivariate normal
 library(LaplacesDemon) # for logistic transform
-library(beepr)
 
 invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))  # load functions
 
