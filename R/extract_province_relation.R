@@ -6,8 +6,9 @@
 #' 
 #' @param data Choice of: (character/ named numeric vector)
 #'              - "GDP", for log(GDP) data from StatCan;
-#'              - "low_income_families" , for rate of children in low-income families (Market Basket Measure) from Health Inequalities Data Tool;
-#'              - "vaccine_hesitancy", for prevalence of parents' vaccine hesitancy (refuse all + hesitant) from cNICS;
+#'              - "low_income_families" , for 2021 rate of children in low-income families (Market Basket Measure) from Health Inequalities Data Tool;
+#'              - "vaccine_hesitancy", for 2017 prevalence of parents' vaccine hesitancy (refuse all + hesitant) from cNICS;
+#'              - "Gini", for 2020 Gini index on adjusted household after-tax income from StatCan;
 #'              - any named ordered numeric vector giving y-axis values associated to each province,
 #'               unscaled, in which case the function will return this vector unchanged.
 #' @param vax_dataset Used only to filter out provinces with no public coverage data (tibble)              
@@ -26,12 +27,18 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
     } else if (data=="vaccine_hesitancy") {  # vaccine hesitancy among parents (cNICS, refuse all + hesitant)
       province_relation_data <- readr::read_csv(here::here("data", "cNICS-vaccine-hesitancy.csv"), show_col_types = F) %>%
         mutate(value = 100 - (refuse_all + hesitant)) %>% arrange(value)  # 100-X for positive trend
-      
+    
+    } else if (data=="Gini") {  # Gini index on adjusted household after-tax income, currently mean of 2015 and 2020 values
+      province_relation_data <- readr::read_csv(here::here("data", "9810009601_databaseLoadingData_StatCanGini.csv")) %>%
+        filter(`Inequality measures (5)` == "Gini index on adjusted household after-tax income") %>% rename(location = GEO, value = VALUE, year = `Year (2)`) %>%
+        select(location, year, value) %>% group_by(location) %>% summarise(value = mean(value)) %>% arrange(value)
+    
     } else if (data=="UK-GDP") {  # UK GDP 2023 data from ONS (log) https://www.ons.gov.uk/datasets/regional-gdp-by-year/editions/time-series/versions/6
       province_relation_data <- readr::read_csv(here::here("data", "uk-ONSdownload-regionalgdp.csv"), show_col_types = F, skip=1) %>% # skip title row
         filter(ITL %in% c("ITL1","Other")) %>% mutate(location = `Region name`, value = log(`2023`)) %>%
         mutate(location = if_else(location == "East", "East of England", location)) %>%
         select(location, value) %>% arrange(value)
+      
     } else if (data=="UK-low_income_families") {  # UK % children in low-income families (DWP Official Statistics, FYE 2023)
       province_relation_data <- readr::read_csv(here::here("data", "uk-officialstatistics-childreninlowincomefamilies.csv"), show_col_types = F, skip=1) %>% # skip title row
         add_row(location="England", value=21.296) %>% select(location, value) %>%  # estimated from regions

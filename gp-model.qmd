@@ -565,6 +565,19 @@ GPcombinations_VH2 <- select_GP(vax_cleanVH, prov_values="vaccine_hesitancy", k_
 GPcombinations_VH2 %>% readr::write_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv"))
 ```
 
+We also wish to add a new indicator: Gini index. This runs on all provinces.
+
+```{r}
+#| label: province_relation_gini
+
+#' example model
+run_GP(vax_clean, prov_values="Gini", l1=2.5, l2=4, b=0.5, meas_error=0.1)
+
+#' exhaustive search of reasonable hyperparameter space with error
+GPcombinations_GI <- select_GP(vax_clean, prov_values="Gini", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_GI %>% readr::write_csv(here::here("results", "GPcombinations_Gini_witherror.csv"))
+```
+
 ## Assumptions tests
 
 A Gaussian Process model assumes relation of the independent variable(s), i.e. that 'related' ages (defined however we wish with lengthscale parameter l1) will have similar vaccination coverage and that 'related' provinces will also have similar coverage.
@@ -816,6 +829,7 @@ The function `compute_lppd_lopo` computes lppd for one set of model params from 
 #' example with diagnostics plot
 example <- compute_lppd_lopo(vax_clean, prov_values="GDP", k=ksqexp, l1=1.5, l2=0.2, b=1)
 example
+prov_values <- extract_province_relation("GDP", vax_clean)
 plot(x=prov_values[names(example$mean_lppd_by_province)], y=example$mean_lppd_by_province, xlab = "province value e.g. GDP", ylab = "Mean LOPO lppd")
 ```
 
@@ -938,7 +952,7 @@ k_select <- function(a) {  # quick function to randomly choose ksqexp or kexp
   }
 }
 
-for (i in 1:2) {
+for (i in 1:50) {
   #' Step 1: Create synthetic data by randomly drawing one posterior from a GP with known hyperparams
   #' define hyperparams for this iteration
   k_object <- k_select(sample(0:1, 1))
