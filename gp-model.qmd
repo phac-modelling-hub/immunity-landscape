@@ -468,7 +468,7 @@ GPcombinations_GDP2 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqex
 GPcombinations_GDP2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_witherror.csv"))
 
 #' example lppd fit
-run_GP(vax_clean,l1=2,l2=250,b=1,meas_error=0.5,ndrws=50)
+run_GP(vax_clean,l1=2.5,l2=250,b=0.5,meas_error=0.1,ndrws=50)
 ```
 
 We can also explore if there are local maximums in the model selection, rather than only considering the model with largest lppd.
@@ -479,6 +479,7 @@ We can also explore if there are local maximums in the model selection, rather t
 my_tibble_GDP2 <- read_csv(here::here("results", "GPcombinations_GDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
 my_tibble_LI2 <- read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
 my_tibble_VH2 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
+my_tibble_GI <- read_csv(here::here("results", "GPcombinations_Gini_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
 
 #' plot l1 against l2, colouring by lppd, for several meas_error values
 my_tibble_GDP2 %>%
@@ -512,6 +513,17 @@ my_tibble_VH2 %>%
   facet_wrap(~ meas_error) +
     #ylim(0,101) +
   labs(title = "lppd heatmaps for Vaccine Hesitancy model, varying measurement error",
+       x = "l1", y = "l2")
+
+my_tibble_GI %>%
+  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
+  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
+  geom_tile() +
+  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
+  facet_wrap(~ meas_error) +
+    #ylim(0,101) +
+  labs(title = "lppd heatmaps for Gini model, varying measurement error",
        x = "l1", y = "l2")
 ```
 
@@ -571,7 +583,7 @@ We also wish to add a new indicator: Gini index. This runs on all provinces.
 #| label: province_relation_gini
 
 #' example model
-run_GP(vax_clean, prov_values="Gini", l1=2.5, l2=4, b=0.5, meas_error=0.1)
+run_GP(vax_clean, prov_values="Gini", l1=2.5, l2=10, b=0.5, meas_error=0.1)
 
 #' exhaustive search of reasonable hyperparameter space with error
 GPcombinations_GI <- select_GP(vax_clean, prov_values="Gini", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
@@ -591,6 +603,7 @@ To visualise relation of provinces, we can plot `province_relation_data` on an a
 prov_valuesGDP <- enframe(extract_province_relation("GDP", vax_dataset=vax_clean), name="location", value="prov_valuesGDP")  # GDP
 prov_valuesLI <- enframe(extract_province_relation("low_income_families", vax_dataset=vax_cleanLI), name="location", value="prov_valuesLI")  # low_income
 prov_valuesVH <- enframe(extract_province_relation("vaccine_hesitancy", vax_dataset=vax_cleanVH), name="location", value="prov_valuesVH")  # vaccine_hesitancy
+prov_valuesGI <- enframe(extract_province_relation("Gini", vax_dataset=vax_clean), name="location", value="prov_valuesGI")  # Gini
 ARval <- prov_valuesVH %>% filter(location=="Atlantic region") %>% pull(prov_valuesVH)
 NRval <- prov_valuesVH %>% filter(location=="Northern region") %>% pull(prov_valuesVH)
 prov_valuesVH <- prov_valuesVH %>% rbind(c("Newfoundland and Labrador", ARval)) %>% rbind(c("Prince Edward Island", ARval)) %>%  # this is very crude code!
@@ -602,7 +615,7 @@ cNICS_2021 <- vax_cNICS %>% filter(year_report==2021) %>% select(location, "cNIC
 cNICS_2017 <- vax_cNICS %>% filter(year_report==2017) %>% select(location, "cNICS_2017"=value) %>% mutate(cNICS_2017=cNICS_2017*100)
 
 #' combine into one
-provinces_test <- prov_valuesGDP %>% left_join(prov_valuesLI, by="location") %>% left_join(prov_valuesVH, by="location") %>%
+provinces_test <- prov_valuesGDP %>% left_join(prov_valuesLI, by="location") %>% left_join(prov_valuesVH, by="location") %>% left_join(prov_valuesGI, by="location") %>%
   left_join(cNICS_2021, by="location") %>% left_join(cNICS_2017, by="location") %>% 
   mutate(cNICS_mean=(cNICS_2021 + cNICS_2017)/2)
 
@@ -614,20 +627,24 @@ ggplot(provinces_test, aes(x = prov_valuesLI, y = cNICS_2021)) + geom_point(colo
   xlim(85,100) + ylim(85,100) + labs(title="Comparing province relation datasets to coverage", x="% of children not in low-income families", y = "vaccine coverage, cNICS 2021 (%)")
 ggplot(provinces_test, aes(x = prov_valuesVH, y = cNICS_2021)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
   xlim(70,100) + ylim(85,100) + labs(title="Comparing province relation datasets to coverage", x="% of parents who are not vaccine hesitant", y = "vaccine coverage, cNICS 2021 (%)")
+ggplot(provinces_test, aes(x = prov_valuesGI, y = cNICS_2021)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
+  ylim(85,100) + labs(title="Comparing province relation datasets to coverage", x="Gini index", y = "vaccine coverage, cNICS 2021 (%)")
 
 #' instead consider provincial data mean over cNICS
 vax_means_noaNICS <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2-noadults.csv"), show_col_types = FALSE) %>% 
   filter(n_doses %in% c("1", "1+")) %>% group_by(location) %>% summarise(average = mean(value)) %>% select(location, "vax_means_noaNICS"=average)
 provinces_test <- provinces_test %>% left_join(vax_means_noaNICS, by="location") %>% mutate(vax_means_noaNICS=vax_means_noaNICS*100)
 ggplot(provinces_test, aes(x = prov_valuesGDP, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  ylim(79,100) + labs(title="Comparing province relation datasets to coverage", x="log(GDP)", y = "vaccine coverage, provincial data (%)")
+  ylim(79,100) + labs(title="Comparing province relation datasets to coverage", x="log(GDP)", y = "vaccine coverage, provincial data mean (%)")
 ggplot(provinces_test, aes(x = prov_valuesLI, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  xlim(79,100) + ylim(79,100) + labs(title="Comparing province relation datasets to coverage", x="% of children not in low-income families", y = "vaccine coverage, provincial data (%)")
+  xlim(79,100) + ylim(79,100) + labs(title="Comparing province relation datasets to coverage", x="% of children not in low-income families", y = "vaccine coverage, provincial data mean (%)")
 ggplot(provinces_test, aes(x = prov_valuesVH, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  xlim(70,100) + ylim(70,100) + labs(title="Comparing province relation datasets to coverage", x="% of parents who are not vaccine hesitant", y = "vaccine coverage, provincial data (%)")
+  xlim(70,100) + ylim(70,100) + labs(title="Comparing province relation datasets to coverage", x="% of parents who are not vaccine hesitant", y = "vaccine coverage, provincial data mean (%)")
+ggplot(provinces_test, aes(x = prov_valuesGI, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
+  ylim(79,100) + labs(title="Comparing province relation datasets to coverage", x="Gini index", y = "vaccine coverage, provincial data mean (%)")
 
 #' for fun, plot provincial data against cNICS
-ggplot(provinces_test, aes(x = vax_means_noaNICS, y = cNICS_mean)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
+#"C:/Users/lh667/AppData/Local/Packages/MicrosoftWindows.Client.Core_cw5n1h2txyewy/TempState/ScreenClip/{FC770BFB-663B-4B30-A70C-5B5DC4D78C9F}.png"ggplot(provinces_test, aes(x = vax_means_noaNICS, y = cNICS_mean)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
 ```
 
 To test relation of ages, we can compute pairwise differences in absolute coverage for all data points and observe if pairs of adjacent ages have a lower difference on average:
@@ -758,11 +775,15 @@ GPcombinations_englandGDP %>% readr::write_csv(here::here("results", "GPcombinat
 GPcombinations_englandLI <- select_GP(vax_england, prov_values="UK-low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
 GPcombinations_englandLI %>% readr::write_csv(here::here("results", "GPcombinations_englandLI_witherror.csv"))
 
+GPcombinations_englandGini <- select_GP(vax_england, prov_values="UK-Gini", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
+GPcombinations_englandGini %>% readr::write_csv(here::here("results", "GPcombinations_englandGini_witherror.csv"))
+
 #' UK lppd heatmaps
 my_tibble_a <- read_csv(here::here("results", "GPcombinations_UKGDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
 my_tibble_b <- read_csv(here::here("results", "GPcombinations_UKLI_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
 my_tibble_c <- read_csv(here::here("results", "GPcombinations_englandGDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
 my_tibble_d <- read_csv(here::here("results", "GPcombinations_englandLI_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
+my_tibble_e <- read_csv(here::here("results", "GPcombinations_englandGini_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
 
 my_tibble_a %>%
   mutate(l1 = factor(l1), l2 = factor(l2)) %>%
@@ -807,6 +828,17 @@ my_tibble_d %>%
     #ylim(0,101) +
   labs(title = "lppd heatmaps for England Low-Income model, varying measurement error", x = "l1", y = "l2")
 ggsave(paste0("plots/lppdheatmap_englandLI",".jpeg"), height=4.51, width=7.29)
+
+my_tibble_e %>%
+  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
+  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
+  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
+  geom_tile() +
+  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
+  facet_wrap(~ meas_error) +
+    #ylim(0,101) +
+  labs(title = "lppd heatmaps for England Gini model, varying measurement error", x = "l1", y = "l2")
+ggsave(paste0("plots/lppdheatmap_englandGini",".jpeg"), height=4.51, width=7.29)
 ```
 
 ## Sensitivity analysis 1 - prior means
@@ -872,6 +904,18 @@ max(model_1937$mean_lppd_by_province) - min(model_1937$mean_lppd_by_province)  #
 model_1215 <- compute_lppd_lopo(vax_cleanVH, prov_values="vaccine_hesitancy", k=ksqexp, l1=2, l2=0.1, b=1.5, meas_error=0)
 plot(x=prov_values[names(model_1215$mean_lppd_by_province)], y=model_1215$mean_lppd_by_province, xlab = "province, by e.g. VH value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1215 (worst)")
 max(model_1215$mean_lppd_by_province) - min(model_1215$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
+
+
+#' Gini model framework
+#' explore province predictability (LOPO lppd) for one model e.g. best model from model selection
+model_2072 <- compute_lppd_lopo(vax_clean, prov_values="Gini", k=ksqexp, l1=2.5, l2=10, b=0.5, meas_error=0.1)
+prov_values <- extract_province_relation("Gini", vax_dataset=vax_clean)
+plot(x=prov_values[names(model_2072$mean_lppd_by_province)], y=model_2072$mean_lppd_by_province, xlab = "province, by e.g. Gini value", ylab = "Mean LOPO lppd", main = "Province predictability for model_2072 (best)")
+max(model_2072$mean_lppd_by_province) - min(model_2072$mean_lppd_by_province)  # small difference == age model
+#' compare to a poor model
+model_1895 <- compute_lppd_lopo(vax_clean, prov_values="Gini", k=ksqexp, l1=2.5, l2=0.1, b=0.5, meas_error=0)
+plot(x=prov_values[names(model_1895$mean_lppd_by_province)], y=model_1895$mean_lppd_by_province, xlab = "province, by e.g. Gini value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1895 (worst)")
+max(model_1895$mean_lppd_by_province) - min(model_1895$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
 ```
 
 We can also explore the difference `delta` between LOO lppd and LOPO lppd. Similar values indicate weak province predictability ie. that provinces are independent and our model is essentially behaving as an age model. From the plots, we see that this happens with large l2.
@@ -885,7 +929,7 @@ delta_plot <- read_csv(here::here("results", "GPcombinations_GDP_witherror.csv")
 delta_plot <- delta_plot %>% arrange(l2) %>%  # sort by increasing l2
   mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
 delta_plot %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
- scale_x_continuous(breaks = seq(0, max(delta_plot$l2), by=50))
+ xlim(0,250)
 
 
 #' LI model framework
@@ -894,7 +938,7 @@ delta_plot2 <- read_csv(here::here("results", "GPcombinations_lowincome_witherro
 delta_plot2 <- delta_plot2 %>% arrange(l2) %>%  # sort by increasing l2
   mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
 delta_plot2 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
- scale_x_continuous(breaks = seq(0, max(delta_plot2$l2), by=50))
+ xlim(0,250)
 
 
 #' VH model framework
@@ -903,7 +947,22 @@ delta_plot3 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_w
 delta_plot3 <- delta_plot3 %>% arrange(l2) %>%  # sort by increasing l2
   mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
 delta_plot3 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
- scale_x_continuous(breaks = seq(0, max(delta_plot3$l2), by=50))
+  xlim(0,250)
+
+#' Gini model framework
+#' load model selection results and plot difference between LOPO and LOO lppd's
+delta_plot4 <- read_csv(here::here("results", "GPcombinations_Gini_witherror.csv"))  # load a model selection csv file
+delta_plot4 <- delta_plot4 %>% arrange(l2) %>%  # sort by increasing l2
+  mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
+delta_plot4 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
+  xlim(0,250)
+
+
+#' An alternative visualisation is to look at the difference between LOO and LOPO for each best model:
+best_gdp <- delta_plot %>% filter(lppd_exact==max(lppd_exact))
+best_li <- delta_plot2 %>% filter(lppd_exact==max(lppd_exact))
+best_vh <- delta_plot3 %>% filter(lppd_exact==max(lppd_exact))
+best_gini <- delta_plot4 %>% filter(lppd_exact==max(lppd_exact))
 ```
 
 This leads to the question: do any of our modelling frameworks utilise relation between provinces/regions? Consider the England LI model. From model selection, this framework does not favour largest l2 (best LOO lppd currently gives l2=3.5, compared to the plausible upper limit of 25). Repeat the LOPO analysis for England LI. Take code from uk code snippet above.
