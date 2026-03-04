@@ -31,7 +31,7 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
     } else if (data=="Gini") {  # Gini index on adjusted household after-tax income, currently mean of 2015 and 2020 values
       province_relation_data <- readr::read_csv(here::here("data", "9810009601_databaseLoadingData_StatCanGini.csv")) %>%
         filter(`Inequality measures (5)` == "Gini index on adjusted household after-tax income") %>% rename(location = GEO, value = VALUE, year = `Year (2)`) %>%
-        select(location, year, value) %>% group_by(location) %>% summarise(value = mean(value)) %>% arrange(value)
+        mutate(value = 100*value) %>% select(location, year, value) %>% group_by(location) %>% summarise(value = mean(value)) %>% arrange(value)
     
     } else if (data=="UK-GDP") {  # UK GDP 2023 data from ONS (log) https://www.ons.gov.uk/datasets/regional-gdp-by-year/editions/time-series/versions/6
       province_relation_data <- readr::read_csv(here::here("data", "uk-ONSdownload-regionalgdp.csv"), show_col_types = F, skip=1) %>% # skip title row
@@ -43,6 +43,11 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
       province_relation_data <- readr::read_csv(here::here("data", "uk-officialstatistics-childreninlowincomefamilies.csv"), show_col_types = F, skip=1) %>% # skip title row
         add_row(location="England", value=21.296) %>% select(location, value) %>%  # estimated from regions
         mutate(value = (100 - value)) %>% arrange(value)
+      
+    } else if (data=="UK-Gini") {  # UK Gini index for total wealth (ONS, April 2016-March 2018)
+      province_relation_data <- readr::read_csv(here::here("data", "ONS_analysingregionaleconomicandwellbeingtrends_fig7.csv")) %>%
+        select(location, `April 2016 to March 2018`) %>% rename(value =`April 2016 to March 2018`) %>% arrange(value)
+      
     }
     
     # filter provinces with no public coverage data
