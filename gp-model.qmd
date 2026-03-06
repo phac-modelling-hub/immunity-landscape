@@ -170,25 +170,26 @@ Note that we currently assume a mean of 0. We could specify a non-zero mean here
 
 ```{r}
 #| label: prior_2D
-
+#run_GP(vax_clean, prov_values = "Gini", k=ksqexp, l1=2.5, l2=10, b=0.5, meas_error=0.1)
 #' setup
 #' now both x and y are inputs, with output z
 first_agecurrent <- 1  # first age for the GP model
 last_agecurrent <- 21  #age_pre1970-1  # last age for the GP model 
 xvals <- first_agecurrent:last_agecurrent  # a vector of current ages (these x_i's are equally spaced) 
 
-province_relation <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
-  filter(location %in% unique(vax_clean$location))  # province GDP data from StatCan
-yvals <- log(province_relation %>% pull(Dollars))  # a vector of provinces -- currently log(GDP)
+province_relation <- province_relation_data <- readr::read_csv(here::here("data", "9810009601_databaseLoadingData_StatCanGini.csv"), show_col_types = F) %>%
+        filter(`Inequality measures (5)` == "Gini index on adjusted household after-tax income") %>% rename(location = GEO, value = VALUE, year = `Year (2)`) %>%
+        mutate(value = 100*value) %>% select(location, year, value) %>% group_by(location) %>% summarise(value = mean(value)) %>% arrange(value) # province Gini data from StatCan
+yvals <- log(province_relation %>% pull(value))  # a vector of provinces -- currently log(GDP)
 names(yvals) <- province_relation %>% pull(location)
 
 npts <- length(xvals)*length(yvals)
-l1 <- 1.5  # x lengthscale
-l2 <- 3  # relative lengthscale of x values to y values
+l1 <- 2.5  # x lengthscale
+l2 <- 10  # relative lengthscale of x values to y values
 yvals <- yvals*l2  # scale y values to the x lengthscale
 
 #' covariance matrix in 2D
-b <- 1 # optional function scale for ksqexp determining output variance
+b <- 0.5 # optional function scale for ksqexp determining output variance
 covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l1, b=b)) %>%
   pull(k) %>% matrix(nrow=npts)
 
@@ -222,12 +223,7 @@ Extension: A possible model extension is to add 2-dose data as minimums at this 
 ```{r}
 #| label: data_2D
 
-#' observe coverage data for age 4, 9, 13, 19, 20, 21, 25, 30 in all provinces where data exists
-xobs <- vax_clean %>% filter((age_current %in% c(4,9,13,19,20,21,25,30)) & n_doses!="2") %>% pull(age_current)   # can optionally add error term here
-yobs <- yvals[vax_clean %>% filter((age_current %in% c(4,9,13,19,20,21,25,30)) & n_doses!="2") %>% pull(location)]  # Alberta==25.5 etc as in yvals (log(GDP))  **already scaled by l2
-zobs <- vax_clean %>% filter((age_current %in% c(4,9,13,19,20,21,25,30)) & n_doses!="2") %>% pull(value)
-
-#' alternatively uncomment to observe all available data (excluding 2-dose)
+#' observe coverage data in all provinces where data exists (excluding 2-dose)
 xobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2") %>% pull(age_current)
 yobs <- yvals[vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2") %>% pull(location)]
 zobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2") %>% pull(value)
@@ -261,6 +257,12 @@ kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=ksqexp,l=l1,b=b)
 #' calculate posterior mean and posterior cov matrix
 post_mean <- kuo%*%solve(koo)%*%(logit_zobs_centred)  # conditional mean
 post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
+
+#' optional: examine koo
+max(koo)
+mean(koo)
+median(koo)
+min(koo)
 ```
 
 ```{r}
@@ -761,6 +763,7 @@ run_GP(vax_UK, prov_values = "UK-GDP")
 run_GP(vax_UK, prov_values = "UK-low_income_families")
 run_GP(vax_england, prov_values = "UK-GDP")
 run_GP(vax_england, prov_values = "UK-low_income_families")
+run_GP(vax_england, prov_values = "UK-Gini")
 
 #' UK hyperparams
 GPcombinations_UKGDP <- select_GP(vax_UK, prov_values="UK-GDP", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
@@ -839,6 +842,10 @@ my_tibble_e %>%
     #ylim(0,101) +
   labs(title = "lppd heatmaps for England Gini model, varying measurement error", x = "l1", y = "l2")
 ggsave(paste0("plots/lppdheatmap_englandGini",".jpeg"), height=4.51, width=7.29)
+
+#' Best model outputs
+run_GP(vax_england, prov_values = "UK-Gini", k=ksqexp, l1=2.25, l2=8, b=0.5, meas_error=0.05)
+run_GP(vax_england, prov_values = "UK-low_income_families", k=ksqexp, l1=2.25, l2=3.5, b=0.5, meas_error=0.05)
 ```
 
 ## Sensitivity analysis 1 - prior means
@@ -847,7 +854,7 @@ One sensitivity analysis consideration is in exploring the choice of prior mean.
 
 ```{r}
 #| label: sens_anal_mean
-
+run_GP(vax_clean, prov_values = "Gini", k=ksqexp, l1=2.5, l2=10, b=0.5, meas_error=0.1)
 
 ```
 

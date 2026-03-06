@@ -29,7 +29,7 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
         mutate(value = 100 - (refuse_all + hesitant)) %>% arrange(value)  # 100-X for positive trend
     
     } else if (data=="Gini") {  # Gini index on adjusted household after-tax income, currently mean of 2015 and 2020 values
-      province_relation_data <- readr::read_csv(here::here("data", "9810009601_databaseLoadingData_StatCanGini.csv")) %>%
+      province_relation_data <- readr::read_csv(here::here("data", "9810009601_databaseLoadingData_StatCanGini.csv"), show_col_types = F) %>%
         filter(`Inequality measures (5)` == "Gini index on adjusted household after-tax income") %>% rename(location = GEO, value = VALUE, year = `Year (2)`) %>%
         mutate(value = 100*value) %>% select(location, year, value) %>% group_by(location) %>% summarise(value = mean(value)) %>% arrange(value)
     
@@ -45,7 +45,7 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
         mutate(value = (100 - value)) %>% arrange(value)
       
     } else if (data=="UK-Gini") {  # UK Gini index for total wealth (ONS, April 2016-March 2018)
-      province_relation_data <- readr::read_csv(here::here("data", "ONS_analysingregionaleconomicandwellbeingtrends_fig7.csv")) %>%
+      province_relation_data <- readr::read_csv(here::here("data", "ONS_analysingregionaleconomicandwellbeingtrends_fig7.csv"), show_col_types = F) %>%
         select(location, `April 2016 to March 2018`) %>% rename(value =`April 2016 to March 2018`) %>% arrange(value)
       
     }
