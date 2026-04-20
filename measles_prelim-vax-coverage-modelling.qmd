@@ -205,16 +205,13 @@ vax_aged <- vax_parsed2 |>
 
 ## Save cleaned data
 
-We fill in year_birth where it is missing and then export the cleaned data for use in statistical modelling.
+We fill in year_birth where it is missing and append adults estimates.
 ```{r}
-#| label: export_vax
+#| label: prep_to_export_vax
 
 # fill in year_birth where it is missing
 vax_clean <- vax_aged %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth)) %>% 
   bind_rows(vax_aNICS_full)  # attach all adult estimate from aNICS
-
-# export
-vax_clean %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-clean.csv"))
 ```
 
 # Set up additional immunity assumptions {#immunity-assumptions}
@@ -413,7 +410,7 @@ vax_deduped |>
   facet_wrap(~location)
 ```
 ```{r}
-#| label: export_vax_deduped
+#| label: prep_to_export_vax_deduped
 
 # fill in year_birth where it is missing and assume 2+ = 2 doses for now (as same vaccine efficacy used currently)
 vax_clean1 <- vax_deduped %>% ungroup() %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth)) %>%
@@ -421,8 +418,6 @@ vax_clean1 <- vax_deduped %>% ungroup() %>% mutate(year_birth = ifelse(is.na(yea
   bind_rows(vax_aNICS_full %>% filter(age==18)) %>%  # attach one adult estimate from aNICS for each province (e.g. age 18)
   group_by(pt, location, age_current) %>% filter(value == max(value)) # keep largest estimate if there are duplicates (as aNICS likely underreports?)
 
-# export -- vax_clean1 is the cleaned data set for take 1
-vax_clean1 %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-clean1.csv"))
 ```
 
 ## Interpolate/extrapolate
@@ -571,7 +566,7 @@ We start by dropping all distinct dose types (excluding for ON) in order to take
 
 vax_new2 <- vax_new %>%
   mutate(n_doses_new = "dose_new") %>%
-  # choose the most recent estimate (by dose and current age) using year reported
+  # choose the most recent estimate (by current age) using year reported
   group_by(pt, location, age_current, n_doses_new) %>%
   filter(year_report == max(year_report)) %>%
   arrange(pt, age_current) %>%
@@ -599,7 +594,7 @@ vax_dedupe |>
   facet_wrap(~location)
 ```
 ```{r}
-#| label: export_vax_dedupe
+#| label: prep_to_export_vax_dedupe
 
 # fill in year_birth where it is missing and assume 2+ = 2 doses for now (as same vaccine efficacy used currently)
 vax_clean2_noadults <- vax_dedupe %>% ungroup() %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth)) %>%
@@ -607,9 +602,6 @@ vax_clean2_noadults <- vax_dedupe %>% ungroup() %>% mutate(year_birth = ifelse(i
 vax_clean2 <- vax_clean2_noadults %>% bind_rows(vax_aNICS_full %>% filter(age==18)) %>%  # attach one adult estimate from aNICS for each province (e.g. age 18)
   group_by(pt, location, age_current) %>% filter(value == max(value)) # keep largest estimate if there are duplicates (as aNICS likely underreports?, and for estimates with 1+ and 2 dose we wish to keep the larger)
 
-# export -- vax_clean2 is the cleaned data set for take 2
-vax_clean2 %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-clean2.csv"))
-vax_clean2_noadults %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-clean2-noadults.csv"))
 ```
 
 

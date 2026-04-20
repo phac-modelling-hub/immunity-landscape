@@ -29,7 +29,7 @@ library(LaplacesDemon) # for logistic transform
 invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))  # load functions
 
 #' read cleaned data from 'take 2' approach
-vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2.csv"), show_col_types = FALSE) %>% filter(!(pt %in% c("SK","YT","NB"))) #%>% filter(location %in% unique(pt_lookup()$location))  # filtering out sub-provinces etc estimates
+vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned.csv"), show_col_types = FALSE) %>% filter(!(pt %in% c("SK","YT","NB"))) #%>% filter(location %in% unique(pt_lookup()$location))  # filtering out sub-provinces etc estimates
 vax_schedule <- readr::read_csv(here::here("data", "measles_raw", "vax_schedule.csv"), show_col_types = FALSE)
 popsize <- readr::read_csv(here::here("data", "popsize.csv"), show_col_types = FALSE)
 current_year <- as.integer(format(Sys.Date(), "%Y")) # for ageing estimates
@@ -39,7 +39,7 @@ vax_cNICS <- readr::read_csv(here::here("data", "measles_CNICS.csv"), show_col_t
 
 #' cleaned data for use with low-income and vaccine hesitancy province relation indicators
 vax_cleanLI <- vax_clean %>% filter(!(pt %in% c("NU","YT","NT")))  # "low_income_families" has no data for NU, NT, YT
-vax_cleanVH <- vax_clean %>% filter(n_doses!="2") %>% mutate(location = if_else(location %in% c("Newfoundland and Labrador", "Prince Edward Island", "Nova Scotia", "New Brunswick"), "Atlantic region", location)) %>% mutate(location = if_else(location %in% c("Yukon", "Northwest Territories", "Nunavut"), "Northern region", location)) %>%  mutate(pt = if_else(location %in% c("Atlantic region"), "AR", pt)) %>% mutate(pt = if_else(location %in% c("Northern region"), "NR", pt)) %>% group_by(across(-value)) %>% summarise(value = mean(value), .groups = "drop")  # "vaccine_hesitancy" groups Atlantic PTs and Northen PTs
+vax_cleanVH <- vax_clean %>% filter(n_doses!="2+") %>% mutate(location = if_else(location %in% c("Newfoundland and Labrador", "Prince Edward Island", "Nova Scotia", "New Brunswick"), "Atlantic region", location)) %>% mutate(location = if_else(location %in% c("Yukon", "Northwest Territories", "Nunavut"), "Northern region", location)) %>%  mutate(pt = if_else(location %in% c("Atlantic region"), "AR", pt)) %>% mutate(pt = if_else(location %in% c("Northern region"), "NR", pt)) %>% group_by(across(-value)) %>% summarise(value = mean(value), .groups = "drop")  # "vaccine_hesitancy" groups Atlantic PTs and Northen PTs
 ```
 
 ## A note on scales
@@ -55,7 +55,7 @@ A Gaussian Process model assumes relation of the independent variable(s), i.e. t
 The 1D model can be run for any single province, e.g. Alberta.
 
 ```{r}
-vax_prov <- vax_clean %>% filter(pt=="AB") #%>% filter(n_doses!="2")
+vax_prov <- vax_clean %>% filter(pt=="AB") #%>% filter(n_doses!="2+")
 ```
 
 ## Define covariance function / covariance matrix
@@ -224,12 +224,12 @@ Extension: A possible model extension is to add 2-dose data as minimums at this 
 #| label: data_2D
 
 #' observe coverage data in all provinces where data exists (excluding 2-dose)
-xobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2") %>% pull(age_current)
-yobs <- yvals[vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2") %>% pull(location)]
-zobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2") %>% pull(value)
+xobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(age_current)
+yobs <- yvals[vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(location)]
+zobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(value)
 
-#' optional extension: add 2-dose data as minimums?
-# vax_obs <- vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2")  # unclear how to incorporate as a minimum
+#' optional extension: add 2+-dose data as minimums?
+# vax_obs <- vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2+")  # unclear how to incorporate as a minimum
 
 #' apply logistic transform and then centre the data around mean 0
 logit_zobs_centred <- logit(zobs) - mean(logit(zobs))
@@ -302,19 +302,19 @@ post2D %>% ggplot() +
   theme(axis.text=element_text(size=12), axis.title=element_text(size=20), plot.title = element_text(size=25), strip.text.x = element_text(size=9))
 ggsave(paste0("plots/1+dose_data_plot",".jpeg"), height=4.51, width=7.29)
 
-#' to plot only the data, as separate image files
-province_levels <- levels(yobs_factors)
-walk(province_levels, function(prov) {
-  # subset observations for this province
-  idx <- which(yobs_factors == prov)
-  df_obs <- tibble(x = xobs[idx], y = zobs[idx]*100, y_label = prov)
-  p <- ggplot() +
-    geom_point(data=df_obs, aes(x=x, y=y), col="red") +
-    scale_x_continuous(limits=c(0,25), breaks=seq(0, 25, by=5), name="current age") +
-    scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
-    ggtitle(paste("Province:", prov))
-  ggsave(filename = paste0("plots/1+dose_data_plot_", prov, ".jpeg"), plot=p, height=4.51, width=7.29)
-})
+# #' to plot only the data, as separate image files
+# province_levels <- levels(yobs_factors)
+# walk(province_levels, function(prov) {
+#   # subset observations for this province
+#   idx <- which(yobs_factors == prov)
+#   df_obs <- tibble(x = xobs[idx], y = zobs[idx]*100, y_label = prov)
+#   p <- ggplot() +
+#     geom_point(data=df_obs, aes(x=x, y=y), col="red") +
+#     scale_x_continuous(limits=c(0,25), breaks=seq(0, 25, by=5), name="current age") +
+#     scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
+#     ggtitle(paste("Province:", prov))
+#   ggsave(filename = paste0("plots/1+dose_data_plot_", prov, ".jpeg"), plot=p, height=4.51, width=7.29)
+# })
 ```
 
 As before, we can compare performance by adding back in data points that the model has not seen in green (including for example 2-dose data):
@@ -341,10 +341,10 @@ Optional: We can also drop any posterior draws that do not satisfy the 2-dose da
 #| label: set_minimums2D
 #| eval: false
 
-# extract 2-dose data from vax_clean, matching column names with post2D
-data_2dose <- tibble(x_i=(vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2") %>% pull(age_current)),  # adding in full data from vax_clean
-                     y_label=factor((vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2") %>% pull(location)), levels=prov_levels),
-                     value_2dose=(vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2") %>% pull(value)))
+# extract 2+-dose data from vax_clean, matching column names with post2D
+data_2dose <- tibble(x_i=(vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2+") %>% pull(age_current)),  # adding in full data from vax_clean
+                     y_label=factor((vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2+") %>% pull(location)), levels=prov_levels),
+                     value_2dose=(vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2+") %>% pull(value)))
 # filter out posterior draws that do not meet the criterion, using all()
 post2D_new <- post2D %>% ungroup() %>% left_join(data_2dose, by=c("x_i","y_label")) %>%
   mutate(value_2dose=ifelse(is.na(value_2dose), 0, value_2dose)) %>%  ##UP TO HERE
@@ -446,7 +446,7 @@ One option is to work with the posterior mean at each missing age as described. 
 #example2 <- compute_lppd(vax_clean, prov_values=prov_values, k=ksqexp, l1=1.5, l2=3, b=1)  # run time: <1 second
 
 #' example model selection
-example <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))  # prov_values defined above
+example <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
 
 #' exhaustive search of reasonable hyperparameter space (provinical dataset)
 GPcombinations_GDP <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.5,1.0,1.5,2,2.5,3.0,3.5,4.0), b=c(0.5,1,1.5))
@@ -633,7 +633,7 @@ ggplot(provinces_test, aes(x = prov_valuesGI, y = cNICS_2021)) + geom_point(colo
   ylim(85,100) + labs(title="Comparing province relation datasets to coverage", x="Gini index", y = "vaccine coverage, cNICS 2021 (%)")
 
 #' instead consider provincial data mean over cNICS
-vax_means_noaNICS <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2-noadults.csv"), show_col_types = FALSE) %>% 
+vax_means_noaNICS <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned_noadults.csv"), show_col_types = FALSE) %>% 
   filter(n_doses %in% c("1", "1+")) %>% group_by(location) %>% summarise(average = mean(value)) %>% select(location, "vax_means_noaNICS"=average)
 provinces_test <- provinces_test %>% left_join(vax_means_noaNICS, by="location") %>% mutate(vax_means_noaNICS=vax_means_noaNICS*100)
 ggplot(provinces_test, aes(x = prov_valuesGDP, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
@@ -656,7 +656,7 @@ To test relation of ages, we can compute pairwise differences in absolute covera
 
 #' 1+ dose provincial data, no aNICS
 #' read in provincial data with aNICS removed
-vax_dataset1 <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2-noadults.csv"), show_col_types = FALSE) %>%
+vax_dataset1 <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned_noadults.csv"), show_col_types = FALSE) %>%
   filter(n_doses %in% c("1", "1+")) %>% filter(age_current <= 21)
 
 #' define a function to compute all pairwise differences
@@ -692,7 +692,7 @@ ggsave(paste0("plots/testing_age_assumption1",".pdf"), height=4.51, width=7.29) 
 
 #' 2 dose provincial data
 #' repeat steps as above
-vax_dataset2 <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clean2-noadults.csv"), show_col_types = FALSE) %>%
+vax_dataset2 <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned_noadults.csv"), show_col_types = FALSE) %>%
   filter(n_doses %in% c("2", "2+"))
 province_pairs2 <- vax_dataset2 %>% group_by(location) %>% group_modify(~ compute_pairwise_diffs(.x))
 ggplot(province_pairs2, aes(x = diff*100, fill = gap_group)) + geom_histogram() + 
@@ -1039,7 +1039,7 @@ for (i in 1:50) {
     rename(age_current=x_i, value=post2D_constrained) %>% select(-y_label) %>%
     mutate(n_doses="1+")
   # remove x% missing data
-  n <- as.numeric(count(vax_cleanLI %>% filter((age_current<=21) & n_doses!="2")))  # vax_cleanLI has 34/168 data points
+  n <- as.numeric(count(vax_cleanLI %>% filter((age_current<=21) & n_doses!="2+")))  # vax_cleanLI has 34/168 data points
   synthetic_data_partial <- synthetic_data %>% mutate(id=row_number()) %>%
     filter(age_current > 4) %>%  # no data for under 5 year olds
     filter(id %in% sample(min(id):max(id), n, replace=F))  # randomly remove rows leaving n points
