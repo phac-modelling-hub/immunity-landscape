@@ -673,7 +673,7 @@ vax_dataset2 <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cl
   filter(n_doses %in% c("2", "2+"))
 province_pairs2 <- vax_dataset2 %>% group_by(location) %>% group_modify(~ compute_pairwise_diffs(.x))
 ggplot(province_pairs2, aes(x = diff*100, fill = gap_group)) + geom_histogram() + 
-  facet_wrap(~ location) + labs(title = "Pairwise Coverage Differences — By Province (2 dose)",
+  facet_wrap(~ location) + labs(title = "Pairwise Coverage Differences — By Province (2+ dose)",
                                 x = "Absolute Difference in Coverage (%)", y = "Count", fill = "Age gap")
 ggsave(paste0("plots/testing_age_assumption2",".pdf"), height=4.51, width=7.29)  # example code to save plot
 
@@ -711,7 +711,7 @@ ggplot(country_pairs2, aes(x = diff*100, fill = gap_group)) + geom_histogram() +
   labs(title = "Pairwise Coverage Differences — All provincial data (2 dose)")
 ```
 
-We see a good relationship between coverage at adjacent ages, both in the 1+ and 2 dose data.
+We see a good relationship between coverage at adjacent ages, both in the 1+ and 2+ dose data.
 
 ## UK comparison
 
@@ -831,7 +831,6 @@ One sensitivity analysis consideration is in exploring the choice of prior mean.
 
 ```{r}
 #| label: sens_anal_mean
-run_GP(vax_clean, prov_values = "Gini", k=ksqexp, l1=2.5, l2=10, b=0.5, meas_error=0.1)
 
 ```
 

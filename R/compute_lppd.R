@@ -1,4 +1,4 @@
-#' COMPUTE the lppd analytically for one GP model (i.e. for one choice of parameter values of {k, l1, l2, b}) from
+#' COMPUTE the lppd analytically for one GP model (i.e. for one choice of parameter values of {k, l1, l2, b, meas_error}) from
 #' leave-one-out cross-validation. 
 #' See GitHub Issue #4 for details of method.
 #' Note: scaling by l2 happens inside the function.
