@@ -10,7 +10,7 @@ editor: visual
 library(readr)
 library(dplyr)
 library(tidyr)
-library(summarytools)
+library(skimr)
 
 invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
 ```
@@ -69,7 +69,7 @@ Thankfully, this dataset is somewhat machine readible! It looks like this datase
 df <- read_csv(filename) |> janitor::clean_names() |> filter(antigen_or_vaccine=="Measles")
 names(df)
 
-df  |> dfSummary(plain.ascii = FALSE, style ="grid") 
+df  |> skim() 
 ```
 
 Lots of stuff here, not all of which is needed... let's keep the key columns that we need for our standardized format and drop what we don't need
@@ -81,7 +81,7 @@ df_filt <- df |>
   select(ref_date, geo, target_population, characteristics, value) |>
   drop_na(value)
 
-df_filt |> dfSummary(plain.ascii = FALSE, style ="grid") 
+df_filt |> skim() 
 ```
 
 For now, we will keep just the value reported for percentage vaccinated (some kind of central tendency), though it's worth noting there's uncertainty bounds available for each estimate...
