@@ -31,7 +31,7 @@ select_GP <- function(vax_dataset, last_agecurrent=21, prov_values, ndrws=100, k
   #   l1 = ..2,
   #   l2 = ..3,
   #   b = ..4)))
-  combinations <- combinations %>% mutate(lppd_exact = pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd(  # method 2: compute lppd analytically
+  combinations <- combinations %>% mutate(lppd_exact = purrr::pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd(  # method 2: compute lppd analytically
     vax_dataset = vax_dataset,
     last_agecurrent = last_agecurrent,
     prov_values = prov_values,
@@ -40,7 +40,7 @@ select_GP <- function(vax_dataset, last_agecurrent=21, prov_values, ndrws=100, k
     l2 = ..3,
     b = ..4,
     meas_error = ..5))) %>% 
-    mutate(lppd_LOPO = pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd_lopo(  # compute lppd from leave-one-province-out CV
+    mutate(lppd_LOPO = purrr::pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd_lopo(  # compute lppd from leave-one-province-out CV
       vax_dataset = vax_dataset,
       last_agecurrent = last_agecurrent,
       prov_values = prov_values,

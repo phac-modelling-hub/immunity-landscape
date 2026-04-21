@@ -48,8 +48,8 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=21, prov_val
   xobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+") %>% pull(age_current)
   yobs <- yvals[vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+") %>% pull(location)]  # this includes scaling by l2
   zobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+") %>% pull(value)  # note: data is transformed & centred inside compute_posterior2D
-  centring_term <- mean(logit(zobs))
-  logit_zobs_centred <- logit(zobs) - centring_term  # apply logistic transform and centre the data around mean 0
+  centring_term <- mean(LaplacesDemon::logit(zobs))
+  logit_zobs_centred <- LaplacesDemon::logit(zobs) - centring_term  # apply logistic transform and centre the data around mean 0
   if (show_plots) tibble(xobs, yobs, zobs, logit_zobs_centred) %>% print()
   
   #' compute and plot posterior

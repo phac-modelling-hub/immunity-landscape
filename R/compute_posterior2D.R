@@ -20,7 +20,7 @@
 #' @param meas_error if specified, measurement error is included (numeric)
 compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA, ndrws=50, prov_levels, b=1, meas_error=NA) {
   # calculate covariances between unobserved and observed
-  xygrid <- expand_grid(x=xvals, y=yvals)
+  xygrid <- tidyr::expand_grid(x=xvals, y=yvals)
   xyobs <- tibble(x=xobs,y=yobs)
   
   kuo <- generate_2Dksqexp_covmat(xygrid,xyobs,fn=k,l=l1,b=b)  # 'relationship' pairwise between unobserved and observed
@@ -29,8 +29,8 @@ compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA,
   kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=k,l=l1,b=b)
   
   # calculate posterior mean and posterior cov matrix
-  centring_term <- mean(logit(zobs))
-  logit_zobs_centred <- logit(zobs) - centring_term  # use the logistic-transformed data centred around mean 0
+  centring_term <- mean(LaplacesDemon::logit(zobs))
+  logit_zobs_centred <- LaplacesDemon::logit(zobs) - centring_term  # use the logistic-transformed data centred around mean 0
   if (is.na(meas_error)) {
     post_mean <- kuo%*%solve(koo)%*%(logit_zobs_centred)  # conditional mean
     post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
@@ -50,6 +50,6 @@ compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA,
     prov_levels = prov_levels
   ) |>
     dplyr::rename(post2D = value) |>
-    dplyr::mutate(post2D_constrained = invlogit(post2D + centring_term)) |>
+    dplyr::mutate(post2D_constrained = LaplacesDemon::invlogit(post2D + centring_term)) |>
     dplyr::relocate(post2D, .after = y_label)
 }

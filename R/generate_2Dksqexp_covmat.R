@@ -17,7 +17,7 @@ generate_2Dksqexp_covmat <- function(xy1,xy2,fn=ksqexp,l,b=1) {
    xy1 <- xy1 %>% mutate(i = row_number())  # add index col to enable joining
    xy2 <- xy2 %>% mutate(j = row_number())  # add index col to enable joining
    
-   expand_grid(i = xy1$i, j = xy2$j) %>%  # slightly faster version of expand_grid
+   tidyr::expand_grid(i = xy1$i, j = xy2$j) %>%  # slightly faster version of expand_grid
     left_join(xy1, by="i") %>%
     left_join(xy2, by="j", suffix = c("1", "2")) %>%  # suffix avoids duplicate column names
     mutate(k=fn(sqrt((x1 - x2)^2 + (y1 - y2)^2),l,b)) %>%  # pairwise evaluation of cov function

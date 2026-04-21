@@ -16,7 +16,7 @@
 compute_prior2D <- function(xvals, yvals, k=ksqexp, l1=NA, ndrws=50, prov_levels, b=1) {
   # covariance matrix in 2D
   npts <- length(xvals)*length(yvals)
-  covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=k(sqrt((x1-x2)^2 + (y1-y2)^2), l1, b)) %>%
+  covmat <- tidyr::expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=k(sqrt((x1-x2)^2 + (y1-y2)^2), l1, b)) %>%
     pull(k) %>% matrix(nrow=npts)
   
   # define prior and take 50 draws

@@ -25,7 +25,7 @@
 plot_posterior2D <- function(df, xobs, yobs, zobs, k_param1=NA, k_param2=NA, k_param3=NA,
                              vax_dataset=NA, last_agecurrent=NA, prov_levels=NA) {
   yobs_factors <- factor(names(yobs), levels(df$y_label))  # convert yobs to factors for use in facet_wrap
-  logit_zobs_centred <- logit(zobs) - mean(logit(zobs))  # recall the logistic-transformed data centred around mean 0 for use in plot 1
+  logit_zobs_centred <- LaplacesDemon::logit(zobs) - mean(LaplacesDemon::logit(zobs))  # recall the logistic-transformed data centred around mean 0 for use in plot 1
   
   #' plot 1
   p1 <- df %>% ggplot() + geom_point(aes(x=x_i, y=post2D, group=factor(draw)), alpha=0.1) +
