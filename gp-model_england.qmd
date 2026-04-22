@@ -168,8 +168,8 @@ To calculate an accuracy score based on the left-out (test) data, it seems reaso
 How should we define the accuracy, then? I discussed this with David Champredon, and we came to the following idea:
 
 1. For each test point, choose an acceptable level of error, _e.g._, within 5% of the true vaccine coverage (the "target interval").
-2. Retrieve the fitted model's probability density for the age and location of the test point.
-3. Calculate the probability mass within the target interval. This tells us how likely it is that the model would have predicted the true value given our chosen error tolerance.
+2. Retrieve parameters for the fitted model's (normal) posterior predictive distribution at the test point (distribution mean and variance).
+3. Calculate the density's probability mass captured within the target interval (difference between a normal cumulative distribution function evaluated at the edges of the target interval). This tells us how likely it is that the model would have predicted the true value given our chosen error tolerance.
 
 For instance, say true vaccine coverage is 80% for kids aged 7 in London. We choose an error tolerance of 5%, because epidemiologically, these are "similar enough" values. Then our target interval is 77.5%-82.5%. Suppose 70% of the fitted model's probability mass is in that interval; then our model had a 70% chance of predicting the true value with an acceptable amount of error. The more error we tolerate, the higher the accuracy, but this way the accuracy is informed directly by the real-world application, and so it can be interpretted. 
 
@@ -177,7 +177,7 @@ The proceedure above could be repeated for each test point, and then we could co
 
 # Outstanding issues
 
-* Is there a more careful way of "replicating" the structure of the Canadian data with the England data, beyond sample size? The GP model leverages relatedness between ages; it stands to reason that three points sampled right next to each other in age, would not give the GP model the same info as three points sampled further apart... Do we want to control for this in our experiment? Or is it sufficient to sample randomly and capture any effect from this potential mechanism in the uncertainty around our results?
-    * Maybe spend 10 mins on this and if it's going quickly, we could do it. If not, maybe wait until a reviewer asks for it.
-* We may need to speed up `select_GP()` if we're using it repeatedly in this experiment. I suspect it's checking sets of hyperparameters in sequence, but this can be done in parallel because it's just a brute force check. Consider refactoring.
-* Can we verify the filtering for "1+" dose occurs as expected? Concered by `compute_lppd.R@l23` only filtering out "2" instead of filtering _for_ "1+"... assumes those are the only two options. `vax_clean` contains "2+" as an option that isn't a case handled by that code.
+* Can we talk through retrieving the parameters for the fitted model's posterior predictive distribution at the test points? from the code?
+    - `compute_lppd()` has it, look to [this issue](https://github.com/phac-modelling-hub/immunity-landscape/issues/4#issuecomment-3410698100) for the math
+    - modularize the computation of the means and vars to be able to extract
+    - find indices (row numbers) of test points in input dataset to just pull out means and variants we want
