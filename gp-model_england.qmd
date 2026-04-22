@@ -1,7 +1,9 @@
 ---
 title: "Modelling similarly-sparse UK data"
 author: "Irena Papst"
-format: html
+format: 
+    html:
+        embed-resources: true
 ---
 
 ```{r}
@@ -229,7 +231,7 @@ The accuracy values look pretty good! Not all perfect but pretty good considerin
 
 Another way to visualize would be to create a plot of posterior draws by age and region, include the train obs as black points, and then test obs coloured by accuracy (on a continuous scale between 0 and 1).[^1] This would help us see which points have been easily predicted and which have not. Though this is already, to some extent, eye-ballable when test points are plotted overtop of posterior draws because that already gives an impression of prediction mean/variance under the test point... so maybe not worth spending time on?
 
-[1]: I think this could be done relatively easily, but it would be good to repurpose existing code to plot posterior draws for this (perhaps from the `plot_posterior` chunk within `gp-model.qmd`)?
+[^1]: I think this could be done relatively easily, but it would be good to repurpose existing code to plot posterior draws for this (perhaps from the `plot_posterior` chunk within `gp-model.qmd`)?
 
 Note, the above is just for one test set, so we would want to repeat this process multiple times (with different random subsamples of the England data). That would give us multiple sets of accuracy scores, and we could run summary stats on this. We could then also run a sensitivity analysis of these scores to the error tolerance to show just how robust the framework is. 
 
