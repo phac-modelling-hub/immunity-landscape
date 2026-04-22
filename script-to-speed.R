@@ -38,7 +38,7 @@ age_pre1970 <- current_year - 1969 # min age of those born strictly before 1970
 #' @param b scale for covariance function determining the output variance
 lppd <- function(vax_dataset, last_agecurrent=30, ndrws=50, k=ksqexp, l1=NA, l2=NA, b=1) {
   #' prepare the multiple training datasets (take-one-out)
-  vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
+  vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+")  # filter out unused data (2-dose & older ages)
   vax_datasets <- map(1:nrow(vax_dataset), ~ vax_dataset[-.x, ])
   names(vax_datasets) <- paste0("vax_dataset", 1:nrow(vax_dataset))
   

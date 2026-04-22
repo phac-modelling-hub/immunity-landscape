@@ -20,7 +20,7 @@
 #' @param meas_error if specified, measurement error is included (numeric)
 compute_lppd <- function(vax_dataset, last_agecurrent=21, prov_values, k=ksqexp, l1=NA, l2=NA, b=1, meas_error=NA) {
   # prepare observed data (training+test)
-  vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2")  # filter out unused data (2-dose & older ages)
+  vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+")  # filter out unused data (2-dose & older ages)
   xobs <- vax_dataset %>% pull(age_current)
   prov_values <- extract_province_relation(prov_values, vax_dataset=vax_dataset)
   prov_values <- prov_values*l2  # scale province values by l2
