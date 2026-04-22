@@ -930,6 +930,7 @@ for (model_name in names(model_configs)) {
     ylim(-0.75,0.75) + theme_minimal()
 }
 
+# view plots
 p_diffs$Gini
 p_diffs$LI
 p_diffs$VH
