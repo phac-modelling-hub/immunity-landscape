@@ -978,6 +978,68 @@ delta_plot4 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000
 
 ```
 
+We then had further discussions into these LOPO investigations and came up with a fourth more-interpretive analysis: Really we are interested in how each province compares to being left out of the age+province model, compared to just an age model. Do provinces matter? 
+
+For this, we wish to compare lppd for one province in the best age+province model case (best l2) to just the age model (e.g. l2=500). The function `compute_lppd_lopo` already outputs the lppd for each province so we utilise this.
+
+```{r}
+#| label: lopo_investigation4
+
+# Consider each model framework in turn
+# model configurations
+l2_lim <- list(Gini = c(0.1, 50), LI = c(0.2, 25), VH = c(0.1,  8))
+model_configs <- list(Gini = list(csv="GPcombinations_Gini_witherror.csv", prov_values="Gini", l2_lim=l2_lim$Gini, title_lab="Gini",
+                                  vax_dataset=vax_clean),
+                      LI = list(csv="GPcombinations_lowincome_witherror.csv", prov_values="low_income_families", l2_lim=l2_lim$LI, title_lab="LI",
+                                vax_dataset=vax_cleanLI),
+                      VH = list(csv="GPcombinations_vaccinehesitancy_witherror.csv", prov_values="vaccine_hesitancy", l2_lim=l2_lim$VH, 
+                                title_lab="VH", vax_dataset=vax_cleanVH))
+
+lopo_comparisons <- list()
+prop_summaries   <- list()
+p_diffs          <- list()
+
+# For each model framework:
+for (model_name in names(model_configs)) {
+  cfg <- model_configs[[model_name]]
+  
+  # extract parameter values for best model
+  best_model <- read_csv(here::here("results", cfg$csv)) %>% filter(l2 <= cfg$l2_lim[2], l2 >= cfg$l2_lim[1]) %>% slice_max(lppd_exact, n=1)
+  k         <- get(best_model$k_name)
+  l1        <- best_model$l1
+  l2        <- best_model$l2
+  b         <- best_model$b
+  meas_error <- best_model$meas_error
+  
+  # compute lppd lopo by province for best model and age-only model
+  best_model_lopo <- compute_lppd_lopo(cfg$vax_dataset, prov_values=cfg$prov_values, k=k, l1=l1, l2=l2, b=b, meas_error=meas_error)
+  age_model_lopo <- compute_lppd_lopo(cfg$vax_dataset, prov_values=cfg$prov_values, k=k, l1=l1, l2=500, b=b, meas_error=meas_error)
+  
+  # compare for each province
+  lopo_comparisons[[model_name]] <- tibble(province = names(best_model_lopo$mean_lppd_by_province), best_model = best_model_lopo$mean_lppd_by_province,
+    age_model  = age_model_lopo$mean_lppd_by_province, diff = best_model_lopo$mean_lppd_by_province - age_model_lopo$mean_lppd_by_province) %>%
+    left_join(pt_lookup(), by = c("province" = "location"))
+  
+  # proportion positive vs negative
+  prop_summaries[[model_name]] <- lopo_comparisons[[model_name]] %>% summarise(prop_best_wins = mean(diff > 0), prop_age_wins = mean(diff < 0))
+  print(model_name); print(prop_summaries[[model_name]])
+  
+  # plot difference (best model − age model) by province
+  p_diffs[[model_name]] <- ggplot(lopo_comparisons[[model_name]], aes(x = pt, y = diff, fill = diff > 0)) + geom_col() +
+    geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.5) +
+    scale_fill_manual(values = c("TRUE" = "#2166ac", "FALSE" = "#d73027"), labels = c("TRUE" = "Full model preferred", "FALSE" = "Age model preferred"),
+                      name = NULL) +
+    labs(x = "Province", y = "Difference in mean LPPD per province", title = paste0("Relative LOPO performance (", cfg$title_lab, " model)")) +
+    ylim(-0.75,0.75) + theme_minimal()
+}
+
+# view plots
+p_diffs$Gini
+p_diffs$LI
+p_diffs$VH
+```
+
+
 ## Simulation-based calibration (SBC)
 
 For each iteration i, the below code generates a synthetic data set with known hyperparameters and then runs the model selection process to see how well the true hyperparameters can be recovered. The data generation process (Step 1) is as follows: choose values for k, l1, l2, b, and meas_error; compute a GP for this parameter combination and calculate the posteriors; save one random posterior draw and treat this as the synthetic data.
