@@ -64,51 +64,49 @@ compute_lppd <- function(vax_dataset, last_agecurrent=21, prov_values, k=ksqexp,
 #' @inheritParams compute_lppd2
 #' @return List containing `vax_dataset`, `bottom` (matrix for denominator of PPD mean equation), logit_zobs_centred (centred and transformed response values), and centring_term (mean of transformed response values used to centre them)
 prepare_ppd_inputs <- function(vax_dataset, last_agecurrent = 21, prov_values, k = ksqexp, l1 = NA, l2 = NA, b = 1, meas_error = NA) {
-vax_dataset <- vax_dataset %>% dplyr::filter((age_current <= last_agecurrent) & n_doses != "2+")
-xobs <- vax_dataset %>% dplyr::pull(age_current)
-prov_values <- extract_province_relation(prov_values, vax_dataset = vax_dataset)
-prov_values <- prov_values * l2
-yobs <- prov_values[vax_dataset %>% dplyr::pull(location)]
-zobs <- vax_dataset %>% dplyr::pull(value)
-centring_term <- mean(LaplacesDemon::logit(zobs))
-logit_zobs_centred <- LaplacesDemon::logit(zobs) - centring_term
+  vax_dataset <- vax_dataset %>% dplyr::filter((age_current <= last_agecurrent) & n_doses != "2+")
+  xobs <- vax_dataset %>% dplyr::pull(age_current)
+  prov_values <- extract_province_relation(prov_values, vax_dataset = vax_dataset)
+  prov_values <- prov_values * l2
+  yobs <- prov_values[vax_dataset %>% dplyr::pull(location)]
+  zobs <- vax_dataset %>% dplyr::pull(value)
+  centring_term <- mean(LaplacesDemon::logit(zobs))
+  logit_zobs_centred <- LaplacesDemon::logit(zobs) - centring_term
 
-xyobs <- tibble::tibble(x = xobs, y = yobs)
-koo <- generate_2Dksqexp_covmat(xyobs, xyobs, fn = k, l = l1, b = b) + 1e-12 * diag(nrow(xyobs))
+  xyobs <- tibble::tibble(x = xobs, y = yobs)
+  koo <- generate_2Dksqexp_covmat(xyobs, xyobs, fn = k, l = l1, b = b) + 1e-12 * diag(nrow(xyobs))
 
-bottom <- if (is.na(meas_error)) {
-solve(koo)
-} else {
-solve(koo + diag(meas_error^2, nrow(koo)))
-}
-  
-top <- bottom %*% logit_zobs_centred
+  bottom <- if (is.na(meas_error)) {
+    solve(koo)
+  } else {
+    solve(koo + diag(meas_error^2, nrow(koo)))
+  }
+    
+  top <- bottom %*% logit_zobs_centred
 
-list(
-  vax_dataset = vax_dataset,
-  bottom = bottom,
-  top = top,
-  logit_zobs_centred = logit_zobs_centred
-)
+  list(
+    vax_dataset = vax_dataset,
+    bottom = bottom,
+    top = top,
+    logit_zobs_centred = logit_zobs_centred,
+    centring_term = centring_term
+  )
 }
 
 #' Compute parameters for posterior predictive density (PPD)
 #' @param prep Output from `prepare_ppd_inputs`
+#' @param indx Row indices at which to evaluate the PPD means and variances. If NULL, evaluate at all points
 #' @return List containing `ppd_means` and `ppd_vars`
-compute_ppd_params <- function(prep) {
-bottom <- prep$bottom
-top <- prep$top
-n <- nrow(prep$vax_dataset)
-zobs <- prep$vax_dataset %>% dplyr::pull(value)
+compute_ppd_params <- function(prep, indx = NULL) {
+  bottom <- prep$bottom
+  top <- prep$top
+  zobs <- prep$vax_dataset %>% dplyr::pull(value)
 
-# ppd_means <- rep(NA, n)
-# ppd_vars <- rep(NA, n)
-# for (i in seq_len(n)) {
-ppd_means <- sapply(seq_len(n), \(i){prep$logit_zobs_centred[i] - (top[i] / bottom[i, i])})
-ppd_vars <- sapply(seq_len(n), \(i){1 / bottom[i, i]})
-# }
+  if(is.null(indx)) indx <- seq_len(nrow(prep$vax_dataset))
+  ppd_means <- sapply(indx, \(i){prep$logit_zobs_centred[i] - (top[i] / bottom[i, i])})
+  ppd_vars <- sapply(indx, \(i){1 / bottom[i, i]})
 
-list(ppd_means = ppd_means, ppd_vars = ppd_vars)
+  list(ppd_means = ppd_means, ppd_vars = ppd_vars)
 }
 
 #' COMPUTE the lppd analytically for one GP model (i.e. for one choice of parameter values of {k, l1, l2, b, meas_error}) from
@@ -132,11 +130,40 @@ list(ppd_means = ppd_means, ppd_vars = ppd_vars)
 #' @param b scale for covariance function determining the output variance
 #' @param meas_error if specified, measurement error is included (numeric)
 compute_lppd2 <- function(vax_dataset, last_agecurrent = 21, prov_values, k = ksqexp, l1 = NA, l2 = NA, b = 1, meas_error = NA) {
-ppd_inputs <- prepare_ppd_inputs(vax_dataset, last_agecurrent, prov_values, k, l1, l2, b, meas_error)
-ppd_params <- compute_ppd_params(ppd_inputs)
+  ppd_inputs <- prepare_ppd_inputs(vax_dataset = vax_dataset, last_agecurrent = last_agecurrent, prov_values = prov_values, k = k, l1 = l1, l2 = l2, b = b, meas_error = meas_error)
+  ppd_params <- compute_ppd_params(prep = ppd_inputs, indx = NULL)
 
-lppds <- -0.5 * log(ppd_params$ppd_vars) -
-((ppd_inputs$logit_zobs_centred - ppd_params$ppd_means)^2 / (2 * ppd_params$ppd_vars)) -
-0.5 * log(2 * pi)
-sum(lppds)
+  lppds <- -0.5 * log(ppd_params$ppd_vars) -
+  ((ppd_inputs$logit_zobs_centred - ppd_params$ppd_means)^2 / (2 * ppd_params$ppd_vars)) -
+  0.5 * log(2 * pi)
+  sum(lppds)
+}
+
+#' Compute model accuracy against test points
+#' 
+#' What is the probability that the fitted model predicts each test (left out) point within a specified error tolerance?
+#' 
+#' @param train A data frame with the training points
+#' @param test A data frame with the test points
+#' @param error_tolerance A proportion specifying the acceptable error tolerance on the scale of vaccine coverage. For instance, error_tolerance=0.05 would mean the model's prediction of a vaccine coverage is considered accurate if it is within 5% of the test (true) value.
+#' @inheritParams compute_lppd2
+#' @return An accuracy (as a proportion/probability) for each test point
+compute_accuracy <- function(train, test, error_tolerance = 0.05, last_agecurrent = 21, prov_values, k = ksqexp, l1 = NA, l2 = NA, b = 1, meas_error = NA) {
+  ppd_inputs <- prepare_ppd_inputs(vax_dataset = dplyr::bind_rows(test, train), last_agecurrent = last_agecurrent, prov_values = prov_values, k = k, l1 = l1, l2 = l2, b = b, meas_error = meas_error)
+
+  # parameters of the ppd (as a normal over logit-transformed and standardized vaccine coverage values)
+  # given a test obs (z value; vax coverage) and an acceptable level of error, how much probability mass is found in that interval?
+  ppd_params <- compute_ppd_params(prep = ppd_inputs, indx = 1:nrow(test))
+ 
+  # create target interval
+  # cap vaccine coverage between 0 and 1
+  target_lwr <- sapply(test$value-error_tolerance/2, \(x) max(x, 0))
+  target_upr <- sapply(test$value+error_tolerance/2, \(x) min(x, 1))
+
+  # centre and standardized target interval
+  target_lwr <- LaplacesDemon::logit(target_lwr) - ppd_inputs$centring_term
+  target_upr <- LaplacesDemon::logit(target_upr) - ppd_inputs$centring_term
+  
+  # evaluate the CDF at boundary of target interval and take the difference to get accuracy
+  pnorm(target_upr, mean = ppd_params$ppd_means, sd = sqrt(ppd_params$ppd_vars)) - pnorm(target_lwr, mean = ppd_params$ppd_means, sd = sqrt(ppd_params$ppd_vars))
 }

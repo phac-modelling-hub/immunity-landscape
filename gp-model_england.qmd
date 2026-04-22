@@ -8,6 +8,7 @@ format: html
 #| label: setup
 
 library(dplyr)
+library(ggplot2)
 
 invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))  # load functions
 
@@ -126,23 +127,29 @@ sample_by_location <- tibble(
     n = sample(sample_size$n)
 )
 
-vax_input <- vax_england |>
+vax_england_subset <- vax_england |>
   right_join( # filtering join to subsample regions
     sample_by_location,
     by = "location"
-  ) |>
+  )
+
+vax_train <- vax_england_subset |>
   group_split(location) |>
   purrr::map(\(df) slice_sample(df, n = df$n[1]) |> select(-n)) |>
   purrr::list_rbind()
+
+vax_test <- anti_join(vax_england_subset, vax_train)
 ```
 
 Fit the model to the subsampled data:
 
 ```{r}
 #| label: fit_england_gini
+
+rerun <- FALSE
 if(rerun){
     fit <- select_GP(
-        vax_input, 
+        vax_train, 
         prov_values="UK-Gini", 
         k_list=list(ksqexp=ksqexp, kexp=kexp),  
         l1=c(1,1.25,1.5,1.75,2,2.25,2.5), 
@@ -175,9 +182,57 @@ For instance, say true vaccine coverage is 80% for kids aged 7 in London. We cho
 
 The proceedure above could be repeated for each test point, and then we could compute summary statistics on it: an average accuracy score along with a range or confidence interval.
 
-# Outstanding issues
+## Prototype
 
-* Can we talk through retrieving the parameters for the fitted model's posterior predictive distribution at the test points? from the code?
-    - `compute_lppd()` has it, look to [this issue](https://github.com/phac-modelling-hub/immunity-landscape/issues/4#issuecomment-3410698100) for the math
-    - modularize the computation of the means and vars to be able to extract
-    - find indices (row numbers) of test points in input dataset to just pull out means and variants we want
+`compute_lppd()` computes required inputs for the above accuracy calculation (mean and variance of the posterior predictive density at each test point). Notes on the math can be found in [this issue](https://github.com/phac-modelling-hub/immunity-landscape/issues/4#issuecomment-3410698100).
+
+```{r}
+#| label: compute_accuracy
+
+error_tolerance <- 0.02 # 2%
+last_agecurrent <- 21
+prov_values <- "UK-Gini"
+k <- get(fit_opt$k_name)
+l1 <- fit_opt$l1
+l2 <- fit_opt$l2
+b <- fit_opt$b
+meas_error <- fit_opt$meas_error
+
+# to use compute_lppd() equations, need to feed in vax_train _and_ vax_test, then only do the for loop stuff on the indices corresponding with vax_test (add those indices above!)
+acc <- compute_accuracy(
+    train = vax_train, 
+    test = vax_test,
+    error_tolerance = error_tolerance,
+    last_agecurrent = last_agecurrent,
+    prov_values = prov_values,
+    k = k,
+    l1 = l1,
+    l2 = l2,
+    b = b,
+    meas_error = meas_error
+)
+```
+
+```{r}
+#| label: plot_accuracy
+
+ggplot(data = tibble::tibble(acc = acc), aes(x = acc)) +
+    geom_histogram() +
+    labs(
+        title = "Distribution of accuracy across test points",
+         x = "Accuracy",
+         y = "Count"
+    )
+```
+
+The accuracy values look pretty good! Not all perfect but pretty good considering the error tolerance is only 2%. 
+
+Another way to visualize would be to create a plot of posterior draws by age and region, include the train obs as black points, and then test obs coloured by accuracy (on a continuous scale between 0 and 1).[^1] This would help us see which points have been easily predicted and which have not. Though this is already, to some extent, eye-ballable when test points are plotted overtop of posterior draws because that already gives an impression of prediction mean/variance under the test point... so maybe not worth spending time on?
+
+[1]: I think this could be done relatively easily, but it would be good to repurpose existing code to plot posterior draws for this (perhaps from the `plot_posterior` chunk within `gp-model.qmd`)?
+
+Note, the above is just for one test set, so we would want to repeat this process multiple times (with different random subsamples of the England data). That would give us multiple sets of accuracy scores, and we could run summary stats on this. We could then also run a sensitivity analysis of these scores to the error tolerance to show just how robust the framework is. 
+
+The above is also only for the Gini model. We could repeat for the low-income model and then compare accuracy values between them to see if one PT similarity metric is potentially more predictive of vaccine coverage than the other.
+
+This is getting to be a bit of a data heavy experiment... may want to consider moving to a `{targets}` pipeline.
