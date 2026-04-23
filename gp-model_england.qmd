@@ -227,11 +227,26 @@ ggplot(data = tibble::tibble(acc = acc), aes(x = acc)) +
     )
 ```
 
-The accuracy values look pretty good! Not all perfect but pretty good considering the error tolerance is only 2%. 
+The accuracy values look pretty good! Not all perfect but pretty good considering the error tolerance is only 2%. However, it could just be the case that the underlying data just doesn't vary a lot around it's mean, so it's not that hard of a test to pass...
+
+```{r}
+vax_england |>
+    ggplot(aes(x = value)) +
+    geom_histogram() +
+    labs(
+        title = "Distribution of vaccine coverage values in England",
+        x = "Vaccine Coverage",
+        y = "Count"
+    )
+
+sd(vax_england$value)
+```
+
+Seems like there is enough variance here that this prediction task isn't trivial.
 
 Another way to visualize would be to create a plot of posterior draws by age and region, include the train obs as black points, and then test obs coloured by accuracy (on a continuous scale between 0 and 1).[^1] This would help us see which points have been easily predicted and which have not. Though this is already, to some extent, eye-ballable when test points are plotted overtop of posterior draws because that already gives an impression of prediction mean/variance under the test point... so maybe not worth spending time on?
 
-[^1]: I think this could be done relatively easily, but it would be good to repurpose existing code to plot posterior draws for this (perhaps from the `plot_posterior` chunk within `gp-model.qmd`)?
+[^1]: I think this could be done relatively easily, but it would be good to repurpose existing code to plot posterior draws for this (Liza suggests using `plot_posterior2D()`)?
 
 Note, the above is just for one test set, so we would want to repeat this process multiple times (with different random subsamples of the England data). That would give us multiple sets of accuracy scores, and we could run summary stats on this. We could then also run a sensitivity analysis of these scores to the error tolerance to show just how robust the framework is. 
 
