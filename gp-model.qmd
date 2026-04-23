@@ -742,8 +742,6 @@ The function `compute_lppd_lopo` computes lppd for one set of model params from 
 #' example with diagnostics plot
 example <- compute_lppd_lopo(vax_cleanVH, prov_values="vaccine_hesitancy", k=kexp, l1=2.5, l2=3, b=0.5, meas_error=0)
 example
-prov_values <- extract_province_relation("GDP", vax_clean)
-plot(x=prov_values[names(example$mean_lppd_by_province)], y=example$mean_lppd_by_province, xlab = "province value e.g. GDP", ylab = "Mean LOPO lppd")
 ```
 
 The above diagnostic plot allows us to explore the relative contribution of each province to the total log posterior predictive density (after scaling by \# of observations). For the GDP model framework, we see that for poor models, there is a large contribution from the ?tail-end? provinces to total lppd, whereas with our best models (largest LOO lppd / large l2), the diagnostic plot is fairly flat indicating that each province contributes equally (after scaling by \# of observations) and the model essentially collapses to an age model.
@@ -916,7 +914,7 @@ for (model_name in names(model_configs)) {
   # compare for each province
   lopo_comparisons[[model_name]] <- tibble(province = names(best_model_lopo$mean_lppd_by_province), best_model = best_model_lopo$mean_lppd_by_province,
     age_model  = age_model_lopo$mean_lppd_by_province, diff = best_model_lopo$mean_lppd_by_province - age_model_lopo$mean_lppd_by_province) %>%
-    left_join(pt_lookup(), by = c("province" = "location"))
+    left_join(cfg$vax_dataset %>% distinct(location, pt), by = c("province" = "location"))
   
   # proportion positive vs negative
   prop_summaries[[model_name]] <- lopo_comparisons[[model_name]] %>% summarise(prop_best_wins = mean(diff > 0), prop_age_wins = mean(diff < 0))
@@ -931,7 +929,6 @@ for (model_name in names(model_configs)) {
     ylim(-0.75,0.75) + theme_minimal()
 }
 
-# view plots
 p_diffs$Gini
 p_diffs$LI
 p_diffs$VH
@@ -944,16 +941,26 @@ For each iteration i, the below code generates a synthetic data set with known h
 ```{r}
 #| label: sbc
 
-SBC_results_list <- vector("list", 100)
-k_select <- function(a) {  # quick function to randomly choose ksqexp or kexp
-  if (a==1) {
+SBC_results_list <- vector("list", 50)
+k_select <- function(j) {  # quick function to randomly choose ksqexp or kexp
+  if (j==1) {
     list(fn=ksqexp, name="ksqexp")
-  } else if (a==0) {
+  } else if (j==0) {
     list(fn=kexp, name="kexp")
   }
 }
 
-for (i in 1:50) {
+extract_results <- function(modelselection, sample_name) {
+    true_model <- modelselection %>% select(-model_no, -lppd_LOPO) %>%
+      filter(k_name==params$k_name & l1==params$l1 & l2==params$l2 & b==params$b & meas_error==params$meas_error)
+    true_model %>%
+      rename_with(~ paste0("true_", .x)) %>%
+      mutate(i=i, sample=sample_name,
+             min_lppd=min(modelselection$lppd_exact),
+             max_lppd=max(modelselection$lppd_exact))
+  }
+
+for (i in 1:1) {
   #' Step 1: Create synthetic data by randomly drawing one posterior from a GP with known hyperparams
   #' define hyperparams for this iteration
   k_object <- k_select(sample(0:1, 1))
@@ -961,40 +968,52 @@ for (i in 1:50) {
   l1 <- sample(c(1,1.25,1.5,1.75,2,2.25,2.5), 1)  #runif(1, 1, 2.5)
   l2 <- sample(c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25), 1)  #runif(1, 0.2, 25)
   b <- sample(c(0.5,1,1.5), 1)  #runif(1, 0.5, 1.5)
-  meas_error <- sample(c(0.5,0.1,0.05,0.01,0), 1)  #runif(1, 0, 0.5)
+  meas_error <- 0  #sample(c(0.5,0.1,0.05,0.01,0), 1)  #runif(1, 0, 0.5)
   params <- list(k=k, k_name=k_object$name, l1=l1, l2=l2, b=b, meas_error=meas_error)  # save param values
-  #' run model
-  post <- run_GP(vax_cleanLI, prov_values="low_income_families", k=kexp, l1=l1, l2=l2, 
-                 b=b, meas_error=meas_error, show_plots=F)
-  #' randomly save one posterior draw as the data
+  #' set up xvals and yvals (mirroring run_GP internals)
+  first_agecurrent <- 5
+  last_agecurrent <- 21
+  xvals <- first_agecurrent:last_agecurrent
+  prov_values <- extract_province_relation("Gini", vax_dataset=vax_clean)
+  prov_levels <- names(prov_values)
+  yvals <- prov_values * l2
+  #' draw from the GP prior and take one random draw as synthetic data
+  prior <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=50, prov_levels=prov_levels, b=b)
   a <- sample(1:50, 1)
-  synthetic_data <- post %>% filter(draw == a) %>% select(-draw, -post2D, -y_i)
-  #' reformat
-  synthetic_data <- synthetic_data %>% mutate(location=as.character(y_label)) %>%
-    rename(age_current=x_i, value=post2D_constrained) %>% select(-y_label) %>%
-    mutate(n_doses="1+")
-  # remove x% missing data
-  n <- as.numeric(count(vax_cleanLI %>% filter((age_current>=5) & (age_current<=21) & n_doses!="2+")))  # vax_cleanLI has 34/168 data points
-  synthetic_data_partial <- synthetic_data %>% mutate(id=row_number()) %>%
-    filter(age_current > 4) %>%  # no data for under 5 year olds
-    filter(id %in% sample(min(id):max(id), n, replace=F))  # randomly remove rows leaving n points
+  synthetic_data <- prior %>% filter(draw == a) %>%
+    mutate(age_current = x_i,
+           location    = as.character(y_label),
+           value       = invlogit(prior2D),  # transform from logit scale to [0,1]
+           n_doses     = "1+") %>%
+    select(age_current, location, value, n_doses)
+  # remove x% missing data (two options)
+  # option 1: complete synthetic data
+  synthetic_data_sample1 <- synthetic_data
+  # option 2: only the same (age,province) pairs of vax_clean
+  data_points <- vax_clean %>% filter(age_current >= 5, age_current <= 21, n_doses != "2+") %>% distinct(age_current, location)
+  synthetic_data_sample2 <- synthetic_data %>% semi_join(data_points, by = c("age_current", "location"))
 
-  #' Step 2: Run model selection process with the synthetic data
-  synthetic_modelselection_LI <- select_GP(synthetic_data_partial, prov_values="low_income_families",
+  #' Step 2: Run model selection process with the synthetic data (zero meas_error)
+  synthetic_modelselection_sample1 <- select_GP(synthetic_data_sample1, prov_values="Gini",
                                            k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5),
-                                           l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25), b=c(0.5,1,1.5),
-                                           meas_error=c(0.5,0.1,0.05,0.01,0))
-  synthetic_modelselection_LI %>% 
-    readr::write_csv(here::here("results", paste0("Synthetic_modelselection_LI_",i,".csv")))
+                                           l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25), b=c(0.5,1,1.5), meas_error=c(0))
+  synthetic_modelselection_sample1 %>% 
+    readr::write_csv(here::here("results", paste0("Synthetic_modelselection_Gini_samplefull_",i,".csv")))
+  synthetic_modelselection_sample2 <- select_GP(synthetic_data_sample2, prov_values="Gini",
+                                           k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5),
+                                           l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25), b=c(0.5,1,1.5), meas_error=c(0))
+  synthetic_modelselection_sample2 %>% 
+    readr::write_csv(here::here("results", paste0("Synthetic_modelselection_Gini_samplepartial_",i,".csv")))
   
   #' Step 3: Identify how well the true model performs and store results
-  true_model <- synthetic_modelselection_LI %>% select(-model_no, -lppd_LOPO) %>%
-    filter(k_name==params$k_name & l1==params$l1 & l2==params$l2 & b==params$b & meas_error==params$meas_error)
-  min_lppd <- synthetic_modelselection_LI %>% filter(lppd_exact==min(lppd_exact)) %>% pull(lppd_exact)
-  max_lppd <- synthetic_modelselection_LI %>% filter(lppd_exact==max(lppd_exact)) %>% pull(lppd_exact)
+  # true_model <- synthetic_modelselection_LI %>% select(-model_no, -lppd_LOPO) %>%
+  #   filter(k_name==params$k_name & l1==params$l1 & l2==params$l2 & b==params$b & meas_error==params$meas_error)
+  # min_lppd <- synthetic_modelselection_LI %>% filter(lppd_exact==min(lppd_exact)) %>% pull(lppd_exact)
+  # max_lppd <- synthetic_modelselection_LI %>% filter(lppd_exact==max(lppd_exact)) %>% pull(lppd_exact)
   
-  SBC_results_list[[i]] <- tibble(i=i, true_model=true_model, min_lppd=min_lppd, max_lppd=max_lppd)
+  SBC_results_list[[i]] <- bind_rows(extract_results(synthetic_modelselection_sample1, "full"),
+                                     extract_results(synthetic_modelselection_sample2, "partial"))
 }
 SBC_results <- bind_rows(SBC_results_list)
-SBC_results %>% saveRDS(here::here("results", "SBC_results_LI.rds"))
+SBC_results %>% saveRDS(here::here("results", "SBC_results_Gini.rds"))
 ```
