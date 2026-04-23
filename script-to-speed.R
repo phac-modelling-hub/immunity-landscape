@@ -36,9 +36,9 @@ age_pre1970 <- current_year - 1969 # min age of those born strictly before 1970
 #' @param l1 x-lengthscale parameter, for use with covariance functions ksqexp and kexp
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
-lppd <- function(vax_dataset, last_agecurrent=30, ndrws=50, k=ksqexp, l1=NA, l2=NA, b=1) {
+lppd <- function(vax_dataset, first_agecurrent=5, last_agecurrent=30, ndrws=50, k=ksqexp, l1=NA, l2=NA, b=1) {
   #' prepare the multiple training datasets (take-one-out)
-  vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+")  # filter out unused data (2-dose & older ages)
+  vax_dataset <- vax_dataset %>% filter((age_current>=first_agecurrent) & (age_current<=last_agecurrent) & n_doses!="2+")  # filter out unused data (2-dose & older/younger ages)
   vax_datasets <- map(1:nrow(vax_dataset), ~ vax_dataset[-.x, ])
   names(vax_datasets) <- paste0("vax_dataset", 1:nrow(vax_dataset))
   
@@ -48,7 +48,7 @@ lppd <- function(vax_dataset, last_agecurrent=30, ndrws=50, k=ksqexp, l1=NA, l2=
     xout <- vax_dataset[i, ] %>% pull(age_current)  # age_current of removed data point
     yout <- vax_dataset[i, ] %>% pull(location)  # province of removed data point
     zout <- vax_dataset[i, ] %>% pull(value)  # correct coverage value of removed data point
-    ppd <- run_GP(vax_datasets[[i]], show_plots=F, last_agecurrent=last_agecurrent, ndrws=ndrws, k=k, l1=l1, l2=l2, b=b) %>%
+    ppd <- run_GP(vax_datasets[[i]], show_plots=F, first_agecurrent=first_agecurrent, last_agecurrent=last_agecurrent, ndrws=ndrws, k=k, l1=l1, l2=l2, b=b) %>%
       filter(x_i==xout & y_label==yout) %>% pull(post2D_constrained) %>% 
       between(zout - 0.01, zout + 0.01) %>% sum()  # freq of ppd evaluated at true removed value +/-1%
     lppd_value[i] <- ppd  # not taking logs currently; should be log(ppd) eventually

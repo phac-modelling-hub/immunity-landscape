@@ -4,6 +4,7 @@
 #' Note: covariance functions can be ksqexp and/or kexp.
 #' 
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
+#' @param first_agecurrent first age for the GP model, i.e. smallest x-variable entry (numeric)
 #' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
 #' @param ndrws specify number of draws to be taken for estimate_lppd() (numeric)
 #' @param prov_values named ordered vector giving numerical y-axis values associated to each province, unscaled
@@ -16,7 +17,7 @@
 #' @param l2 a vector of relative lengthscale parameters for use with covariance functions ksqexp and/or kexp (vector)
 #' @param b a vector of scales for covariance function determining the output variances (vector)
 #' @param meas_error if specified, measurement error is included (numeric)
-select_GP <- function(vax_dataset, last_agecurrent=21, prov_values, ndrws=100, k_list=list(ksqexp=ksqexp), l1=NA, l2=NA, b=1, meas_error=NA) {
+select_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_values, ndrws=100, k_list=list(ksqexp=ksqexp), l1=NA, l2=NA, b=1, meas_error=NA) {
   # first separate k_list into functions and names
   k_tibble <- tibble(k_name = names(k_list), k = unname(k_list))
   
@@ -33,6 +34,7 @@ select_GP <- function(vax_dataset, last_agecurrent=21, prov_values, ndrws=100, k
   #   b = ..4)))
   combinations <- combinations %>% mutate(lppd_exact = purrr::pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd2(  # method 2: compute lppd analytically
     vax_dataset = vax_dataset,
+    first_agecurrent = first_agecurrent,
     last_agecurrent = last_agecurrent,
     prov_values = prov_values,
     k = ..1,
@@ -42,6 +44,7 @@ select_GP <- function(vax_dataset, last_agecurrent=21, prov_values, ndrws=100, k
     meas_error = ..5))) %>% 
     mutate(lppd_LOPO = purrr::pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd_lopo(  # compute lppd from leave-one-province-out CV
       vax_dataset = vax_dataset,
+      first_agecurrent = first_agecurrent,
       last_agecurrent = last_agecurrent,
       prov_values = prov_values,
       k = ..1,

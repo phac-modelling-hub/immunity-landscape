@@ -69,8 +69,8 @@ Use the squared exponential covariance function, `k`, to begin with and assume l
 #   b*exp(-r^2 / (2*l^2))
 # }
 
-first_agecurrent <- 1  # first age for the GP model
-last_agecurrent <- 32  #age_pre1970-1  # last age for the GP model 
+first_agecurrent <- 5  # first age for the GP model
+last_agecurrent <- 32  #age_pre1970-1  # last age for the GP model
 xvals <- first_agecurrent:last_agecurrent  # a vector of current ages (these x_i's are equally spaced)  
 npts <- length(xvals)
 l <- 2
@@ -149,7 +149,7 @@ We can add in the remaining true data (which the model has not seen) to evaluate
 ```{r}
 #| label: compare_to_data
 
-post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(name="current age x_i", breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=(vax_prov %>% filter(age_current <= last_agecurrent) %>% pull(age_current)), y=(vax_prov %>% filter(age_current <= last_agecurrent) %>% pull(value))), aes(x=x,y=y), col="green") + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
+post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(name="current age x_i", breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=(vax_prov %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% pull(age_current)), y=(vax_prov %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% pull(value))), aes(x=x,y=y), col="green") + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
 
 #ggsave(paste0("plots/ABpost_l",l,"_ksqexp",".pdf"), height=4.51, width=7.29)
 ```
@@ -173,8 +173,8 @@ Note that we currently assume a mean of 0. We could specify a non-zero mean here
 #run_GP(vax_clean, prov_values = "Gini", k=ksqexp, l1=2.5, l2=10, b=0.5, meas_error=0.1)
 #' setup
 #' now both x and y are inputs, with output z
-first_agecurrent <- 1  # first age for the GP model
-last_agecurrent <- 21  #age_pre1970-1  # last age for the GP model 
+first_agecurrent <- 5  # first age for the GP model
+last_agecurrent <- 21  #age_pre1970-1  # last age for the GP model
 xvals <- first_agecurrent:last_agecurrent  # a vector of current ages (these x_i's are equally spaced) 
 
 province_relation <- province_relation_data <- readr::read_csv(here::here("data", "9810009601_databaseLoadingData_StatCanGini.csv"), show_col_types = F) %>%
@@ -222,9 +222,9 @@ Extension: A possible model extension is to add 2-dose data as minimums at this 
 #| label: data_2D
 
 #' observe coverage data in all provinces where data exists (excluding 2-dose)
-xobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(age_current)
-yobs <- yvals[vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(location)]
-zobs <- vax_clean %>% filter(age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(value)
+xobs <- vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(age_current)
+yobs <- yvals[vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(location)]
+zobs <- vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(value)
 
 #' optional extension: add 2+-dose data as minimums?
 # vax_obs <- vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2+")  # unclear how to incorporate as a minimum
@@ -294,7 +294,7 @@ post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(d
 #' to plot only the data, as facets
 post2D %>% ggplot() +
   geom_point(data=tibble(x=xobs, y=zobs*100, y_label=yobs_factors), aes(x=x, y=y), col="red") +
-  scale_x_continuous(limits=c(0,25), breaks=seq(0, 25, by=5), name="current age") + 
+  scale_x_continuous(limits=c(first_agecurrent, last_agecurrent), breaks=seq(first_agecurrent, last_agecurrent, by=5), name="current age") +
   scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
   facet_wrap(~ y_label) +
   theme(axis.text=element_text(size=12), axis.title=element_text(size=20), plot.title = element_text(size=25), strip.text.x = element_text(size=9))
@@ -308,7 +308,7 @@ ggsave(paste0("plots/1+dose_data_plot",".jpeg"), height=4.51, width=7.29)
 #   df_obs <- tibble(x = xobs[idx], y = zobs[idx]*100, y_label = prov)
 #   p <- ggplot() +
 #     geom_point(data=df_obs, aes(x=x, y=y), col="red") +
-#     scale_x_continuous(limits=c(0,25), breaks=seq(0, 25, by=5), name="current age") +
+#     scale_x_continuous(limits=c(first_agecurrent, last_agecurrent), breaks=seq(first_agecurrent, last_agecurrent, by=5), name="current age") +
 #     scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
 #     ggtitle(paste("Province:", prov))
 #   ggsave(filename = paste0("plots/1+dose_data_plot_", prov, ".jpeg"), plot=p, height=4.51, width=7.29)
@@ -322,9 +322,9 @@ As before, we can compare performance by adding back in data points that the mod
 
 post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) + 
   geom_line(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.2) + 
-  geom_point(data=tibble(x=(vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(age_current)),  # adding in full data from vax_clean
-                         y=(vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(value)), 
-                         y_label=factor((vax_clean %>% filter(age_current<=last_agecurrent) %>% pull(location)), levels=prov_levels)),
+  geom_point(data=tibble(x=(vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% pull(age_current)),  # adding in full data from vax_clean
+                         y=(vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% pull(value)),
+                         y_label=factor((vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% pull(location)), levels=prov_levels)),
                          aes(x=x,y=y), col="green") + 
   geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red") +
   scale_x_continuous(breaks=xvals, name="current age x_i") + scale_y_continuous(limits=c(0,1)) +
@@ -340,9 +340,9 @@ Optional: We can also drop any posterior draws that do not satisfy the 2-dose da
 #| eval: false
 
 # extract 2+-dose data from vax_clean, matching column names with post2D
-data_2dose <- tibble(x_i=(vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2+") %>% pull(age_current)),  # adding in full data from vax_clean
-                     y_label=factor((vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2+") %>% pull(location)), levels=prov_levels),
-                     value_2dose=(vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2+") %>% pull(value)))
+data_2dose <- tibble(x_i=(vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent, n_doses=="2+") %>% pull(age_current)),  # adding in full data from vax_clean
+                     y_label=factor((vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent, n_doses=="2+") %>% pull(location)), levels=prov_levels),
+                     value_2dose=(vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent, n_doses=="2+") %>% pull(value)))
 # filter out posterior draws that do not meet the criterion, using all()
 post2D_new <- post2D %>% ungroup() %>% left_join(data_2dose, by=c("x_i","y_label")) %>%
   mutate(value_2dose=ifelse(is.na(value_2dose), 0, value_2dose)) %>%  ##UP TO HERE
@@ -562,7 +562,7 @@ We also wish to add a new indicator: Gini index. This runs on all provinces.
 #| label: province_relation_gini
 
 #' example model
-run_GP(vax_clean, prov_values="Gini", l1=2.5, l2=10, b=0.5, meas_error=0, k=kexp)
+run_GP(vax_clean, prov_values="Gini", l1=2.5, l2=10, b=0.5, meas_error=0.1)
 
 #' exhaustive search of reasonable hyperparameter space with error
 GPcombinations_GI <- select_GP(vax_clean, prov_values="Gini", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
@@ -631,10 +631,13 @@ To test relation of ages, we can compute pairwise differences in absolute covera
 ```{r}
 #| label: assumption_test_ages
 
+first_agecurrent <- 5
+last_agecurrent <- 21
+
 #' 1+ dose provincial data, no aNICS
 #' read in provincial data with aNICS removed
 vax_dataset1 <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned_noadults.csv"), show_col_types = FALSE) %>%
-  filter(n_doses %in% c("1", "1+")) %>% filter(age_current <= 21)
+  filter(n_doses %in% c("1", "1+")) %>% filter(age_current >= first_agecurrent, age_current <= last_agecurrent)
 
 #' define a function to compute all pairwise differences
 compute_pairwise_diffs <- function(df) {
@@ -729,10 +732,10 @@ vax_england <- read_csv("data/ukhsa-chart-download-mmr1-regions.csv") %>%  # dat
   mutate(age_current = current_year - year_report + age) %>% select(location, year_report, age, n_doses, value, age_current)
 
 vax_UK %>% ggplot() + geom_point(aes(x=age_current, y=value), col="red") +
-  scale_x_continuous(name="current age x_i", limits=c(1,20)) + scale_y_continuous(limits=c(0,1)) +
+  scale_x_continuous(name="current age x_i", limits=c(5,21)) + scale_y_continuous(limits=c(0,1)) +
   facet_wrap(~ location)
 vax_england %>% ggplot() + geom_point(aes(x=age_current, y=value), col="red") +
-  scale_x_continuous(name="current age x_i", limits=c(1,20)) + scale_y_continuous(limits=c(0,1)) +
+  scale_x_continuous(name="current age x_i", limits=c(5,21)) + scale_y_continuous(limits=c(0,1)) +
   facet_wrap(~ location)
 
 #' UK model
@@ -978,7 +981,7 @@ delta_plot4 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000
 
 ```
 
-We then had further discussions into these LOPO investigations and came up with a fourth more-interpretive analysis: Really we are interested in how each province compares to being left out of the age+province model, compared to just an age model. Do provinces matter? 
+We then had further discussions into these LOPO investigations and came up with a fourth more-interpretive analysis: Really we are interested in how each province compares to being left out of the age+province model, compared to just an age model. Do provinces matter?
 
 For this, we wish to compare lppd for one province in the best age+province model case (best l2) to just the age model (e.g. l2=500). The function `compute_lppd_lopo` already outputs the lppd for each province so we utilise this.
 
@@ -1039,7 +1042,6 @@ p_diffs$LI
 p_diffs$VH
 ```
 
-
 ## Simulation-based calibration (SBC)
 
 For each iteration i, the below code generates a synthetic data set with known hyperparameters and then runs the model selection process to see how well the true hyperparameters can be recovered. The data generation process (Step 1) is as follows: choose values for k, l1, l2, b, and meas_error; compute a GP for this parameter combination and calculate the posteriors; save one random posterior draw and treat this as the synthetic data.
@@ -1077,7 +1079,7 @@ for (i in 1:50) {
     rename(age_current=x_i, value=post2D_constrained) %>% select(-y_label) %>%
     mutate(n_doses="1+")
   # remove x% missing data
-  n <- as.numeric(count(vax_cleanLI %>% filter((age_current<=21) & n_doses!="2+")))  # vax_cleanLI has 34/168 data points
+  n <- as.numeric(count(vax_cleanLI %>% filter((age_current>=5) & (age_current<=21) & n_doses!="2+")))  # vax_cleanLI has 34/168 data points
   synthetic_data_partial <- synthetic_data %>% mutate(id=row_number()) %>%
     filter(age_current > 4) %>%  # no data for under 5 year olds
     filter(id %in% sample(min(id):max(id), n, replace=F))  # randomly remove rows leaving n points

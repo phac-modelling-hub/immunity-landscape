@@ -4,6 +4,7 @@
 #' Note: scaling by l2 happens inside the function.
 #' 
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
+#' @param first_agecurrent first age for the GP model, i.e. smallest x-variable entry (numeric)
 #' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
 #' @param prov_values named ordered vector giving numerical y-axis values associated to each province, unscaled
 #' OR a character from the following list:
@@ -18,10 +19,10 @@
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
 #' @param meas_error if specified, measurement error is included (numeric)
-compute_lppd <- function(vax_dataset, last_agecurrent=21, prov_values, k=ksqexp, l1=NA, l2=NA, b=1, meas_error=NA) {
+compute_lppd <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_values, k=ksqexp, l1=NA, l2=NA, b=1, meas_error=NA) {
   # prepare observed data (training+test)
-  vax_dataset <- vax_dataset %>% dplyr::filter((age_current<=last_agecurrent) & n_doses!="2+")  # filter out unused data (2-dose & older ages)
-  xobs <- vax_dataset %>% dplyr::pull(age_current)
+  vax_dataset <- vax_dataset %>% filter((age_current>=first_agecurrent) & (age_current<=last_agecurrent) & n_doses!="2+")  # filter out unused data (2-dose & older/younger ages)
+  xobs <- vax_dataset %>% pull(age_current)
   prov_values <- extract_province_relation(prov_values, vax_dataset=vax_dataset)
   prov_values <- prov_values*l2  # scale province values by l2
   yobs <- prov_values[vax_dataset %>% dplyr::pull(location)]  # this includes scaling by l2
