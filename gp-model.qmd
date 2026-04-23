@@ -369,22 +369,6 @@ The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`. A
 run_GP(vax_clean)
 ```
 
-From a quick by-eye model selection with GDP province relation, current best GP model parameter values are approximately `l1=1.5, l2=3, b=0.75` for `k=ksqexp`. Plausible range (by-eye) was previously `1 <= l1 < 2`, `l1 < l2 < 3*l1`, and `0.5 <= b <= 1.5` (GDP, provincial data, no measurement error). This hyperparameter space can be searched with`select_GP()` below.
-
-```{r}
-#| label: fit_byeye
-
-# for (l1 in seq(1,3,1)) {  # l1>=2 gives meaningless outputs; l=1.5 (or 1) seems reasonable.
-#   for (l2 in seq(1,5,0.5)) {  # l2<=2.5 is too strong a relation; l>=3 seems reasonable for log(GBP) data.
-#     for (b in seq(0.5,1,0.25)) {  # b>1 gives too much variance; b=0.75 or 1 seems reasonable at present.
-#       run_GP(vax_clean, l1=l1, l2=l2, b=b)
-#     }
-#   }
-# }
-
-run_GP(vax_clean,l1=1.5,l2=3,b=0.75)
-```
-
 ## Running with cNICS data
 
 Note that the provincial estimates collected in `vax_clean` are from multiple sources with varying data collection methodology. As an alternative, the national cNICS study, although perhaps less trustworthy, does have consistent methodology across provinces. We make use of Irena's cleaned, standardised cNICS data and run_GP(). The final plot compares model fit against the full (1+ and 2 dose) provincial dataset `vax_clean`.
@@ -395,6 +379,7 @@ Plausible range (by-eye) was previously `1 <= l1 <= 4`, `l1 < l2 <= 50*l1`, and 
 
 ```{r}
 #| label: run_cNICS
+#| eval: FALSE
 
 run_GP(vax_cNICS, l1=3.5, l2=4, b=1)
 ```
@@ -407,10 +392,7 @@ Our GP model currently treats the observed data as exact estimates - posterior d
 #| label: meas_error
 
 run_GP(vax_clean,l1=1.5,l2=3,b=0.75)  # exact
-run_GP(vax_clean,l1=1.5,l2=3,b=0.75,meas_error=0.01,ndrws=50)  # with measurement error
 run_GP(vax_clean,l1=1.5,l2=3,b=0.75,meas_error=0.1,ndrws=50)  # with measurement error
-run_GP(vax_clean,l1=1.25,l2=1,b=1.5,meas_error=0.01,ndrws=50)  # with measurement error
-
 ```
 
 See the [GitHub Issue #3](https://github.com/phac-modelling-hub/immunity-landscape/issues/3) for a discussion of methodology.
@@ -452,67 +434,27 @@ We can also explore if there are local maximums in the model selection, rather t
 ```{r}
 #| label: model_selection_heatmaps
 
-my_tibble_GDP2 <- read_csv(here::here("results", "GPcombinations_GDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
-my_tibble_LI2 <- read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
-my_tibble_VH2 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
-my_tibble_VH2exp <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% filter(k_name == "kexp" & b == 1)
-my_tibble_GI <- read_csv(here::here("results", "GPcombinations_Gini_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
+my_tibble_LI2 <- read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv")) %>% filter(b == 1)
+my_tibble_VH2 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% filter(b == 1)
+my_tibble_GI <- read_csv(here::here("results", "GPcombinations_Gini_witherror.csv")) %>% filter(b == 1)
 
-#' plot l1 against l2, colouring by lppd, for several meas_error values
-my_tibble_GDP2 %>%
-  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
-  mutate(lppd_capped = if_else(lppd_exact < -200, NA_real_, lppd_exact)) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
+#' plot l2 against l1, colouring by lppd, for several meas_error values (all modelling frameworks)
+list(read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))      %>% mutate(model = "LI"),
+     read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% mutate(model = "VH"),
+     read_csv(here::here("results", "GPcombinations_Gini_witherror.csv"))           %>% mutate(model = "Gini")) %>%
+  bind_rows() %>%
+  filter(b == 1, meas_error != 0.01, !l2 %in% c(1.5, 2.5, 3.5)) %>%
+  mutate(l1 = factor(l1), l2 = factor(l2),
+         lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
+  ggplot(aes(x = l2, y = l1, fill = lppd_capped)) +
   geom_tile() +
-  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -200") +
-  facet_wrap(~ meas_error) +
-    #ylim(0,101) +
-  labs(title = "lppd heatmaps for GDP model, varying measurement error",
-       x = "l1", y = "l2")
-
-my_tibble_LI2 %>%
-  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
-  mutate(lppd_capped = if_else(lppd_exact < -200, NA_real_, lppd_exact)) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
-  geom_tile() +
-  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -200") +
-  facet_wrap(~ meas_error) +
-    #ylim(0,101) +
-  labs(title = "lppd heatmaps for Low-Income model, varying measurement error",
-       x = "l1", y = "l2")
-
-my_tibble_VH2 %>%
-  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
-  mutate(lppd_capped = if_else(lppd_exact < -200, NA_real_, lppd_exact)) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
-  geom_tile() +
-  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -200") +
-  facet_wrap(~ meas_error) +
-    #ylim(0,101) +
-  labs(title = "lppd heatmaps for Vaccine Hesitancy model (k = sqexp), varying measurement error",
-       x = "l1", y = "l2")
-
-my_tibble_VH2exp %>%
-  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
-  mutate(lppd_capped = if_else(lppd_exact < -200, NA_real_, lppd_exact)) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
-  geom_tile() +
-  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -200") +
-  facet_wrap(~ meas_error) +
-    #ylim(0,101) +
-  labs(title = "lppd heatmaps for Vaccine Hesitancy model (k = exp), varying measurement error",
-       x = "l1", y = "l2")
-
-my_tibble_GI %>%
-  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
-  mutate(lppd_capped = if_else(lppd_exact < -200, NA_real_, lppd_exact)) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
-  geom_tile() +
-  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -200") +
-  facet_wrap(~ meas_error) +
-    #ylim(0,101) +
-  labs(title = "lppd heatmaps for Gini model, varying measurement error",
-       x = "l1", y = "l2")
+  scale_fill_gradient(low = "white", high = "red", na.value = "white", name = "lppd > -100") +
+  facet_grid(rows = vars(model, k_name), cols = vars(meas_error), scales = "free_x",
+             labeller = labeller(meas_error = function(x) paste0("\u03c8 = ", x))) +
+  labs(title = "lppd heatmaps across all models, varying measurement error",
+       x = "l2", y = "l1") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+ggsave(paste0("plots/lppd_heatmaps_combined",".jpeg"), height=4.51, width=7.29)
 ```
 
 ## Relation of provinces
@@ -531,11 +473,11 @@ GPcombinations_LI2 <- select_GP(vax_cleanLI, prov_values="low_income_families", 
 GPcombinations_LI2 %>% readr::write_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))
 
 # #' plots of final model (using best parameter values)
-# run_GP(vax_clean, prov_values="GDP", l1=2.5, l2=250, b=0.5, meas_error=0.1)
-# ggsave(paste0("plots/bestGPmodel_GDP",".jpeg"), height=4.51, width=7.29)
-# run_GP(vax_cleanLI, prov_values="low_income_families", l1=2.5, l2=25, b=0.5, meas_error=0.1)
+# run_GP(vax_clean, prov_values="Gini", l1=2.5, l2=10, b=0.5, meas_error=0, k=kexp)
+# ggsave(paste0("plots/bestGPmodel_Gini",".jpeg"), height=4.51, width=7.29)
+# run_GP(vax_cleanLI, prov_values="low_income_families", l1=2.5, l2=25, b=0.5, meas_error=0.0, k=kexp)
 # ggsave(paste0("plots/bestGPmodel_lowincome",".jpeg"), height=4.51, width=7.29)
-# run_GP(vax_cleanVH, prov_values="vaccine_hesitancy", l1=2.5, l2=6.0, b=0.5, meas_error=0.1)
+# run_GP(vax_cleanVH, prov_values="vaccine_hesitancy", l1=2.5, l2=3, b=0.5, meas_error=0, k=kexp)
 # ggsave(paste0("plots/bestGPmodel_vaccinehesitancy",".jpeg"), height=4.51, width=7.29)
 ```
 
@@ -739,22 +681,11 @@ vax_england %>% ggplot() + geom_point(aes(x=age_current, y=value), col="red") +
   facet_wrap(~ location)
 
 #' UK model
-run_GP(vax_UK, prov_values = "UK-GDP")
 run_GP(vax_UK, prov_values = "UK-low_income_families")
-run_GP(vax_england, prov_values = "UK-GDP")
 run_GP(vax_england, prov_values = "UK-low_income_families")
 run_GP(vax_england, prov_values = "UK-Gini")
 
 #' UK hyperparams
-GPcombinations_UKGDP <- select_GP(vax_UK, prov_values="UK-GDP", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
-GPcombinations_UKGDP %>% readr::write_csv(here::here("results", "GPcombinations_UKGDP_witherror.csv"))
-
-GPcombinations_UKLI <- select_GP(vax_UK, prov_values="UK-low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
-GPcombinations_UKLI %>% readr::write_csv(here::here("results", "GPcombinations_UKLI_witherror.csv"))
-
-GPcombinations_englandGDP <- select_GP(vax_england, prov_values="UK-GDP", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
-GPcombinations_englandGDP %>% readr::write_csv(here::here("results", "GPcombinations_englandGDP_witherror.csv"))
-
 GPcombinations_englandLI <- select_GP(vax_england, prov_values="UK-low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
 GPcombinations_englandLI %>% readr::write_csv(here::here("results", "GPcombinations_englandLI_witherror.csv"))
 
@@ -762,44 +693,8 @@ GPcombinations_englandGini <- select_GP(vax_england, prov_values="UK-Gini", k_li
 GPcombinations_englandGini %>% readr::write_csv(here::here("results", "GPcombinations_englandGini_witherror.csv"))
 
 #' UK lppd heatmaps
-my_tibble_a <- read_csv(here::here("results", "GPcombinations_UKGDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
-my_tibble_b <- read_csv(here::here("results", "GPcombinations_UKLI_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
-my_tibble_c <- read_csv(here::here("results", "GPcombinations_englandGDP_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
 my_tibble_d <- read_csv(here::here("results", "GPcombinations_englandLI_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
 my_tibble_e <- read_csv(here::here("results", "GPcombinations_englandGini_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
-
-my_tibble_a %>%
-  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
-  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%  # ignoring poor model fits
-  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
-  geom_tile() +
-  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
-  facet_wrap(~ meas_error) +
-    #ylim(0,101) +
-  labs(title = "lppd heatmaps for UK GDP model, varying measurement error", x = "l1", y = "l2")
-ggsave(paste0("plots/lppdheatmap_UKGDP",".jpeg"), height=4.51, width=7.29)
-
-my_tibble_b %>%
-  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
-  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
-  geom_tile() +
-  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
-  facet_wrap(~ meas_error) +
-    #ylim(0,101) +
-  labs(title = "lppd heatmaps for UK Low-Income model, varying measurement error", x = "l1", y = "l2")
-ggsave(paste0("plots/lppdheatmap_UKLI",".jpeg"), height=4.51, width=7.29)
-
-my_tibble_c %>%
-  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
-  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
-  geom_tile() +
-  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
-  facet_wrap(~ meas_error) +
-    #ylim(0,101) +
-  labs(title = "lppd heatmaps for England GDP model, varying measurement error", x = "l1", y = "l2")
-ggsave(paste0("plots/lppdheatmap_englandGDP",".jpeg"), height=4.51, width=7.29)
 
 my_tibble_d %>%
   mutate(l1 = factor(l1), l2 = factor(l2)) %>%
@@ -845,7 +740,7 @@ The function `compute_lppd_lopo` computes lppd for one set of model params from 
 #| label: lopo
 
 #' example with diagnostics plot
-example <- compute_lppd_lopo(vax_clean, prov_values="GDP", k=ksqexp, l1=1.5, l2=0.2, b=1)
+example <- compute_lppd_lopo(vax_cleanVH, prov_values="vaccine_hesitancy", k=kexp, l1=2.5, l2=3, b=0.5, meas_error=0)
 example
 prov_values <- extract_province_relation("GDP", vax_clean)
 plot(x=prov_values[names(example$mean_lppd_by_province)], y=example$mean_lppd_by_province, xlab = "province value e.g. GDP", ylab = "Mean LOPO lppd")
