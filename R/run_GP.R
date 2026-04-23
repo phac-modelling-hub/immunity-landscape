@@ -20,7 +20,7 @@
 #' @param meas_error if specified, measurement error is included (numeric)
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions
 #' @param show_plots if false, plots are hidden
-run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=21, prov_values=NA, k=ksqexp, l1=NA, l2=NA, b=1, 
+run_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_values=NA, k=ksqexp, l1=NA, l2=NA, b=1,
                    meas_error=NA, ndrws=50, show_plots=T) {
   #' define possible x values
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
@@ -45,9 +45,9 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=21, prov_val
   if (show_plots) prior2D %>% plot_prior2D(., k_param1=l1, k_param2=l2) %>% print()
   
   #' observe data and print to console (we may wish to use cNICS here instead of vax_clean)
-  xobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+") %>% pull(age_current)
-  yobs <- yvals[vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+") %>% pull(location)]  # this includes scaling by l2
-  zobs <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+") %>% pull(value)  # note: data is transformed & centred inside compute_posterior2D
+  xobs <- vax_dataset %>% filter((age_current>=first_agecurrent) & (age_current<=last_agecurrent) & n_doses!="2+") %>% pull(age_current)
+  yobs <- yvals[vax_dataset %>% filter((age_current>=first_agecurrent) & (age_current<=last_agecurrent) & n_doses!="2+") %>% pull(location)]  # this includes scaling by l2
+  zobs <- vax_dataset %>% filter((age_current>=first_agecurrent) & (age_current<=last_agecurrent) & n_doses!="2+") %>% pull(value)  # note: data is transformed & centred inside compute_posterior2D
   centring_term <- mean(logit(zobs))
   logit_zobs_centred <- logit(zobs) - centring_term  # apply logistic transform and centre the data around mean 0
   if (show_plots) tibble(xobs, yobs, zobs, logit_zobs_centred) %>% print()
@@ -58,6 +58,6 @@ run_GP <- function(vax_dataset, first_agecurrent=1, last_agecurrent=21, prov_val
   vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned.csv"), show_col_types = FALSE) %>%  #added for cNICS comparison
     filter(!(pt %in% c("SK","YT","NB")))
   if (show_plots) post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k_param1=l1, k_param2=l2, k_param3=b,
-                                              vax_dataset=vax_clean, last_agecurrent=last_agecurrent, prov_levels=prov_levels) %>% print()
+                                              vax_dataset=vax_clean, first_agecurrent=first_agecurrent, last_agecurrent=last_agecurrent, prov_levels=prov_levels) %>% print()
   return(post2D)
 }
