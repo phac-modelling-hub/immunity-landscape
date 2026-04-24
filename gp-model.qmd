@@ -25,6 +25,7 @@ library(purrr)
 library(tibble)
 library(mnormt) # for multivariate normal
 library(LaplacesDemon) # for logistic transform
+library(flextable) # for exporting tables in .docx
 
 invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))  # load functions
 
@@ -936,7 +937,7 @@ p_diffs$VH
 
 ## Simulation-based calibration (SBC)
 
-For each iteration i, the below code generates a synthetic data set with known hyperparameters and then runs the model selection process to see how well the true hyperparameters can be recovered. The data generation process (Step 1) is as follows: choose values for k, l1, l2, b, and meas_error; compute a GP for this parameter combination and calculate the posteriors; save one random posterior draw and treat this as the synthetic data.
+For each iteration i, the below code generates a synthetic data set with known hyperparameters and then runs the model selection process to see how well the true hyperparameters can be recovered. The data generation process (Step 1) is as follows: choose values for k, l1, l2, b, and meas_error; compute a GP for this parameter combination and calculate the priors; save one random prior draw and treat this as the synthetic data.
 
 ```{r}
 #| label: sbc
@@ -952,15 +953,19 @@ k_select <- function(j) {  # quick function to randomly choose ksqexp or kexp
 
 extract_results <- function(modelselection, sample_name) {
     true_model <- modelselection %>% select(-model_no, -lppd_LOPO) %>%
-      filter(k_name==params$k_name & l1==params$l1 & l2==params$l2 & b==params$b & meas_error==params$meas_error)
+      filter(k_name==params$k_name & l1==params$l1 & l2==params$l2 & b==params$b & meas_error==params$meas_error) %>%
+      rename_with(~ paste0("true_", .x))
+    estimated_model <- modelselection %>% filter(lppd_exact == max(lppd_exact)) %>% select(-model_no, -lppd_LOPO) %>%
+      rename_with(~ paste0("predicted_", .x))
+    
     true_model %>%
-      rename_with(~ paste0("true_", .x)) %>%
-      mutate(i=i, sample=sample_name,
-             min_lppd=min(modelselection$lppd_exact),
+      mutate(i=i, sample=sample_name, .before=1) %>%
+      bind_cols(estimated_model) %>%
+      mutate(min_lppd=min(modelselection$lppd_exact),
              max_lppd=max(modelselection$lppd_exact))
   }
 
-for (i in 1:1) {
+for (i in 1:50) {
   #' Step 1: Create synthetic data by randomly drawing one posterior from a GP with known hyperparams
   #' define hyperparams for this iteration
   k_object <- k_select(sample(0:1, 1))
@@ -1006,14 +1011,70 @@ for (i in 1:1) {
     readr::write_csv(here::here("results", paste0("Synthetic_modelselection_Gini_samplepartial_",i,".csv")))
   
   #' Step 3: Identify how well the true model performs and store results
-  # true_model <- synthetic_modelselection_LI %>% select(-model_no, -lppd_LOPO) %>%
-  #   filter(k_name==params$k_name & l1==params$l1 & l2==params$l2 & b==params$b & meas_error==params$meas_error)
-  # min_lppd <- synthetic_modelselection_LI %>% filter(lppd_exact==min(lppd_exact)) %>% pull(lppd_exact)
-  # max_lppd <- synthetic_modelselection_LI %>% filter(lppd_exact==max(lppd_exact)) %>% pull(lppd_exact)
-  
   SBC_results_list[[i]] <- bind_rows(extract_results(synthetic_modelselection_sample1, "full"),
                                      extract_results(synthetic_modelselection_sample2, "partial"))
 }
 SBC_results <- bind_rows(SBC_results_list)
+
+# Finally append some summary metrics
+SBC_results <- SBC_results %>% mutate(normalized_score = (true_lppd_exact - min_lppd) / (max_lppd - min_lppd),  # 0=worst, 1=best/exact
+    exact_recovery   = (true_k_name==predicted_k_name & true_l1==predicted_l1 & true_l2==predicted_l2 & true_b==predicted_b),
+    k_correct  = true_k_name == predicted_k_name,
+    l1_correct = true_l1 == predicted_l1,
+    l2_correct = true_l2 == predicted_l2,
+    b_correct  = true_b  == predicted_b)
 SBC_results %>% saveRDS(here::here("results", "SBC_results_Gini.rds"))
 ```
+
+```{r}
+#| label: sbc_visualise
+
+SBC_results <- readRDS(here::here("results", "SBC_results_Gini.rds"))
+# summary tables
+SBC_results %>% filter(sample=="partial") %>%
+  select(i, true_k_name, true_l1, true_l2, true_b, predicted_k_name, predicted_l1, predicted_l2, predicted_b, normalized_score, exact_recovery) %>%
+  arrange(i) %>% #knitr::kable(digits=3)
+  flextable() %>%
+  colformat_double(digits=2) %>%
+  save_as_docx(path=here::here("results", "SBC_table_partial.docx"))
+
+SBC_results %>% filter(sample=="full") %>%
+  select(i, true_k_name, true_l1, true_l2, true_b, predicted_k_name, predicted_l1, predicted_l2, predicted_b, normalized_score, exact_recovery) %>%
+  arrange(i) %>% #knitr::kable(digits=3)
+  flextable() %>%
+  colformat_double(digits=2) %>%
+  save_as_docx(path=here::here("results", "SBC_table_full.docx"))
+
+# stats to report - per-parameter recovery rate
+SBC_results %>% group_by(sample) %>%
+  summarise(k=mean(k_correct), l1=mean(l1_correct), l2=mean(l2_correct), b=mean(b_correct), normalized_score=mean(normalized_score), exact=mean(exact_recovery))
+
+# # other visualisations for interest
+# # histogram of normalised scores - overall recovery quality
+# SBC_results %>%
+#   ggplot(aes(x=normalized_score, fill=sample)) +
+#   geom_histogram(binwidth=0.05, position="dodge") +
+#   labs(x="Normalised score (0=worst, 1=exact recovery)", y="Count") +
+#   theme_minimal()
+# # true vs predicted scatterplots per parameter - to spot bias/clustering
+# SBC_results %>%
+#   select(i, sample, true_l1, true_l2, true_b, predicted_l1, predicted_l2, predicted_b) %>%
+#   pivot_longer(-c(i, sample), names_to=c("type","param"), names_sep="_(?=l1|l2|b)") %>%
+#   pivot_wider(names_from=type, values_from=value) %>%
+#   ggplot(aes(x=true, y=predicted)) +
+#   geom_jitter(width=0.05, height=0.05, alpha=0.5) +
+#   geom_abline(linetype="dashed") +
+#   facet_grid(sample ~ param, scales="free") +
+#   theme_minimal()
+# # normalised score heatmap by true l1/l2 - to show which region of parameter space is poorly identified - this is only meaningful with many runs
+# SBC_results %>%
+#   group_by(sample, true_l1, true_l2) %>%
+#   summarise(mean_score=mean(normalized_score), .groups="drop") %>%
+#   ggplot(aes(x=factor(true_l2), y=factor(true_l1), fill=mean_score)) +
+#   geom_tile() +
+#   scale_fill_gradient(low="white", high="red") +
+#   facet_wrap(~sample) +
+#   labs(x="true l2", y="true l1") +
+#   theme_minimal()
+```
+
