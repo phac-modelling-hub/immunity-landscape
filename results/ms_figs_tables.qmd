@@ -1,0 +1,16 @@
+---
+title: "Manuscript figures and tables"
+---
+
+This doc is used to source figures and tables for the [manuscript](https://docs.google.com/document/d/1CMSp4e_r6As2yim0dHeWNWYWK2msEPtZZl-3ekjgz0I/edit?tab=t.0). File names follow a convention of starting with `fig-` or `tbl-`, then the cross-reference label used in the manuscript draft.
+
+```{r}
+#| label: setup
+source(here::here("results", "setup.R"))
+```
+
+```{r}
+#| label: rerun
+rerun <- F
+if(rerun) source(here::here("results", "results_setup.R"))
+```
