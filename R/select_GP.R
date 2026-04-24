@@ -34,6 +34,5 @@ select_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_
     b = ..4,
     meas_error = ..5))) %>%
     select(-k) %>% mutate(model_no = row_number(), .before = 1)
-
   return(combinations)
 }
