@@ -11,6 +11,76 @@ source(here::here("results", "setup.R"))
 
 ```{r}
 #| label: rerun
-rerun <- F
-if(rerun) source(here::here("results", "results_setup.R"))
+rerun <- FALSE
+if (rerun) source(here::here("results", "results_setup.R"))
+```
+
+## Main figures
+
+```{r}
+#| label: fig-data-plot
+source(here::here("results", "fig-data-plot.R"))
+fig_data_plot
+```
+
+```{r}
+#| label: fig-posterior-draws
+source(here::here("results", "fig-posterior-draws.R"))
+fig_posterior_Gini
+fig_posterior_LI
+fig_posterior_VH
+```
+
+## Supplementary figures
+
+```{r}
+#| label: fig-lppd-lopo
+source(here::here("results", "fig-lppd-lopo.R"))
+fig_lopo_combined
+```
+
+```{r}
+#| label: fig-provinces-test
+source(here::here("results", "fig-provinces-test.R"))
+fig_provinces_test
+```
+
+```{r}
+#| label: fig-lppd-heatmaps
+source(here::here("results", "fig-lppd-heatmaps.R"))
+fig_heatmap_Gini
+fig_heatmap_LI
+fig_heatmap_VH
+```
+
+```{r}
+#| label: fig-ages-test
+source(here::here("results", "fig-ages-test.R"))
+fig_ages_test1
+fig_ages_test2
+```
+
+```{r}
+#| label: fig-england
+source(here::here("results", "fig-england.R"))
+fig_england_posterior_Gini
+fig_england_posterior_LI
+fig_england_heatmap_Gini
+fig_england_heatmap_LI
+```
+
+```{r}
+#| label: fig-kexp-example
+source(here::here("results", "fig-kexp-example.R"))
+fig_kernels
+fig_kexp_posterior
+fig_ksqexp_posterior
+```
+
+## Tables
+
+```{r}
+#| label: tbl-simulation-recapture
+source(here::here("results", "tbl-simulation-recapture.R"))
+tbl_sbc
 ```
