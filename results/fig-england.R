@@ -18,6 +18,9 @@ england_obs <- read_csv(here::here("data", "ukhsa-chart-download-mmr1-regions.cs
 
 # ── Posterior plots ────────────────────────────────────────────────────────────
 make_england_posterior_plot <- function(post2D, obs_df, title = NULL) {
+  obs_df <- obs_df %>%
+    mutate(y_label = factor(location, levels = levels(post2D$y_label)))
+
   p <- ggplot(post2D) +
     geom_line(aes(x = x_i, y = post2D_constrained * 100, group = factor(draw)),
               alpha = 0.15, linewidth = 0.3) +

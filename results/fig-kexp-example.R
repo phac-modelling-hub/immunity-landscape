@@ -42,6 +42,9 @@ post_Gini_ksqexp <- run_GP(
 obs_Gini <- vax_clean %>% filter(age_current >= 5, age_current <= 21, n_doses != "2+")
 
 make_kernel_post_plot <- function(post2D, obs_df, kernel_label) {
+  obs_df <- obs_df %>%
+    mutate(y_label = factor(location, levels = levels(post2D$y_label)))
+
   ggplot(post2D) +
     geom_line(aes(x = x_i, y = post2D_constrained * 100, group = factor(draw)),
               alpha = 0.15, linewidth = 0.3) +
