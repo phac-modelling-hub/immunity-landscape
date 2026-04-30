@@ -3,7 +3,6 @@
 # Source this file at the top of every figure/table script.
 
 library(here)
-library(patchwork)
 library(ggrepel)
 
 # ── Helper: extract and run a named chunk from a .qmd file ────────────────────
