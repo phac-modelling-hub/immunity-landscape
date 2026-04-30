@@ -13,6 +13,9 @@ obs_VH   <- vax_cleanVH %>% filter(age_current >= 5, age_current <= 21, n_doses 
 
 make_posterior_plot <- function(post2D, obs_df, row_title,
                                 show_unobs = FALSE, unobs_df = NULL) {
+  obs_df <- obs_df %>%
+    mutate(y_label = factor(location, levels = levels(post2D$y_label)))
+
   p <- ggplot(post2D) +
     geom_line(aes(x = x_i, y = post2D_constrained * 100, group = factor(draw)),
               alpha = 0.15, linewidth = 0.3) +
