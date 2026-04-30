@@ -2,6 +2,10 @@
 # Load packages, source R functions, and define manuscript plot theme, palettes, and shapes.
 # Source this file at the top of every figure/table script.
 
+library(here)
+library(patchwork)
+library(ggrepel)
+
 # ── Helper: extract and run a named chunk from a .qmd file ────────────────────
 source_qmd_chunk <- function(qmd_file, chunk_label) {
   lines       <- readLines(qmd_file)
@@ -18,6 +22,10 @@ source_qmd_chunk <- function(qmd_file, chunk_label) {
 
 # ── Run gp-model.qmd initial_setup chunk ──────────────────────────────────────
 source_qmd_chunk(here::here("gp-model.qmd"), "initial_setup")
+
+# ── Figure save dimensions ─────────────────────────────────────────────────────
+fig_w <- 7.29   # inches
+fig_h <- 4.51   # inches
 
 # ── Manuscript ggplot theme ────────────────────────────────────────────────────
 theme_ms <- theme_minimal(base_size = 12) +
@@ -36,8 +44,10 @@ theme_set(theme_ms)
 scale_colour_ms <- function(...) scale_colour_viridis_d(option = "G", direction = -1, end = 0.9, ...)
 scale_fill_ms   <- function(...) scale_fill_viridis_d(option = "G",   direction = -1, end = 0.9, ...)
 
-# Two-category fill (e.g. LOPO bar charts: full model vs age-only model)
-colours_binary <- c("TRUE" = "#2166ac", "FALSE" = "#d73027")
+# LOPO bar charts: full model preferred (blue) vs age-only model preferred (red)
+# Usage: aes(fill = diff > 0) + scale_fill_manual(values = colours_lopo)
+colours_lopo <- c("TRUE" = "#2166ac", "FALSE" = "#d73027")
 
 # ── Shape mapping (from plot_coverage.R — n_doses categories) ─────────────────
+# Assigned by factor level order of n_doses; see factorize() for level ordering.
 shapes_doses <- c(18, 16, 17, 15, 13)  # diamond, circle, triangle, square, x-circle

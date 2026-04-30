@@ -41,17 +41,17 @@ select_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_
     l1 = ..2,
     l2 = ..3,
     b = ..4,
-    meas_error = ..5))) %>% 
-    mutate(lppd_LOPO = purrr::pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd_lopo(  # compute lppd from leave-one-province-out CV
-      vax_dataset = vax_dataset,
-      first_agecurrent = first_agecurrent,
-      last_agecurrent = last_agecurrent,
-      prov_values = prov_values,
-      k = ..1,
-      l1 = ..2,
-      l2 = ..3,
-      b = ..4,
-      meas_error = ..5)$lppd)) %>%
+    meas_error = ..5))) %>%
+    # mutate(lppd_LOPO = pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd_lopo(  # compute lppd from leave-one-province-out CV
+    #   vax_dataset = vax_dataset,
+    #   first_agecurrent = first_agecurrent,
+    #   last_agecurrent = last_agecurrent,
+    #   prov_values = prov_values,
+    #   k = ..1,
+    #   l1 = ..2,
+    #   l2 = ..3,
+    #   b = ..4,
+    #   meas_error = ..5)$lppd)) %>%
     select(-k) %>% mutate(model_no = row_number(), .before = 1)
   
   # optimal_model <- combinations %>% slice_max(lppd_exact) %>% select(k_name, l1, l2, b)
