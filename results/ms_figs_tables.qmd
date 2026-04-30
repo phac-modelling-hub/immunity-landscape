@@ -62,6 +62,7 @@ fig_ages_test2
 
 ```{r}
 #| label: fig-england
+#| eval: FALSE
 source(here::here("results", "fig-england.R"))
 fig_england_posterior_Gini
 fig_england_posterior_LI
