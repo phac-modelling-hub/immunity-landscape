@@ -73,7 +73,6 @@ fig_england_heatmap_LI
 ```{r}
 #| label: fig-kexp-example
 source(here::here("results", "fig-kexp-example.R"))
-fig_kernels
 fig_kexp_posterior
 fig_ksqexp_posterior
 ```
