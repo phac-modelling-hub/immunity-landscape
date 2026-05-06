@@ -267,14 +267,22 @@ Stuck here because `ppd_var_a` is negative...
 ## Method 2: Adapting the algebraic trick used for LOPO
 
 ```{r}
-# ppd inputs based on whole dataset
-ppd_inputs <- prepare_ppd_inputs(
-    vax_dataset = dplyr::bind_rows(vax_test, vax_train),
-    prov_values = "UK-Gini",
-    k = k, l1 = l1, l2 = l2, b = b, meas_error = meas_error
-)
-koo <- ppd_inputs$koo
-logit_zobs_centred <- ppd_inputs$logit_zobs_centred
+# largely copied from compute_lppd_lopo(), just changed subsetting index to match test rows in full dataset
+last_agecurrent <- 21
+vax_dataset <- dplyr::bind_rows(vax_test, vax_train)
+vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+")  # filter out unused data (2-dose & older ages)
+xobs <- vax_dataset %>% pull(age_current)
+prov_values <- extract_province_relation(data=prov_values, vax_dataset=vax_dataset)
+prov_values <- prov_values*l2  # scale province values by l2
+yobs <- prov_values[vax_dataset %>% pull(location)]  # this includes scaling by l2
+zobs <- vax_dataset %>% pull(value)
+centring_term <- mean(LaplacesDemon::logit(zobs))
+logit_zobs_centred <- LaplacesDemon::logit(zobs) - centring_term  # apply logistic transform and centre the data around mean 0
+
+# calculate koo, the covariance matrix of training+test points
+xyobs <- tibble(x=xobs,y=yobs)
+koo <- generate_2Dksqexp_covmat(xyobs,xyobs,fn=k,l=l1,b=b) + 1e-12*diag(nrow(xyobs))  # protect against non-invertibleness
+
 if (is.na(meas_error)) {
 Kinv <- solve(koo)
 } else if (!is.na(meas_error)) {
@@ -302,7 +310,7 @@ glue::glue("Method 1 mean: {ppd_mean_a}")
 glue::glue("Method 2 mean: {ppd_mean[1]}")
 ```
 
-These are not the same...
+These are not the same... Let's assume method 2 is correct and move on for now.
 
 # Implementation
 
@@ -342,7 +350,7 @@ fit_opt <- fit |> arrange(desc(lppd_exact)) |> slice(1)
 ```{r}
 #| label: compute_accuracy
 
-error_tolerance <- 0.02 # 2%
+error_tolerance <- 0.05 # 5%
 last_agecurrent <- 21
 prov_values <- "UK-Gini"
 k <- get(fit_opt$k_name)
@@ -378,22 +386,43 @@ ggplot(data = tibble::tibble(acc = acc), aes(x = acc)) +
     )
 ```
 
-The accuracy values look pretty good! Not all perfect but pretty good considering the error tolerance is only 2%. However, it could just be the case that the underlying data just doesn't vary a lot around it's mean, so it's not that hard of a test to pass...
+Let's look at true value vs accuracy to see if there is a correlation (so perhaps the model only correctly predicts values within a certain range):
 
 ```{r}
-vax_england |>
-    ggplot(aes(x = value)) +
+pp_acc <- ggplot(data = tibble::tibble(true = vax_test$value, acc = acc), aes(x = true, y = acc, colour = acc)) +
+    geom_point() +
+    scale_x_continuous(limits = range(vax_england$value)) +
+    labs(
+        title = "True Value vs Accuracy",
+        x = "True Value",
+        y = "Accuracy"
+    )
+
+pp_acc
+```
+
+Doesn't seem to be the case... How hard of a prediction problem is this? Here are distributions of the test and train data sampled here under the accuracy scores:
+
+```{r}
+pp_dist <- dplyr::bind_rows(
+    dplyr::mutate(vax_test, type = "test"),
+    dplyr::mutate(vax_train, type = "train")
+) |>
+    ggplot(aes(x = value, fill = type)) +
     geom_histogram() +
+    scale_x_continuous(limits = range(vax_england$value)) +
+    facet_grid(rows = vars(type)) +
     labs(
         title = "Distribution of vaccine coverage values in England",
         x = "Vaccine Coverage",
         y = "Count"
     )
 
-sd(vax_england$value)
+library(patchwork)
+pp_acc / pp_dist
 ```
 
-Seems like there is enough variance here that this prediction task isn't trivial.
+There is high accuracy for test points in the range that overlaps with the bulk of the training data, but there is also reasonably high accuracy outside of this range. The model seems to be doing something in extrapolating from the training data...
 
 Another way to visualize would be to create a plot of posterior draws by age and region, include the train obs as black points, and then test obs coloured by accuracy (on a continuous scale between 0 and 1).[^1] This would help us see which points have been easily predicted and which have not. Though this is already, to some extent, eye-ballable when test points are plotted overtop of posterior draws because that already gives an impression of prediction mean/variance under the test point... so maybe not worth spending time on?
 
