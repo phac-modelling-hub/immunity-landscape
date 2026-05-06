@@ -49,15 +49,30 @@ The main task here is to emulate the sparsity of the Canadian data to some part 
 
 We will want to run the same experiment (N reps) for each PT similarity metric:
 
-1. Subsample the England data to mimic the CA data sparsity
+1. Subsample the England data to mimic the CA data sparsity ("training" data)
     - Quantify the CA data as a vector of the number of data points available by PT
     - Sample this vector without replacement 8 times (to match the number of regions in England); call this the "sample size vector".
     - For each region of England, draw V vaccine coverage estimates, where V corresponds to an entry of the sample size vector.
-2. Fit the GP model to the subsampled data (code from `gp-model.qmd`)
-3. Calculate an accuracy based on left-out data (full set; code from `gp-model.qmd`)
-    - Liza mentioned that this falls out of the model fitting process already? I can't remember the details right now...
+    - Designate the rest of the data as "test" data
+2. Select GP model hyperparameters based on training data
+3. Train the model on training data with selected hyperparameters
+4. Calculate an accuracy score for the test data
 
 Then we can summarize accuracy for each PT similarity metric.
+
+## Calculating accuracy
+
+To calculate an accuracy score based on test data, it seems reasonable to use the posterior predictive density (PPD) in some way. However, I don't think summing the (L)PPD values will result in an intuitively interpretable accuracy score, because it's not giving us values that are readily interpretable. Point densities are not probabilities. These values are useful _in comparisson_, _i.e._, if looking for a model that is more or less predictive of left-out data than another one, but it's not straight forward to interpret. 
+
+How should we define the accuracy, then? I discussed this with David Champredon, and we came to the following idea:
+
+1. For each test point, choose an acceptable level of error, _e.g._, within 5% of the true vaccine coverage (the "target interval").
+2. Retrieve parameters for the fitted model's (Normal) posterior predictive density at the test point (distribution mean and variance).
+3. Calculate the density's probability mass captured within the target interval (difference between a Normal _cumulative_ distribution function evaluated at the edges of the target interval). This tells us how likely it is that the model would have predicted the true value given our chosen error tolerance.
+
+For instance, say true vaccine coverage is 80% for kids aged 7 in London. We choose an error tolerance of 5%, because epidemiologically, these are "similar enough" values. Then our target interval is 77.5%-82.5%. Suppose 70% of the fitted model's probability mass is in that interval; then our model had a 70% chance of predicting the true value with an acceptable amount of error. The more error we tolerate, the higher the accuracy, but this way the accuracy is informed directly by the real-world application, and so it can be interpretted. 
+
+The procedure above could be repeated for each test point, and then we could compute summary statistics on it: an average accuracy score along with a range or confidence interval.
 
 # Data exploration and prep
 
@@ -104,7 +119,7 @@ vax |>
 
 After filtering, we now only have 6 PTs in the Canadian data, so when testing against the England data, we will only take 6 regions at a time to fit.
 
-# Implementation
+## Sample train and test set
 
 We start by getting the sample size of the (filtered) PT data:
 
@@ -143,6 +158,116 @@ vax_train <- vax_england_subset |>
 vax_test <- anti_join(vax_england_subset, vax_train)
 ```
 
+# Retrieving PPD parameters at a test point
+
+From [Liza's notes](https://github.com/phac-modelling-hub/immunity-landscape/issues/4), the PPD (with measurement error) at a test point $x_a$ with training points $(\underline{x}, \underline{z})$ is given by
+
+$$
+\mathcal{P} (z_{a} | x_{a}, \underline{x}, \underline{z}) \sim \mathcal{N}(\mu_{a}, \sigma_{a}^{2})
+$$
+
+where 
+
+$$
+\mu_{a} = \underline{k}(x_{a}, \underline{x})^{\top} (K + \psi^2I)^{-1}\underline{z},
+$$
+
+$$
+\sigma_{a}^{2} = k(x_{a}, x_{a}) + \psi^2I - \underline{k}(x_{a}, \underline{x})^{T} (K + \psi^2I)^{-1} \underline{k}(x_{a},\underline{x}).
+$$
+
+Here, $K$ is the covariance matrix of **training** data (computed with $K_{ij} = k(x_{i},x_{j})$) for a covariance function $k$, and $\psi$ is the measurement error. We test a few covariance functions in selecting model hyperparameters, but one example is the squared exponential:
+
+$$
+k(x_{i}, x_{j}) = b \exp \left( -\frac{(x_{i} - x_{j})^2}{2l^2} \right)
+$$
+
+Then the posterior predictive density at the test value is as before:
+
+This mean and variance define a Normal posterior predictive density, along with its cumulative distribution function, which we can use to get our desired accuracy score.
+
+Liza was using an algebraic trick to compute parameters for the PPD at a test point (assuming it's "left out"), in order to then analytically compute log PPD (LPPD) at each test point as if it was left out. These LPPD values were then summed to create a metric to compare sets of hyperparametes and select the set that was the most predictive of the data:
+
+$$
+\mu_{a}  = z_{a} - \frac{[(K + \psi^2I)^{-1} \underline{z}]_{i}}{[(K + \psi^2I)^{-1}]_{ii}},  *
+$$
+
+$$
+\sigma_{a}^{2} = ([(K + \psi^2I)^{-1}]_{ii})^{-1}.  *
+$$
+
+In this case, $K$ includes the combined set of train *and* test points; $i$ the index of the left-out point... Does this not mean that the model is being "fitted" on all but the $i^{\rm th}$ point? I think it does... that is not what we want for the accuracy score; we want the model fitted only to the train points. I think this would be the same as doing the above technique but using the structure of leave-one-province-out (LOPO) cross-validation, where the "left out" indices correspond to the test set (and not a specific province). 
+
+If I'm right, the $\mu_a$ and $\sigma_a^2$ as calculated using the first expressions above should coincide with them as calculated using the algebraic trick for LOPO... let's check.
+
+## Method 1: Direct calculation of PPD params
+
+Let's work out an example with a specific test point:
+
+```{r}
+# \mu_{a} = \underline{k}(x_{a}, \underline{x})^{\top} (K + \psi^2I)^{-1}\underline{z},
+#\sigma_{a}^{2} = k(x_{a}, x_{a}) + \psi^2I - \underline{k}(x_{a}, \underline{x})^{T} (K + \psi^2I)^{-1} \underline{k}(x_{a},\underline{x}).
+
+# set hyperparameters
+k <- ksqexp
+l1 <- 2.5
+l2 <- 2
+b <- 0.5
+meas_error <- 0.05
+
+# observed values
+xobs <- vax_train$age_current
+prov_values <- extract_province_relation(prov_values, vax_dataset = vax_train)
+prov_values <- prov_values * l2
+yobs <- prov_values[vax_train %>% dplyr::pull(location)]
+x_underline_x <- xobs # to match notation in equation above
+x_underline_y <- yobs # to match notation in equation above
+zobs <- vax_train$value
+centring_term <- mean(LaplacesDemon::logit(zobs))
+logit_zobs_centred <- LaplacesDemon::logit(zobs) - centring_term
+z_underline <- logit_zobs_centred
+
+# test values
+x_a_x <- vax_test$age_current[1] # x component of x_a (actually 2D coordinate)
+prov_values <- extract_province_relation("UK-Gini", vax_dataset = vax_test)
+prov_values <- prov_values * l2
+y_test <- prov_values[vax_test %>% dplyr::pull(location)]
+x_a_y <- y_test[[1]]
+# test interval
+error_tol <- 0.02
+z_a <- LaplacesDemon::logit(vax_test$value[1]) - centring_term
+z_lwr <- z_a - error_tol/2
+z_upr <- z_a + error_tol/2
+
+# mean's first term: \underline{k}(x_{a}, \underline{x})^{\top}
+first_term <- numeric(nrow(vax_train))
+for (i in seq_len(nrow(vax_train))){
+    r <- sqrt((x_a_x - x_underline_x[i])^2 + (x_a_y - x_underline_y[i])^2)
+    first_term[i] <- k(r, l1, b) # l2 included in y scaling
+}
+
+# mean's second term: (K + \psi^2I)^{-1}
+xyobs <- tibble::tibble(x = xobs, y = yobs)
+K <- generate_2Dksqexp_covmat(xyobs, xyobs, fn = k, l = l1, b = b) + 1e-12 * diag(nrow(xyobs))
+second_term <- solve(K + diag(meas_error^2, nrow(K)))
+
+# mean's third term: \underline{z} 
+third_term <- z_underline
+
+# PPD at x_a's
+ppd_mean_a <- (first_term%*%second_term%*%third_term)[1,1]
+
+# PPD at x_a's variance
+r_a <- 0 # the distance between x_a and x_a
+ppd_var_a <- k(0, l1, b) - (first_term%*%second_term%*%first_term)[1,1]
+```
+
+Stuck here because `ppd_var_a` is negative...
+
+### Method 2: Adapting the algebraic trick used for LOPO
+
+# Implementation
+
 Fit the model to the subsampled data:
 
 ```{r}
@@ -171,18 +296,6 @@ if(rerun){
 # retreive optimal hyperparameters
 fit_opt <- fit |> arrange(desc(lppd_exact)) |> slice(1)
 ```
-
-To calculate an accuracy score based on the left-out (test) data, it seems reasonable to use the posterior predictive density (PPD) in some way. However, I don't think summing the (L)PPD values will result in an intuitively interpretable accuracy score, because it's not giving us values that are readily interpretable. Point densities are not probabilities. Of course, these values are useful _in comparisson_, _i.e._, if looking for a model that is more or less predictive of left-out data than another one, but it's not straight forward to interpret. 
-
-How should we define the accuracy, then? I discussed this with David Champredon, and we came to the following idea:
-
-1. For each test point, choose an acceptable level of error, _e.g._, within 5% of the true vaccine coverage (the "target interval").
-2. Retrieve parameters for the fitted model's (normal) posterior predictive distribution at the test point (distribution mean and variance).
-3. Calculate the density's probability mass captured within the target interval (difference between a normal cumulative distribution function evaluated at the edges of the target interval). This tells us how likely it is that the model would have predicted the true value given our chosen error tolerance.
-
-For instance, say true vaccine coverage is 80% for kids aged 7 in London. We choose an error tolerance of 5%, because epidemiologically, these are "similar enough" values. Then our target interval is 77.5%-82.5%. Suppose 70% of the fitted model's probability mass is in that interval; then our model had a 70% chance of predicting the true value with an acceptable amount of error. The more error we tolerate, the higher the accuracy, but this way the accuracy is informed directly by the real-world application, and so it can be interpretted. 
-
-The proceedure above could be repeated for each test point, and then we could compute summary statistics on it: an average accuracy score along with a range or confidence interval.
 
 ## Prototype
 
