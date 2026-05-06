@@ -89,7 +89,8 @@ prepare_ppd_inputs <- function(vax_dataset, last_agecurrent = 21, prov_values, k
     bottom = bottom,
     top = top,
     logit_zobs_centred = logit_zobs_centred,
-    centring_term = centring_term
+    centring_term = centring_term,
+    koo = koo
   )
 }
 

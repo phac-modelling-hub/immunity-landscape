@@ -217,7 +217,7 @@ meas_error <- 0.05
 
 # observed values
 xobs <- vax_train$age_current
-prov_values <- extract_province_relation(prov_values, vax_dataset = vax_train)
+prov_values <- extract_province_relation("UK-Gini", vax_dataset = vax_train)
 prov_values <- prov_values * l2
 yobs <- prov_values[vax_train %>% dplyr::pull(location)]
 x_underline_x <- xobs # to match notation in equation above
@@ -234,10 +234,10 @@ prov_values <- prov_values * l2
 y_test <- prov_values[vax_test %>% dplyr::pull(location)]
 x_a_y <- y_test[[1]]
 # test interval
-error_tol <- 0.02
-z_a <- LaplacesDemon::logit(vax_test$value[1]) - centring_term
-z_lwr <- z_a - error_tol/2
-z_upr <- z_a + error_tol/2
+# error_tol <- 0.02
+# z_a <- LaplacesDemon::logit(vax_test$value[1]) - centring_term
+# z_lwr <- z_a - error_tol/2
+# z_upr <- z_a + error_tol/2
 
 # mean's first term: \underline{k}(x_{a}, \underline{x})^{\top}
 first_term <- numeric(nrow(vax_train))
@@ -264,7 +264,45 @@ ppd_var_a <- k(0, l1, b) - (first_term%*%second_term%*%first_term)[1,1]
 
 Stuck here because `ppd_var_a` is negative...
 
-### Method 2: Adapting the algebraic trick used for LOPO
+## Method 2: Adapting the algebraic trick used for LOPO
+
+```{r}
+# ppd inputs based on whole dataset
+ppd_inputs <- prepare_ppd_inputs(
+    vax_dataset = dplyr::bind_rows(vax_test, vax_train),
+    prov_values = "UK-Gini",
+    k = k, l1 = l1, l2 = l2, b = b, meas_error = meas_error
+)
+koo <- ppd_inputs$koo
+logit_zobs_centred <- ppd_inputs$logit_zobs_centred
+if (is.na(meas_error)) {
+Kinv <- solve(koo)
+} else if (!is.na(meas_error)) {
+errmat <- diag((meas_error^2), nrow(koo))
+Kinv <- solve(koo + errmat)
+}
+Kinvz <- Kinv%*%(logit_zobs_centred)
+
+# pull out blocks for test points
+idx <- 1:nrow(vax_test)
+# block corresponding to held-out province
+Kinv_AA <- Kinv[idx, idx, drop = FALSE]
+Kinvz_A <- Kinvz[idx, , drop = FALSE]
+# observed values for this province
+z_A <- logit_zobs_centred[idx]
+# conditional mean and covariance
+ppd_var <- solve(Kinv_AA)
+ppd_mean <- z_A - ppd_var %*% Kinvz_A
+```
+
+Setting aside the previous issue with `ppd_var_a` being negative, we can at least compare means for the first test point across the two methods:
+
+```{r}
+glue::glue("Method 1 mean: {ppd_mean_a}")
+glue::glue("Method 2 mean: {ppd_mean[1]}")
+```
+
+These are not the same...
 
 # Implementation
 
