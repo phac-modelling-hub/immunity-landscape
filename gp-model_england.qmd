@@ -186,7 +186,7 @@ Then the posterior predictive density at the test value is as before:
 
 This mean and variance define a Normal posterior predictive density, along with its cumulative distribution function, which we can use to get our desired accuracy score.
 
-Liza was using an algebraic trick to compute parameters for the PPD at a test point (assuming it's "left out"), in order to then analytically compute log PPD (LPPD) at each test point as if it was left out. These LPPD values were then summed to create a metric to compare sets of hyperparametes and select the set that was the most predictive of the data:
+Liza was using an algebraic trick to compute parameters for the PPD at a test point (assuming it's "left out"), in order to then analytically compute log PPD (LPPD) at each test point as if it was left out. This was for leave-one-out cross-validation, in order to select model hyperparameters: LPPD values were then summed to create a metric to compare sets of hyperparametes and select the set that was the most predictive of the data. The formulas are:
 
 $$
 \mu_{a}  = z_{a} - \frac{[(K + \psi^2I)^{-1} \underline{z}]_{i}}{[(K + \psi^2I)^{-1}]_{ii}},  *
@@ -196,11 +196,9 @@ $$
 \sigma_{a}^{2} = ([(K + \psi^2I)^{-1}]_{ii})^{-1}.  *
 $$
 
-In this case, $K$ includes the combined set of train *and* test points; $i$ the index of the left-out point... Does this not mean that the model is being "fitted" on all but the $i^{\rm th}$ point? I think it does... that is not what we want for the accuracy score; we want the model fitted only to the train points. I think this would be the same as doing the above technique but using the structure of leave-one-province-out (LOPO) cross-validation, where the "left out" indices correspond to the test set (and not a specific province). 
+In this case, $K$ includes the combined set of train *and* test points; $i$ the index of the left-out point, so the model is being "fitted" on all but the $i^{\rm th}$ point. She then extended this technique to  leave-one-province-out (LOPO) cross-validation by looking at block matrices corresponding to a specific province/region (the "test set"). However, we both understood this extension to be equivalent to leaving the _entire test set out simultaneously_, which it is not; the LOPO implemenation is just LOO restricted to leaving out a subset of points (those corresponding to a specific province) one at a time. It's a way of stratifying the existing LOO results. If that interpretation is correct, LOPO should be equivalent to taking the vector of LPPDs stemming from LOO, grouping by province, and summing to get the LOPO by province scores.
 
-If I'm right, the $\mu_a$ and $\sigma_a^2$ as calculated using the first expressions above should coincide with them as calculated using the algebraic trick for LOPO... let's check.
-
-## Method 1: Direct calculation of PPD params
+## Direct calculation of PPD params
 
 Let's work out an example with a specific test point:
 
@@ -272,53 +270,9 @@ Stuck here because `ppd_var_a` is negative... Not negative upon re-run? Either:
 
 The best way forward is to write a check for var > 0 and if get gets triggered again, dig deeper. If not, it was likely explanation 1.
 
-## Method 2: Adapting the algebraic trick used for LOPO
+The above computations are likely not the most efficient computationally (specifically the step of inverting a matrix). [Rasmussen and Williams](https://gaussianprocess.org/gpml/chapters/RW.pdf) outline an algorithm using a Cholesky decomp that should be more efficient than direct matrix inversion. Implement that?
 
-```{r}
-# largely copied from compute_lppd_lopo(), just changed subsetting index to match test rows in full dataset
-last_agecurrent <- 21
-vax_dataset <- dplyr::bind_rows(vax_test, vax_train)
-vax_dataset <- vax_dataset %>% filter((age_current<=last_agecurrent) & n_doses!="2+")  # filter out unused data (2-dose & older ages)
-xobs <- vax_dataset %>% pull(age_current)
-prov_values <- extract_province_relation(data=prov_values, vax_dataset=vax_dataset)
-prov_values <- prov_values*l2  # scale province values by l2
-yobs <- prov_values[vax_dataset %>% pull(location)]  # this includes scaling by l2
-zobs <- vax_dataset %>% pull(value)
-centring_term <- mean(LaplacesDemon::logit(zobs))
-logit_zobs_centred <- LaplacesDemon::logit(zobs) - centring_term  # apply logistic transform and centre the data around mean 0
-
-# calculate koo, the covariance matrix of training+test points
-xyobs <- tibble(x=xobs,y=yobs)
-koo <- generate_2Dksqexp_covmat(xyobs,xyobs,fn=k,l=l1,b=b) + 1e-12*diag(nrow(xyobs))  # protect against non-invertibleness
-
-if (is.na(meas_error)) {
-Kinv <- solve(koo)
-} else if (!is.na(meas_error)) {
-errmat <- diag((meas_error^2), nrow(koo))
-Kinv <- solve(koo + errmat)
-}
-Kinvz <- Kinv%*%(logit_zobs_centred)
-
-# pull out blocks for test points
-idx <- 1:nrow(vax_test)
-# block corresponding to held-out province
-Kinv_AA <- Kinv[idx, idx, drop = FALSE]
-Kinvz_A <- Kinvz[idx, , drop = FALSE]
-# observed values for this province
-z_A <- logit_zobs_centred[idx]
-# conditional mean and covariance
-ppd_var <- solve(Kinv_AA)
-ppd_mean <- z_A - ppd_var %*% Kinvz_A
-```
-
-Setting aside the previous issue with `ppd_var_a` being negative, we can at least compare means for the first test point across the two methods:
-
-```{r}
-glue::glue("Method 1 mean: {ppd_mean_a}")
-glue::glue("Method 2 mean: {ppd_mean[1]}")
-```
-
-These are not the same... Let's assume method 2 is correct and move on for now.
+Also though getting the parameters for the PPD at a test point seems like a common task... Is this not discussed in RW?
 
 # Implementation
 
