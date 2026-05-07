@@ -173,7 +173,7 @@ $$
 $$
 
 $$
-\sigma_{a}^{2} = k(x_{a}, x_{a}) + \psi^2I - \underline{k}(x_{a}, \underline{x})^{T} (K + \psi^2I)^{-1} \underline{k}(x_{a},\underline{x}).
+\sigma_{a}^{2} = k(x_{a}, x_{a}) - \underline{k}(x_{a}, \underline{x})^{T} (K + \psi^2I)^{-1} \underline{k}(x_{a},\underline{x}).
 $$
 
 Here, $K$ is the covariance matrix of **training** data (computed with $K_{ij} = k(x_{i},x_{j})$) for a covariance function $k$, and $\psi$ is the measurement error. We test a few covariance functions in selecting model hyperparameters, but one example is the squared exponential:
@@ -263,7 +263,14 @@ r_a <- 0 # the distance between x_a and x_a
 ppd_var_a <- k(0, l1, b) - (first_term%*%second_term%*%first_term)[1,1]
 ```
 
-Stuck here because `ppd_var_a` is negative...
+Stuck here because `ppd_var_a` is negative... Not negative upon re-run? Either:
+
+1. I made a mistake in executing interactively
+1. The above implementation is wrong
+1. There is an edgecase the above method doesn't account for
+1. There is an issue with the input data
+
+The best way forward is to write a check for var > 0 and if get gets triggered again, dig deeper. If not, it was likely explanation 1.
 
 ## Method 2: Adapting the algebraic trick used for LOPO
 
