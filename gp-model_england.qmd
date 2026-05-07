@@ -206,7 +206,7 @@ Let's work out an example with a specific test point:
 
 ```{r}
 # \mu_{a} = \underline{k}(x_{a}, \underline{x})^{\top} (K + \psi^2I)^{-1}\underline{z},
-#\sigma_{a}^{2} = k(x_{a}, x_{a}) + \psi^2I - \underline{k}(x_{a}, \underline{x})^{T} (K + \psi^2I)^{-1} \underline{k}(x_{a},\underline{x}).
+#\sigma_{a}^{2} = k(x_{a}, x_{a}) - \underline{k}(x_{a}, \underline{x})^{T} (K + \psi^2I)^{-1} \underline{k}(x_{a},\underline{x}).
 
 # set hyperparameters
 k <- ksqexp
@@ -258,6 +258,7 @@ third_term <- z_underline
 ppd_mean_a <- (first_term%*%second_term%*%third_term)[1,1]
 
 # PPD at x_a's variance
+#\sigma_{a}^{2} = k(x_{a}, x_{a}) - \underline{k}(x_{a}, \underline{x})^{T} (K + \psi^2I)^{-1} \underline{k}(x_{a},\underline{x}).
 r_a <- 0 # the distance between x_a and x_a
 ppd_var_a <- k(0, l1, b) - (first_term%*%second_term%*%first_term)[1,1]
 ```
