@@ -1,0 +1,125 @@
+---
+title: "LOPO vs LOO: are they equivalent?"
+author:
+  - name: Liza Hadley
+    email: lh667@cam.ac.uk
+editor: visual
+echo: true
+---
+
+## Question
+
+Is `lppd_by_province` from `compute_lppd_lopo` the same as the sum of individual LOO lppd values from `compute_lppd` for the same test points?
+
+**Theoretical expectation: no, for two reasons.**
+
+1. **Different training sets.** LOO leaves out one point at a time, so when predicting point $i$ in province $p$, it still trains on all *other* ages within $p$. LOPO leaves out all of province $p$, so predictions rely entirely on cross-province covariance — no same-province training data is used.
+
+2. **Different predictive distributions.** LOO evaluates a univariate Gaussian for each point independently and sums the log-densities. LOPO evaluates a single *joint* multivariate Gaussian over all $n_p$ held-out points in the province, which accounts for residual within-province correlation after conditioning on the rest of the data.
+
+## Setup
+
+```{r}
+#| label: setup
+library(here)
+source(here::here("results", "setup.R"))
+source(here::here("results", "results_setup.R"))
+```
+
+## Run LOPO
+
+```{r}
+#| label: lopo
+cfg <- model_configs$Gini
+bp  <- best_params$Gini
+
+lopo_result <- compute_lppd_lopo(
+  cfg$vax_dataset,
+  prov_values = cfg$prov_values,
+  k           = get(bp$k_name),
+  l1          = bp$l1,
+  l2          = bp$l2,
+  b           = bp$b,
+  meas_error  = bp$meas_error
+)
+
+lopo_result$lppd_by_province
+```
+
+## Compute per-point LOO lppd values
+
+Replicate the internals of `compute_lppd` to recover individual lppd values (the function currently only returns the total sum).
+
+```{r}
+#| label: loo
+vax_filt <- cfg$vax_dataset %>%
+  filter(age_current >= 5, age_current <= 21, n_doses != "2+")
+
+xobs <- vax_filt %>% pull(age_current)
+prov_vals <- extract_province_relation(cfg$prov_values,
+                                       vax_dataset = cfg$vax_dataset) * bp$l2
+yobs <- prov_vals[vax_filt %>% pull(location)]
+zobs <- vax_filt %>% pull(value)
+centring_term      <- mean(logit(zobs))
+logit_zobs_centred <- logit(zobs) - centring_term
+
+xyobs  <- tibble(x = xobs, y = yobs)
+koo    <- generate_2Dksqexp_covmat(xyobs, xyobs, fn = get(bp$k_name),
+                                   l = bp$l1, b = bp$b) + 1e-12 * diag(nrow(xyobs))
+errmat <- diag(bp$meas_error^2, nrow(koo))
+Kinv   <- solve(koo + errmat)
+KinvZ  <- Kinv %*% logit_zobs_centred
+
+loo_lppds <- numeric(nrow(vax_filt))
+for (i in seq_len(nrow(vax_filt))) {
+  ppd_var_i  <- 1 / Kinv[i, i]
+  ppd_mean_i <- logit_zobs_centred[i] - KinvZ[i] / Kinv[i, i]
+  loo_lppds[i] <- dnorm(logit_zobs_centred[i],
+                        mean = ppd_mean_i, sd = sqrt(ppd_var_i), log = TRUE)
+}
+```
+
+## Compare per province
+
+```{r}
+#| label: comparison
+comparison <- vax_filt %>%
+  mutate(loo_lppd = loo_lppds) %>%
+  group_by(location) %>%
+  summarise(loo_sum   = sum(loo_lppd),
+            n_points  = n(),
+            .groups   = "drop") %>%
+  mutate(
+    lopo      = lopo_result$lppd_by_province[location],
+    diff      = lopo - loo_sum,
+    mean_loo  = loo_sum / n_points,
+    mean_lopo = lopo    / n_points
+  ) %>%
+  arrange(location)
+
+comparison
+```
+
+```{r}
+#| label: totals
+cat("Overall LOO lppd:        ", round(sum(loo_lppds), 3), "\n")
+cat("Overall LOPO lppd:       ", round(lopo_result$lppd, 3), "\n")
+cat("Difference (LOPO - LOO): ", round(lopo_result$lppd - sum(loo_lppds), 3), "\n")
+```
+
+## Visualise
+
+```{r}
+#| label: fig-comparison
+ggplot(comparison, aes(x = location)) +
+  geom_point(aes(y = mean_loo,  colour = "LOO (per point)"),  shape = 16, size = 2) +
+  geom_point(aes(y = mean_lopo, colour = "LOPO (per point)"), shape = 17, size = 2) +
+  scale_colour_manual(values = c("LOO (per point)"  = "#2166ac",
+                                 "LOPO (per point)" = "#d73027"),
+                      name = NULL) +
+  labs(x = "Province", y = "Mean lppd per observation",
+       title = "LOO vs LOPO: mean lppd per observation by province",
+       subtitle = "Gini model — same test points, different training sets & predictive distributions") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom")
+```
