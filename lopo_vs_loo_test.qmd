@@ -7,15 +7,17 @@ editor: visual
 echo: true
 ---
 
+Written by Claude. 
+
 ## Question
 
 Is `lppd_by_province` from `compute_lppd_lopo` the same as the sum of individual LOO lppd values from `compute_lppd` for the same test points?
 
 **Theoretical expectation: no, for two reasons.**
 
-1. **Different training sets.** LOO leaves out one point at a time, so when predicting point $i$ in province $p$, it still trains on all *other* ages within $p$. LOPO leaves out all of province $p$, so predictions rely entirely on cross-province covariance — no same-province training data is used.
+1.  **Different training sets.** LOO leaves out one point at a time, so when predicting point $i$ in province $p$, it still trains on all *other* ages within $p$. LOPO leaves out all of province $p$, so predictions rely entirely on cross-province covariance — no same-province training data is used.
 
-2. **Different predictive distributions.** LOO evaluates a univariate Gaussian for each point independently and sums the log-densities. LOPO evaluates a single *joint* multivariate Gaussian over all $n_p$ held-out points in the province, which accounts for residual within-province correlation after conditioning on the rest of the data.
+2.  **Different predictive distributions.** LOO evaluates a univariate Gaussian for each point independently and sums the log-densities. LOPO evaluates a single *joint* multivariate Gaussian over all $n_p$ held-out points in the province, which accounts for residual within-province correlation after conditioning on the rest of the data.
 
 ## Setup
 
@@ -98,28 +100,4 @@ comparison <- vax_filt %>%
   arrange(location)
 
 comparison
-```
-
-```{r}
-#| label: totals
-cat("Overall LOO lppd:        ", round(sum(loo_lppds), 3), "\n")
-cat("Overall LOPO lppd:       ", round(lopo_result$lppd, 3), "\n")
-cat("Difference (LOPO - LOO): ", round(lopo_result$lppd - sum(loo_lppds), 3), "\n")
-```
-
-## Visualise
-
-```{r}
-#| label: fig-comparison
-ggplot(comparison, aes(x = location)) +
-  geom_point(aes(y = mean_loo,  colour = "LOO (per point)"),  shape = 16, size = 2) +
-  geom_point(aes(y = mean_lopo, colour = "LOPO (per point)"), shape = 17, size = 2) +
-  scale_colour_manual(values = c("LOO (per point)"  = "#2166ac",
-                                 "LOPO (per point)" = "#d73027"),
-                      name = NULL) +
-  labs(x = "Province", y = "Mean lppd per observation",
-       title = "LOO vs LOPO: mean lppd per observation by province",
-       subtitle = "Gini model — same test points, different training sets & predictive distributions") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom")
 ```
