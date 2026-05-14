@@ -2,36 +2,34 @@
 #' 
 #' What is the probability that the fitted model predicts each test (left out) point within a specified error tolerance?
 #' 
-#' @param train A data frame with the training points
-#' @param test A data frame with the test points
+#' @param train A data frame with the training points with columns `age_current` (predictor 1, current age), `location` (predictor 2, categorical location label), and `value` (response, vaccine coverage estimate)
+#' @param test A data frame with the training points with columns `age_current` (predictor 1, current age), `location` (predictor 2, categorical location label), and `value` (response, vaccine coverage estimate)
 #' @param error_tolerance A proportion specifying the acceptable error tolerance on the scale of vaccine coverage. For instance, error_tolerance=0.05 would mean the model's prediction of a vaccine coverage is considered accurate if it is within 5% of the test (true) value.
 #' @inheritParams compute_lppd2
+#' @param prov_values String denoting which province-relation dataset to use in converting categorical location labels to numeric measure
 #' @return An accuracy (as a proportion/probability) for each test point
-compute_accuracy <- function(train, test, error_tolerance = 0.05, last_agecurrent = 21, prov_values, k = ksqexp, l1 = NA, l2 = NA, b = 1, meas_error = NA) {
-  ppd_inputs <- prepare_ppd_inputs(vax_dataset = dplyr::bind_rows(test, train), last_agecurrent = last_agecurrent, prov_values = prov_values, k = k, l1 = l1, l2 = l2, b = b, meas_error = meas_error)
+compute_accuracy <- function(train, test, error_tolerance = 0.05, last_agecurrent = 21, prov_values = "GDP", k = ksqexp, l1 = NA, l2 = NA, b = 1, meas_error = NA) {
+  # transform categorical y variable into numeric and incorporate l2 scaling
+  all <- dplyr::bind_rows(test, train)
+  prov_values <- extract_province_relation(prov_values, vax_dataset=all)*l2
+  yunobs <- prov_values[all$location[1:nrow(test)]]
+  yobs <- prov_values[all$location[(nrow(test)+1):nrow(all)]]
 
-  # compute parameters of the ppd at each test point (as a normal over logit-transformed and standardized vaccine coverage values)
-  if (is.na(meas_error)) {
-    Kinv <- solve(ppd_inputs$koo)
-  } else if (!is.na(meas_error)) {
-    errmat <- diag((meas_error^2), nrow(ppd_inputs$koo))
-    Kinv <- solve(ppd_inputs$koo + errmat)
-  }
-  Kinvz <- Kinv%*%(ppd_inputs$logit_zobs_centred)
-  idx <- 1:nrow(test)
-  # block corresponding to test points
-  Kinv_AA <- Kinv[idx, idx, drop = FALSE]
-  Kinvz_A <- Kinvz[idx, , drop = FALSE]
-  # observed values for test points
-  z_A <- logit_zobs_centred[idx]
-  # conditional mean and covariance
-  ppd_var <- solve(Kinv_AA)
-  ppd_mean <- z_A - ppd_var %*% Kinvz_A
+  fit <- fit_GP(
+    # unobserved points
+    xygrid = tibble::tibble(x = test$age_current, y = yunobs), 
+    # observed points
+    xobs = train$age_current,
+    yobs = yobs,
+    zobs = train$value,
+    k = k, l1 = l1, b = b, meas_error = meas_error)
 
   ppd_params <- list(
-    ppd_means = ppd_mean,
-    ppd_vars = diag(ppd_var) # pull diagonal elements
+    ppd_means = fit$post_mean,
+    ppd_vars = diag(fit$post_covmat) # pull diagonal elements
   )
+
+  return(ppd_params)
  
   # create target interval
   # cap vaccine coverage between 0 and 1

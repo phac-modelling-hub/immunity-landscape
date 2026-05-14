@@ -122,7 +122,7 @@ z_{\text{true},a} \mid x_a, y_a, \mathcal D
 where \(\mu_a\) is the posterior predictive mean and \(\sigma_a^2\) represents
 model‑based uncertainty about the true response.
 
-IP: these value can be retrieved from `compute_posterior2D()`, setting `xvals` and `yvals` to the predictor values for the test points, before the call to `draw_from_rmnorm()`... but can this be done "in bulk" (for all test points at once) or would that yield parameters for just the joint predictive density. How can we marginalize for each test point? Or should we just run this procedure separately for each test point? Maybe see formulas in [Retrieving PPD parameters at a test point](#retrieving-ppd-parameters-at-a-test-point) instead?
+IP: Can these values can be retrieved from `compute_posterior2D()`, setting `xvals` and `yvals` to the predictor values for the test points, before the call to `draw_from_rmnorm()`? No, I don't think so. The above is a marginal probability and `compute_posterior2D()` yields parameters for the joint probability. I think we should instead just use the formulas in [Retrieving PPD parameters at a test point](#retrieving-ppd-parameters-at-a-test-point) sequentially on the test points.
 
 ### Measurement error model
 
@@ -320,9 +320,7 @@ $$
 k(x_{i}, x_{j}) = b \exp \left( -\frac{(x_{i} - x_{j})^2}{2l^2} \right)
 $$
 
-This comes from Rasmussen and Williams (2005), equations 2.25 and 2.26.
-
-Let's work out an example with a specific test point.
+This comes from Rasmussen and Williams (2005), equations 2.25 and 2.26, which we can work out for a specific test point as follows:
 
 ```{r}
 # \mu_{a} = \underline{k}(x_{a}, \underline{x})^{\top} (K + \psi^2I)^{-1}\underline{z},
@@ -383,18 +381,40 @@ r_a <- 0 # the distance between x_a and x_a
 ppd_var_a <- k(0, l1, b) - (first_term%*%second_term%*%first_term)[1,1]
 ```
 
-Stuck here because `ppd_var_a` is negative... Not negative upon re-run? Either:
+We could compare this to the bulk computation of means and covariances in `compute_posterior2D()` to check that whether they match:
 
-1. I made a mistake in executing interactively
-1. The above implementation is wrong
-1. There is an edgecase the above method doesn't account for
-1. There is an issue with the input data
+```{r}
+# test point
+xygrid <- tibble::tibble(
+    x = x_a_x,
+    y = x_a_y
+)
 
-The best way forward is to write a check for var > 0 and if get gets triggered again, dig deeper. If not, it was likely explanation 1.
+fit <- fit_GP(xygrid = xygrid, xobs = x_underline_x, yobs = x_underline_y, zobs = vax_train$value, k = k, l1 = l1, b = b, meas_error = meas_error)
 
-The above computations are likely not the most efficient computationally (specifically the step of inverting a matrix). [Rasmussen and Williams](https://gaussianprocess.org/gpml/chapters/RW.pdf) outline an algorithm using a Cholesky decomp that should be more efficient than direct matrix inversion.
+waldo::compare(fit$post_mean[1,1], ppd_mean_a)
+waldo::compare(fit$post_covmat[1,1], ppd_var_a)
+```
 
-IP: Implement that. See Algorithm 2.1 in Rasmussen and Williams (2005).
+Very close! Difference is likley from the perturbation on `koo` to protect against non-invertibleness... This should go away once the Cholesky decomposition method of inverting `koo` is implemented.
+
+Compare to new implementation in `compute_accuracy()`:
+
+```{r}
+ppd_params <- compute_accuracy(
+    vax_train,
+    vax_test,
+    prov_values = "UK-Gini",
+    k = k,
+    l1 = l1,
+    l2 = l2,
+    b = b,
+    meas_error = meas_error
+)
+
+waldo::compare(ppd_params$ppd_means[1], ppd_mean_a)
+waldo::compare(ppd_params$ppd_vars[1], ppd_var_a)
+```
 
 # Experiment implementation
 
@@ -445,7 +465,7 @@ meas_error <- fit_opt$meas_error
 
 # to use compute_lppd() equations, need to feed in vax_train _and_ vax_test, then only do the for loop stuff on the indices corresponding with vax_test (add those indices above!)
 acc <- compute_accuracy(
-    train = vax_train, 
+    train = vax_train |> transmute(x = age_current, y = ), 
     test = vax_test,
     error_tolerance = error_tolerance,
     last_agecurrent = last_agecurrent,

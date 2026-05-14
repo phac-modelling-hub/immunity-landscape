@@ -19,8 +19,30 @@
 #' @param b optional function scale determining the output variance for k
 #' @param meas_error if specified, measurement error is included (numeric)
 compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA, ndrws=50, prov_levels, b=1, meas_error=NA) {
+
+  fit <- fit_GP(xvals, yvals, xobs, yobs, zobs, k=k, l1=l1, b=b, meas_error=meas_error)
+
+  # draw from the posterior distribution
+  draw_from_rmnorm(
+    n = ndrws,
+    mean = fit$post_mean,
+    varcov = fit$post_covmat + 1e-6*diag(nrow(fit$post_covmat)),
+    xvals = xvals,
+    yvals = yvals,
+    prov_levels = prov_levels
+  ) |>
+    dplyr::rename(post2D = value) |>
+    dplyr::mutate(post2D_constrained = LaplacesDemon::invlogit(post2D + centring_term)) |>
+    dplyr::relocate(post2D, .after = y_label)
+}
+
+#' Fit a Gaussian Process model
+#' 
+#' @param xygrid tibble with unobserved xy values (in case an exhaustive grid is not desired); if NULL, use `xvals` and `yvals` to create a grid of all possible combinations of the two coordinates
+#' @inheritParams compute_posterior2D
+fit_GP <- function(xvals, yvals, xygrid = NULL, xobs, yobs, zobs, k=ksqexp, l1=NA, b=1, meas_error=NA){
   # calculate covariances between unobserved and observed
-  xygrid <- tidyr::expand_grid(x=xvals, y=yvals)
+  if(is.null(xygrid)) xygrid <- tidyr::expand_grid(x=xvals, y=yvals)
   xyobs <- tibble(x=xobs,y=yobs)
   
   kuo <- generate_2Dksqexp_covmat(xygrid,xyobs,fn=k,l=l1,b=b)  # 'relationship' pairwise between unobserved and observed
@@ -39,17 +61,9 @@ compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA,
     post_mean <- kuo%*%solve(koo + errmat)%*%(logit_zobs_centred)  # conditional mean
     post_covmat <- kuu - (kuo%*%solve(koo + errmat)%*%kou)  # conditional variance
   }
-  
-  # draw from the posterior distribution
-  draw_from_rmnorm(
-    n = ndrws,
-    mean = post_mean,
-    varcov = post_covmat + 1e-6*diag(nrow(post_covmat)),
-    xvals = xvals,
-    yvals = yvals,
-    prov_levels = prov_levels
-  ) |>
-    dplyr::rename(post2D = value) |>
-    dplyr::mutate(post2D_constrained = LaplacesDemon::invlogit(post2D + centring_term)) |>
-    dplyr::relocate(post2D, .after = y_label)
+
+  list(
+    post_mean = post_mean,
+    post_covmat = post_covmat
+  )
 }
