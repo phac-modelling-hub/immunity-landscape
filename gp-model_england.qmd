@@ -122,7 +122,11 @@ z_{\text{true},a} \mid x_a, y_a, \mathcal D
 where \(\mu_a\) is the posterior predictive mean and \(\sigma_a^2\) represents
 model‑based uncertainty about the true response.
 
-IP: Can these values can be retrieved from `compute_posterior2D()`, setting `xvals` and `yvals` to the predictor values for the test points, before the call to `draw_from_rmnorm()`? No, I don't think so. The above is a marginal probability and `compute_posterior2D()` yields parameters for the joint probability. I think we should instead just use the formulas in [Retrieving PPD parameters at a test point](#retrieving-ppd-parameters-at-a-test-point) sequentially on the test points.
+IP: I have now verified that these parameters can be retrieved "in bulk" (across a set of test points) from `fit_GP2()`,  a new function that repackages a portion of code used in `compute_posterior2D()`---the stuff before the call to `draw_from_rmnorm()`. We just need to set `xygrid` to be the set of predictor coordinates for each test point. We want the vector of means and the diagonal of the covariance matrix; while the full vector of means and covariance matrix parameterize the **joint** posterior, because of the marginalizations property of Normals, the vector of means and the diagonal of the covariance matrix parameterize the set of **marginal** posteriors (one per test point). We actually do want marginal posteriors instead of joint for our accuracy calculation because the chance of simultaneously observing all test points in the model approaches zero as the number of test points increases (too high-dimensional!)
+
+IP: I originally implemented `fit_GP()` by repackaging code from `compute_posterior2D()` but have since re-implemented using a Cholesky decomposition to invert the covariance matrix of observed vs observed since it is a symmetric positive definite matrix. The reimplementation is `fit_GP2()`. I kept both implementations around to make unit testing between them easy.
+
+IP: Note that the equations used in `fit_GP()` and `fit_GP2()` represent vector versions of the equations from [Liza's notes](https://github.com/phac-modelling-hub/immunity-landscape/issues/4); that is, they work for a vector of tests points, not just a single one.
 
 ### Measurement error model
 
@@ -296,126 +300,6 @@ vax_train <- vax_england_subset |>
 vax_test <- anti_join(vax_england_subset, vax_train)
 ```
 
-# Retrieving PPD parameters at a test point
-
-From [Liza's notes](https://github.com/phac-modelling-hub/immunity-landscape/issues/4), the PPD (with measurement error) at a test point $x_a$ with training points $(\underline{x}, \underline{z})$ is given by
-
-$$
-\mathcal{P} (z_{a} | x_{a}, \underline{x}, \underline{z}) \sim \mathcal{N}(\mu_{a}, \sigma_{a}^{2})
-$$
-
-where 
-
-$$
-\mu_{a} = \underline{k}(x_{a}, \underline{x})^{\top} (K + \psi^2I)^{-1}\underline{z},
-$$
-
-$$
-\sigma_{a}^{2} = k(x_{a}, x_{a}) - \underline{k}(x_{a}, \underline{x})^{T} (K + \psi^2I)^{-1} \underline{k}(x_{a},\underline{x}).
-$$
-
-Here, $K$ is the covariance matrix of **training** data (computed with $K_{ij} = k(x_{i},x_{j})$) for a covariance function $k$, and $\psi$ is the measurement error. We test a few covariance functions in selecting model hyperparameters, but one example is the squared exponential:
-
-$$
-k(x_{i}, x_{j}) = b \exp \left( -\frac{(x_{i} - x_{j})^2}{2l^2} \right)
-$$
-
-This comes from Rasmussen and Williams (2005), equations 2.25 and 2.26, which we can work out for a specific test point as follows:
-
-```{r}
-# \mu_{a} = \underline{k}(x_{a}, \underline{x})^{\top} (K + \psi^2I)^{-1}\underline{z},
-# \sigma_{a}^{2} = k(x_{a}, x_{a}) - \underline{k}(x_{a}, \underline{x})^{T} (K + \psi^2I)^{-1} \underline{k}(x_{a},\underline{x}).
-
-# set hyperparameters
-k <- ksqexp
-l1 <- 2.5
-l2 <- 2
-b <- 0.5
-meas_error <- 0.05
-
-# observed values
-xobs <- vax_train$age_current
-prov_values <- extract_province_relation("UK-Gini", vax_dataset = vax_train)
-prov_values <- prov_values * l2
-yobs <- prov_values[vax_train %>% dplyr::pull(location)]
-x_underline_x <- xobs # to match notation in equation above
-x_underline_y <- yobs # to match notation in equation above
-zobs <- vax_train$value
-centring_term <- mean(LaplacesDemon::logit(zobs))
-logit_zobs_centred <- LaplacesDemon::logit(zobs) - centring_term
-z_underline <- logit_zobs_centred
-
-# test values
-x_a_x <- vax_test$age_current[1] # x component of x_a (actually 2D coordinate)
-prov_values <- extract_province_relation("UK-Gini", vax_dataset = vax_test)
-prov_values <- prov_values * l2
-y_test <- prov_values[vax_test %>% dplyr::pull(location)]
-x_a_y <- y_test[[1]]
-# test interval
-# error_tol <- 0.02
-# z_a <- LaplacesDemon::logit(vax_test$value[1]) - centring_term
-# z_lwr <- z_a - error_tol/2
-# z_upr <- z_a + error_tol/2
-
-# mean's first term: \underline{k}(x_{a}, \underline{x})^{\top}
-first_term <- numeric(nrow(vax_train))
-for (i in seq_len(nrow(vax_train))){
-    r <- sqrt((x_a_x - x_underline_x[i])^2 + (x_a_y - x_underline_y[i])^2)
-    first_term[i] <- k(r, l1, b) # l2 included in y scaling
-}
-
-# mean's second term: (K + \psi^2I)^{-1}
-xyobs <- tibble::tibble(x = xobs, y = yobs)
-K <- generate_2Dksqexp_covmat(xyobs, xyobs, fn = k, l = l1, b = b) + 1e-12 * diag(nrow(xyobs))
-second_term <- solve(K + diag(meas_error^2, nrow(K)))
-
-# mean's third term: \underline{z} 
-third_term <- z_underline
-
-# PPD at x_a's
-ppd_mean_a <- (first_term%*%second_term%*%third_term)[1,1]
-
-# PPD at x_a's variance
-#\sigma_{a}^{2} = k(x_{a}, x_{a}) - \underline{k}(x_{a}, \underline{x})^{T} (K + \psi^2I)^{-1} \underline{k}(x_{a},\underline{x}).
-r_a <- 0 # the distance between x_a and x_a
-ppd_var_a <- k(0, l1, b) - (first_term%*%second_term%*%first_term)[1,1]
-```
-
-We could compare this to the bulk computation of means and covariances in `compute_posterior2D()` to check that whether they match:
-
-```{r}
-# test point
-xygrid <- tibble::tibble(
-    x = x_a_x,
-    y = x_a_y
-)
-
-fit <- fit_GP(xygrid = xygrid, xobs = x_underline_x, yobs = x_underline_y, zobs = vax_train$value, k = k, l1 = l1, b = b, meas_error = meas_error)
-
-waldo::compare(fit$post_mean[1,1], ppd_mean_a)
-waldo::compare(fit$post_covmat[1,1], ppd_var_a)
-```
-
-Very close! Difference is likley from the perturbation on `koo` to protect against non-invertibleness... This should go away once the Cholesky decomposition method of inverting `koo` is implemented.
-
-Compare to new implementation in `compute_accuracy()`:
-
-```{r}
-ppd_params <- compute_accuracy(
-    vax_train,
-    vax_test,
-    prov_values = "UK-Gini",
-    k = k,
-    l1 = l1,
-    l2 = l2,
-    b = b,
-    meas_error = meas_error
-)
-
-waldo::compare(ppd_params$ppd_means[1], ppd_mean_a)
-waldo::compare(ppd_params$ppd_vars[1], ppd_var_a)
-```
-
 # Experiment implementation
 
 Fit the model to the subsampled data:
@@ -425,7 +309,7 @@ Fit the model to the subsampled data:
 
 rerun <- FALSE
 if(rerun){
-    fit <- select_GP(
+    scores <- select_GP(
         vax_train, 
         prov_values="UK-Gini", 
         k_list=list(ksqexp=ksqexp, kexp=kexp),  
@@ -437,14 +321,20 @@ if(rerun){
 
     # temp save since the above takes a while to run
     if(!dir.exists(here::here("results", "tmp"))) dir.create(here::here("results", "tmp"))
-
+    fit <- list(
+        scores = scores,
+        train = vax_train,
+        test = vax_test,
+        prov_values = prov_values,
+        last_agecurrent = last_agecurrent
+    )
     saveRDS(fit, here::here("results", "tmp", "fit_england_gini.rds"))
 } else {
     fit <- readRDS(here::here("results", "tmp", "fit_england_gini.rds"))
 }
 
 # retreive optimal hyperparameters
-fit_opt <- fit |> arrange(desc(lppd_exact)) |> slice(1)
+fit_opt <- fit$scores |> arrange(desc(lppd_exact)) |> slice(1)
 ```
 
 ## Prototype
@@ -455,26 +345,18 @@ IP: everything below needs to be updated, starting with the definition of `compu
 #| label: compute_accuracy
 
 error_tolerance <- 0.05 # 5%
-last_agecurrent <- 21
-prov_values <- "UK-Gini"
-k <- get(fit_opt$k_name)
-l1 <- fit_opt$l1
-l2 <- fit_opt$l2
-b <- fit_opt$b
-meas_error <- fit_opt$meas_error
 
-# to use compute_lppd() equations, need to feed in vax_train _and_ vax_test, then only do the for loop stuff on the indices corresponding with vax_test (add those indices above!)
 acc <- compute_accuracy(
-    train = vax_train |> transmute(x = age_current, y = ), 
-    test = vax_test,
+    train = fit$train, 
+    test = fit$test,
     error_tolerance = error_tolerance,
-    last_agecurrent = last_agecurrent,
-    prov_values = prov_values,
-    k = k,
-    l1 = l1,
-    l2 = l2,
-    b = b,
-    meas_error = meas_error
+    last_agecurrent = fit$last_agecurrent,
+    prov_values = fit$prov_values,
+    k = get(fit_opt$k_name),
+    l1 = fit_opt$l1,
+    l2 = fit_opt$l2,
+    b = fit_opt$b,
+    meas_error = fit_opt$meas_error
 )
 ```
 

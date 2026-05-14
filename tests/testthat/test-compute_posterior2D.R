@@ -38,7 +38,7 @@ test_that("original and Cholesky implementations of GP fitting are close enough"
   )
 
   # check means
-  expect_equal(fit_new$post_mean, fit_old$post_mean, tolerance = 1e-4)
+  expect_equal(fit_new$post_mean, fit_old$post_mean, tolerance = 1e-4) # won't be exactly equal because old method bumps covariance matrix of observed vs observed by 1e-6 to protect against non-invertibleness
   # check covariances
-  expect_equal(fit_new$post_covmat, fit_old$post_covmat, tolerance = 1e-5)
+  expect_equal(fit_new$post_covmat, fit_old$post_covmat, tolerance = 1e-5) # don't need as low of a tolerance since (co)variances are squared
 })
