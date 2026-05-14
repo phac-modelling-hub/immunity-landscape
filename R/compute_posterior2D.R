@@ -20,7 +20,7 @@
 #' @param meas_error if specified, measurement error is included (numeric)
 compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA, ndrws=50, prov_levels, b=1, meas_error=NA) {
 
-  fit <- fit_GP(xvals, yvals, xobs, yobs, zobs, k=k, l1=l1, b=b, meas_error=meas_error)
+  fit <- fit_GP2(xvals, yvals, xobs, yobs, zobs, k=k, l1=l1, b=b, meas_error=meas_error)
 
   # draw from the posterior distribution
   draw_from_rmnorm(
@@ -61,6 +61,37 @@ fit_GP <- function(xvals, yvals, xygrid = NULL, xobs, yobs, zobs, k=ksqexp, l1=N
     post_mean <- kuo%*%solve(koo + errmat)%*%(logit_zobs_centred)  # conditional mean
     post_covmat <- kuu - (kuo%*%solve(koo + errmat)%*%kou)  # conditional variance
   }
+
+  list(
+    post_mean = post_mean,
+    post_covmat = post_covmat
+  )
+}
+
+#' Fit a Gaussian Process model
+#' 
+#' Leverage Cholesky decomposition for efficient computation
+#' 
+#' @param xygrid tibble with unobserved xy values (in case an exhaustive grid is not desired); if NULL, use `xvals` and `yvals` to create a grid of all possible combinations of the two coordinates
+#' @inheritParams compute_posterior2D
+fit_GP2 <- function(xvals, yvals, xygrid = NULL, xobs, yobs, zobs, k=ksqexp, l1=NA, b=1, meas_error=NA){
+  # calculate covariances between unobserved and observed
+  if(is.null(xygrid)) xygrid <- tidyr::expand_grid(x=xvals, y=yvals)
+  xyobs <- tibble(x=xobs,y=yobs)
+  
+  kuo <- generate_2Dksqexp_covmat(xygrid,xyobs,fn=k,l=l1,b=b)  # 'relationship' pairwise between unobserved and observed
+  kou <- generate_2Dksqexp_covmat(xyobs,xygrid,fn=k,l=l1,b=b)  # 'relationship' pairwise between observed and unobserved
+  koo <- generate_2Dksqexp_covmat(xyobs,xyobs,fn=k,l=l1,b=b)
+  kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=k,l=l1,b=b)
+
+  # calculate posterior mean and posterior cov matrix
+  centring_term <- mean(LaplacesDemon::logit(zobs))
+  logit_zobs_centred <- LaplacesDemon::logit(zobs) - centring_term  # use the logistic-transformed data centred around mean 0
+
+  if (is.na(meas_error)) meas_error <- 0
+  errmat <- diag((meas_error^2), nrow(koo))
+  post_mean <- kuo%*%chol2inv(chol(koo + errmat))%*%(logit_zobs_centred)  # conditional mean
+  post_covmat <- kuu - (kuo%*%chol2inv(chol(koo + errmat))%*%kou)  # conditional variance
 
   list(
     post_mean = post_mean,

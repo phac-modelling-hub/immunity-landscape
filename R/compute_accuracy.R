@@ -15,7 +15,7 @@ compute_accuracy <- function(train, test, error_tolerance = 0.05, last_agecurren
   yunobs <- prov_values[all$location[1:nrow(test)]]
   yobs <- prov_values[all$location[(nrow(test)+1):nrow(all)]]
 
-  fit <- fit_GP(
+  fit <- fit_GP2(
     # unobserved points
     xygrid = tibble::tibble(x = test$age_current, y = yunobs), 
     # observed points
