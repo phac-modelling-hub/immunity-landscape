@@ -95,6 +95,7 @@ fit_GP2 <- function(xvals, yvals, xygrid = NULL, xobs, yobs, zobs, k=ksqexp, l1=
 
   list(
     post_mean = post_mean,
-    post_covmat = post_covmat
+    post_covmat = post_covmat,
+    centering_term = centring_term
   )
 }
