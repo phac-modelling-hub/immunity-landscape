@@ -23,15 +23,6 @@ select_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_
   
   # compute lppd for all combinations of parameters
   combinations <- tidyr::expand_grid(k_tibble, l1, l2, b, meas_error)  # functions need to be protected in a list
-  # combinations <- combinations %>% mutate(lppd_estimate = pmap_dbl(list(k, l1, l2, b), ~ estimate_lppd(  # method 1: estimate (l)ppd
-  #   vax_dataset = vax_dataset,
-  #   last_agecurrent = last_agecurrent,
-  #   prov_values = prov_values,
-  #   ndrws = ndrws,
-  #   k = ..1,
-  #   l1 = ..2,
-  #   l2 = ..3,
-  #   b = ..4)))
   combinations <- combinations %>% mutate(lppd_exact = pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd(  # method 2: compute lppd analytically
     vax_dataset = vax_dataset,
     first_agecurrent = first_agecurrent,
@@ -42,19 +33,7 @@ select_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_
     l2 = ..3,
     b = ..4,
     meas_error = ..5))) %>%
-    # mutate(lppd_LOPO = pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd_lopo(  # compute lppd from leave-one-province-out CV
-    #   vax_dataset = vax_dataset,
-    #   first_agecurrent = first_agecurrent,
-    #   last_agecurrent = last_agecurrent,
-    #   prov_values = prov_values,
-    #   k = ..1,
-    #   l1 = ..2,
-    #   l2 = ..3,
-    #   b = ..4,
-    #   meas_error = ..5)$lppd)) %>%
     select(-k) %>% mutate(model_no = row_number(), .before = 1)
-  
-  # optimal_model <- combinations %>% slice_max(lppd_exact) %>% select(k_name, l1, l2, b)
-  # print(c("Optimal hyperparameters:", optimal_model))
+
   return(combinations)
 }
