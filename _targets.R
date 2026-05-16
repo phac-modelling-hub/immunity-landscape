@@ -9,7 +9,7 @@ library(crew)
 
 targets::tar_option_set(
   packages = c("dplyr", "ggplot2", "readr", "purrr", "tibble"),
-  controller = crew_controller_local(workers = parallel::detectCores() - 1)
+  controller = crew_controller_local(workers = parallel::detectCores())
 )
 
 # source all functions in R/
@@ -19,7 +19,7 @@ invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
 
 list(
   # pipeline settings
-  tar_target(n_reps, 2), # number of experimental reps
+  tar_target(n_reps, 40), # number of experimental reps
   tar_target(error_tolerance, 0.05), # tolerable error in the model's vaccine coverage (%) prediction, as a proportion (two-sided)
   tar_target(prov_relation, "UK-Gini"), # province relation metric to use
 
