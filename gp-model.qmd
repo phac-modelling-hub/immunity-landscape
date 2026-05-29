@@ -653,7 +653,7 @@ country_pairs2 <- expand_grid(id1 = vax_dataset4$id, id2 = vax_dataset4$id) %>%
                                                        age_gap == 3 ~ "3 years apart",
                                                        age_gap > 3 ~ ">3 years apart",
                                                        age_gap == 0 ~ "0 years apart"))
-ggplot(country_pairs2, aes(x = diff*100, fill = gap_group)) + geom_histogram() + 
+ggplot(country_pairs2, aes(x = diff*100, fill = gap_group)) + geom_histogram() +
   labs(title = "Pairwise Coverage Differences — All provincial data (2 dose)")
 ```
 
