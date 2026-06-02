@@ -27,14 +27,14 @@ fig_w <- 7.29   # inches
 fig_h <- 4.51   # inches
 
 # ── Manuscript ggplot theme ────────────────────────────────────────────────────
-theme_ms <- theme_minimal(base_size = 12) +
+theme_ms <- theme_grey(base_size = 11) +
   theme(
-    strip.text       = element_text(size = 10, face = "bold"),
-    axis.title       = element_text(size = 12),
-    axis.text        = element_text(size = 10),
+    strip.text.x       = element_text(size = 9),
+    axis.title       = element_text(size = 16),
+    axis.text        = element_text(size = 12),
     legend.title     = element_text(size = 11),
     legend.text      = element_text(size = 10),
-    plot.title       = element_text(size = 13, face = "bold"),
+    plot.title       = element_text(size = 20),
     panel.grid.minor = element_blank()
   )
 theme_set(theme_ms)

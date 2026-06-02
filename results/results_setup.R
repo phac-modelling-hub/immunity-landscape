@@ -1,6 +1,6 @@
 # Generates all model results needed for manuscript figures and tables.
 # Source setup.R first, then run this file (or set rerun=TRUE in ms_figs_tables.qmd).
-# Each output is saved to its own file in results/, overwriting existing outputs.
+# Each output is saved to its own file in results/, *overwriting existing outputs*.
 
 # ── Model framework definitions ────────────────────────────────────────────────
 # l2_lim: plausible range for l2 used to filter the model selection grid before
@@ -12,25 +12,25 @@ model_configs <- list(
   Gini = list(
     prov_values = "Gini",
     vax_dataset = vax_clean,
-    meas_error  = 0.01,
+    meas_error  = 0.05,
     l2_lim      = l2_lim$Gini,
-    csv         = "GPcombinations_Gini_witherror.csv",
+    model_selection_csv         = "GPcombinations_Gini_witherror.csv",
     title_lab   = "Gini"
   ),
   LI = list(
     prov_values = "low_income_families",
     vax_dataset = vax_cleanLI,
-    meas_error  = 0.01,
+    meas_error  = 0.05,
     l2_lim      = l2_lim$LI,
-    csv         = "GPcombinations_lowincome_witherror.csv",
+    model_selection_csv         = "GPcombinations_lowincome_witherror.csv",
     title_lab   = "Low-income"
   ),
   VH = list(
     prov_values = "vaccine_hesitancy",
     vax_dataset = vax_cleanVH,
-    meas_error  = 0.01,
+    meas_error  = 0.05,
     l2_lim      = l2_lim$VH,
-    csv         = "GPcombinations_vaccinehesitancy_witherror.csv",
+    model_selection_csv         = "GPcombinations_vaccinehesitancy_witherror.csv",
     title_lab   = "Vaccine hesitancy"
   )
 )
@@ -51,21 +51,21 @@ if (rerun_select_GP == T) {
       b           = c(0.5, 1, 1.5),
       meas_error  = c(0.5, 0.1, 0.05, 0.01, 0)
     ) %>%
-      readr::write_csv(here::here("results", cfg$csv))
+      readr::write_csv(here::here("results", cfg$model_selection_csv))
   }
 }
 
 # ── 2. Extract best params (k, l1, l2, b from max lppd_exact within l2_lim) ───
 best_params <- imap(model_configs, function(cfg, nm) {
-  best <- read_csv(here::here("results", cfg$csv), show_col_types = FALSE) %>%
-    filter(l2 >= cfg$l2_lim[1], l2 <= cfg$l2_lim[2]) %>%
+  best <- read_csv(here::here("results", cfg$model_selection_csv), show_col_types = FALSE) %>%
+    filter(l2 >= cfg$l2_lim[1], l2 <= cfg$l2_lim[2]) %>% filter(meas_error == cfg$meas_error) %>%  # meas_error is chosen separately 
     slice_max(lppd_exact, n = 1)
   list(
     k_name     = best$k_name,
     l1         = best$l1,
     l2         = best$l2,
     b          = best$b,
-    meas_error = cfg$meas_error   # chosen separately, not from CSV
+    meas_error = best$meas_error  #cfg$meas_error   
   )
 })
 
@@ -74,7 +74,7 @@ cat("Running Canada posteriors...\n")
 for (nm in names(model_configs)) {
   cfg <- model_configs[[nm]]
   bp  <- best_params[[nm]]
-  cat(" ", nm, sprintf("(k=%s l1=%.2f l2=%.2f b=%.2f psi=%.2f)\n",
+  cat(" ", nm, sprintf("(k=%s l1=%.2f l2=%.1f b=%.1f psi=%.2f)\n",
                        bp$k_name, bp$l1, bp$l2, bp$b, bp$meas_error))
   run_GP(
     vax_dataset = cfg$vax_dataset,
@@ -161,9 +161,9 @@ vax_noadults %>%
 # 
 # england_model_configs <- list(
 #   Gini = list(prov_values = "UK-Gini",               meas_error = 0.05,
-#               csv = "GPcombinations_englandGini_witherror.csv", title_lab = "Gini"),
+#               model_selection_csv = "GPcombinations_englandGini_witherror.csv", title_lab = "Gini"),
 #   LI   = list(prov_values = "UK-low_income_families", meas_error = 0.05,
-#               csv = "GPcombinations_englandLI_witherror.csv",   title_lab = "Low-income")
+#               model_selection_csv = "GPcombinations_englandLI_witherror.csv",   title_lab = "Low-income")
 # )
 # 
 # cat("Running England model selection...\n")
@@ -180,11 +180,11 @@ vax_noadults %>%
 #     b           = c(0.5, 1, 1.5),
 #     meas_error  = c(0.5, 0.1, 0.05, 0.01, 0)
 #   ) %>%
-#     readr::write_csv(here::here("results", ecfg$csv))
+#     readr::write_csv(here::here("results", ecfg$model_selection_csv))
 # }
 # 
 # england_best_params <- imap(england_model_configs, function(ecfg, nm) {
-#   best <- read_csv(here::here("results", ecfg$csv), show_col_types = FALSE) %>%
+#   best <- read_csv(here::here("results", ecfg$model_selection_csv), show_col_types = FALSE) %>%
 #     slice_max(lppd_exact, n = 1)
 #   list(k_name = best$k_name, l1 = best$l1, l2 = best$l2, b = best$b,
 #        meas_error = ecfg$meas_error)
