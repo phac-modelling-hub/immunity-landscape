@@ -21,7 +21,7 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
     geom_point(data = obs_df,
                aes(x = age_current, y = value * 100, shape = n_doses),
                colour = "red") +
-    scale_shape_manual(values = shapes_doses, name = "Doses") +
+    scale_shape_manual(values = shapes_doses, name = NULL, labels = c("1+" = "1+ dose (provincial)")) +
     scale_x_continuous(name = "Current age", limits = c(first_agecurrent, last_agecurrent),
                        breaks = seq(5, 21, by = 5)) +
     scale_y_continuous(name = "Vaccine coverage (%)", limits = c(0, 100)) +
@@ -37,7 +37,7 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
     if (!is.null(cnics_df)) {
       cnics_df <- cnics_df %>%
         mutate(y_label    = factor(location, levels = levels(post2D$y_label)),
-               point_type = "cNICS")
+               point_type = "1+ dose (cNICS)")
       overlay_df <- bind_rows(overlay_df, cnics_df)
     }
     
