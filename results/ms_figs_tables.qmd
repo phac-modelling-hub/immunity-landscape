@@ -28,6 +28,9 @@ fig_data_plot
 ```{r}
 #| label: fig-posterior-draws
 source(here::here("results", "fig-posterior-draws.R"))
+fig_posterior_Gini
+fig_posterior_LI
+fig_posterior_VH
 fig_posterior_combined
 fig_posterior_Gini_unobs
 ```
