@@ -35,6 +35,9 @@ model_configs <- list(
   )
 )
 
+first_agecurrent <- 5
+last_agecurrent <- 21
+
 # ── 1. Model selection (overwrites existing GPcombinations CSVs) ───────────────
 rerun_select_GP <- F
 if (rerun_select_GP == T) {
@@ -65,7 +68,7 @@ best_params <- imap(model_configs, function(cfg, nm) {
     l1         = best$l1,
     l2         = best$l2,
     b          = best$b,
-    meas_error = best$meas_error  #cfg$meas_error   
+    meas_error = best$meas_error  # equal to cfg$meas_error   
   )
 })
 
@@ -89,31 +92,31 @@ for (nm in names(model_configs)) {
     saveRDS(here::here("results", paste0("posterior_", nm, ".rds")))
 }
 
-# ── 4. LOPO comparisons (saved as lopo_<name>.rds) ────────────────────────────
-cat("Running LOPO comparisons...\n")
+# ── 4. LOOP comparisons (saved as lopo_<name>.rds) ────────────────────────────
+cat("Running LOOP comparisons...\n")
 for (nm in names(model_configs)) {
   cfg  <- model_configs[[nm]]
   bp   <- best_params[[nm]]
   k_fn <- get(bp$k_name)
   cat(" ", nm, "\n")
-  best_lopo <- compute_lppd_lopo(cfg$vax_dataset, prov_values = cfg$prov_values,
+  best_model_lopo <- compute_lppd_lopo(cfg$vax_dataset, prov_values = cfg$prov_values,
                                  k = k_fn, l1 = bp$l1, l2 = bp$l2,
                                  b = bp$b, meas_error = bp$meas_error)
-  age_lopo  <- compute_lppd_lopo(cfg$vax_dataset, prov_values = cfg$prov_values,
+  age_model_lopo  <- compute_lppd_lopo(cfg$vax_dataset, prov_values = cfg$prov_values,
                                  k = k_fn, l1 = bp$l1, l2 = 500,
                                  b = bp$b, meas_error = bp$meas_error)
   tibble(
-    province   = names(best_lopo$mean_lppd_by_province),
-    best_model = best_lopo$mean_lppd_by_province,
-    age_model  = age_lopo$mean_lppd_by_province,
-    diff       = best_lopo$mean_lppd_by_province - age_lopo$mean_lppd_by_province
+    province   = names(best_model_lopo$mean_lppd_by_province),
+    best_model = best_model_lopo$mean_lppd_by_province,
+    age_model  = age_model_lopo$mean_lppd_by_province,
+    diff       = best_model_lopo$mean_lppd_by_province - age_model_lopo$mean_lppd_by_province
   ) %>%
     left_join(cfg$vax_dataset %>% distinct(location, pt),
               by = c("province" = "location")) %>%
     saveRDS(here::here("results", paste0("lopo_", nm, ".rds")))
 }
 
-# ── 5. Age assumption test data (saved as province_pairs_*.rds) ───────────────
+# ── 5. Age assumption test (saved as ages_test_*.rds) ───────────────
 cat("Computing pairwise age differences...\n")
 
 compute_pairwise_diffs <- function(df) {
@@ -130,23 +133,27 @@ compute_pairwise_diffs <- function(df) {
                                  age_gap  > 3 ~ ">3 years apart"))
 }
 
-vax_noadults <- read_csv(
-  here::here("data", "measles_vax-coverage-data-cleaned_noadults.csv"),
-  show_col_types = FALSE
-)
-vax_noadults %>%
+vax_clean %>%
   filter(n_doses %in% c("1", "1+"), age_current >= 5, age_current <= 21) %>%
   group_by(location) %>%
   group_modify(~ compute_pairwise_diffs(.x)) %>%
-  saveRDS(here::here("results", "province_pairs_1plus.rds"))
+  saveRDS(here::here("results", "ages_test_1plus.rds"))
 
-vax_noadults %>%
-  filter(n_doses %in% c("2", "2+")) %>%
+vax_clean %>%
+  filter(n_doses %in% c("2", "2+"), age_current >= 5, age_current <= 21) %>%
   group_by(location) %>%
   group_modify(~ compute_pairwise_diffs(.x)) %>%
-  saveRDS(here::here("results", "province_pairs_2plus.rds"))
+  saveRDS(here::here("results", "ages_test_2plus.rds"))
 
-# ── 6. England model selection + posteriors ────────────────────────────────────
+## add a stastical test here
+
+# ── 6. PT relation assumption test (saved as provinces_test_*.rds) ───────────────
+## no results need to be generated here for the main test plot
+
+## add statistical test
+
+
+# ── N. England model selection + posteriors ────────────────────────────────────
 # cat("Loading England data...\n")
 # current_year <- as.integer(format(Sys.Date(), "%Y"))
 # vax_england <- read_csv(here::here("data", "ukhsa-chart-download-mmr1-regions.csv"),
@@ -213,37 +220,56 @@ rerun_SBC <- F
 if (rerun_SBC == T) {
   cat("Running SBC...\n")
   
-  k_select <- function(j) {
-    if (j == 1) list(fn = ksqexp, name = "ksqexp") else list(fn = kexp, name = "kexp")
+  SBC_results_list <- vector("list", 50)
+  k_select <- function(j) {  # quick function to randomly choose ksqexp or kexp
+    if (j == 1) list(fn = ksqexp, name = "ksqexp") else if (j==0) list(fn = kexp, name = "kexp")
   }
   
-  SBC_results_list <- vector("list", 50)
+  extract_one <- function(modelselection, sample_name) {
+    true_model <- modelselection %>%
+      filter(k_name == params$k_name, l1 == params$l1, l2 == params$l2,
+             b == params$b, meas_error == params$meas_error) %>%
+      select(-model_no, -lppd_LOPO) %>%
+      rename_with(~ paste0("true_", .x))
+    predicted_model <- modelselection %>%
+      slice_max(lppd_exact, n = 1) %>%
+      select(-model_no, -lppd_LOPO) %>%
+      rename_with(~ paste0("predicted_", .x))
+    true_model %>%
+      mutate(i = i, sample = sample_name, .before = 1) %>%
+      bind_cols(predicted_model) %>%
+      mutate(min_lppd = min(modelselection$lppd_exact), max_lppd = max(modelselection$lppd_exact))
+  }
+  
   for (i in 1:50) {
+    #' Step 1: Create synthetic data by randomly drawing one posterior from a GP with known hyperparams
+    #' define hyperparams for this iteration
     k_object <- k_select(sample(0:1, 1))
     k  <- k_object$fn
     l1 <- sample(c(1, 1.25, 1.5, 1.75, 2, 2.25, 2.5), 1)
     l2 <- sample(c(0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25), 1)
     b  <- sample(c(0.5, 1, 1.5), 1)
     meas_error <- 0
-    params <- list(k = k, k_name = k_object$name, l1 = l1, l2 = l2,
-                   b = b, meas_error = meas_error)
+    params <- list(k = k, k_name = k_object$name, l1 = l1, l2 = l2, b = b, meas_error = meas_error)  # save param values
     
-    xvals      <- 5:21
+    #' set up xvals and yvals (mirroring run_GP internals)
+    xvals      <- first_agecurrent:last_agecurrent
     prov_vals  <- extract_province_relation("Gini", vax_dataset = vax_clean)
     prov_levels <- names(prov_vals)
     yvals      <- prov_vals * l2
     
-    prior <- compute_prior2D(xvals = xvals, yvals = yvals, k = k, l1 = l1,
-                             ndrws = 50, prov_levels = prov_levels, b = b)
+    #' draw from the GP prior and take one random draw as the synthetic data
+    prior <- compute_prior2D(xvals = xvals, yvals = yvals, k = k, l1 = l1, ndrws = 50, prov_levels = prov_levels, b = b)
     a <- sample(1:50, 1)
     synthetic_data <- prior %>%
       filter(draw == a) %>%
       mutate(age_current = x_i,
              location    = as.character(y_label),
-             value       = invlogit(prior2D),
+             value       = invlogit(prior2D),  # transform from logit scale to [0,1]
              n_doses     = "1+") %>%
       select(age_current, location, value, n_doses)
     
+    #' Step 2: Run model selection process with the synthetic data (zero meas_error)
     # full synthetic data
     ms_full <- select_GP(synthetic_data, prov_values = "Gini",
                          k_list     = list(ksqexp = ksqexp, kexp = kexp),
@@ -252,12 +278,12 @@ if (rerun_SBC == T) {
                          b          = c(0.5, 1, 1.5),
                          meas_error = c(0))
     
-    # partial synthetic data (same age×province grid as vax_clean)
-    data_points <- vax_clean %>%
-      filter(age_current >= 5, age_current <= 21, n_doses != "2+") %>%
+    # partial synthetic data (only the same (age,province) pairs of vax_clean)
+    partial_data_points <- vax_clean %>%
+      filter(age_current >= first_agecurrent, age_current <= last_agecurrent, n_doses != "2+") %>%
       distinct(age_current, location)
     ms_partial <- select_GP(
-      synthetic_data %>% semi_join(data_points, by = c("age_current", "location")),
+      synthetic_data %>% semi_join(partial_data_points, by = c("age_current", "location")),
       prov_values = "Gini",
       k_list      = list(ksqexp = ksqexp, kexp = kexp),
       l1          = c(1, 1.25, 1.5, 1.75, 2, 2.25, 2.5),
@@ -266,22 +292,7 @@ if (rerun_SBC == T) {
       meas_error  = c(0)
     )
     
-    extract_one <- function(ms, sample_name) {
-      true_row <- ms %>%
-        filter(k_name == params$k_name, l1 == params$l1, l2 == params$l2,
-               b == params$b, meas_error == params$meas_error) %>%
-        select(-model_no, -lppd_LOPO) %>%
-        rename_with(~ paste0("true_", .x))
-      pred_row <- ms %>%
-        slice_max(lppd_exact, n = 1) %>%
-        select(-model_no, -lppd_LOPO) %>%
-        rename_with(~ paste0("predicted_", .x))
-      true_row %>%
-        mutate(i = i, sample = sample_name, .before = 1) %>%
-        bind_cols(pred_row) %>%
-        mutate(min_lppd = min(ms$lppd_exact), max_lppd = max(ms$lppd_exact))
-    }
-    
+    #' Step 3: Identify how well the true model performs and store results
     SBC_results_list[[i]] <- bind_rows(
       extract_one(ms_full,    "full"),
       extract_one(ms_partial, "partial")
@@ -289,6 +300,7 @@ if (rerun_SBC == T) {
     cat(" SBC iteration", i, "/50\n")
   }
   
+  # Finally bind rows and append some summary metrics
   bind_rows(SBC_results_list) %>%
     mutate(
       normalized_score = (true_lppd_exact - min_lppd) / (max_lppd - min_lppd),

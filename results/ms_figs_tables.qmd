@@ -12,6 +12,8 @@ source(here::here("results", "setup.R"))
 ```{r}
 #| label: rerun
 rerun <- FALSE
+rerun_select_GP <- F
+rerun_SBC <- F
 if (rerun) source(here::here("results", "results_setup.R"))
 ```
 
@@ -26,9 +28,8 @@ fig_data_plot
 ```{r}
 #| label: fig-posterior-draws
 source(here::here("results", "fig-posterior-draws.R"))
-fig_posterior_Gini
-fig_posterior_LI
-fig_posterior_VH
+fig_posterior_combined
+fig_posterior_Gini_unobs
 ```
 
 ## Supplementary figures
