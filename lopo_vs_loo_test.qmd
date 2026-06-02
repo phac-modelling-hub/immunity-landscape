@@ -7,7 +7,7 @@ editor: visual
 echo: true
 ---
 
-Written by Claude. 
+Written by Claude.
 
 ## Question
 

@@ -38,4 +38,6 @@ immunity-landscape.Rproj
 # quarto
 /.quarto/
 /rendered/draft/
+
+**/*.quarto_ipynb
 .positai

@@ -1,0 +1,401 @@
+---
+title: "Modelling similarly-sparse UK data"
+author: "Irena Papst"
+format: 
+    html:
+        embed-resources: true
+---
+
+```{r}
+#| label: setup
+
+library(dplyr)
+library(ggplot2)
+
+invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))  # load functions
+
+current_year <- as.integer(format(Sys.Date(), "%Y")) # for ageing estimates
+
+attach_country <- function(df, country){
+    if("pt" %in% names(df)) df <- df |> select(-pt)
+
+    df |>
+        mutate(country = !!country) |>
+        relocate(country, .before = location)
+}
+
+# Canadian data
+# - - -
+# for Gini model
+vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned.csv"), show_col_types = FALSE) %>% filter(!(pt %in% c("SK","YT","NB"))) #%>% filter(location %in% unique(pt_lookup()$location))  # filtering out sub-provinces etc estimates
+# for low income cleaned data for use with low-income and vaccine hesitancy province relation indicators
+vax_cleanLI <- vax_clean %>% filter(!(pt %in% c("NU","YT","NT"))) # "low_income_families" has no data for NU, NT, YT
+
+# England data
+# - - -
+vax_england <- readr::read_csv("data/ukhsa-chart-download-mmr1-regions.csv") %>%  # data for MMR1 coverage aged 5y from UKHSA (regions of England)
+  mutate(age = 5, n_doses="1+") %>% mutate(value=metric_value/100, location=geography, year_report=year) %>%
+  mutate(age_current = current_year - year_report + age) %>% select(location, year_report, age, n_doses, value, age_current)
+
+vax_gini <- bind_rows(vax_clean |> attach_country("Canada"), vax_england |> attach_country("England")) |> filter(n_doses == "1+")
+vax_LI <- bind_rows(vax_cleanLI |> attach_country("Canada"), vax_england |> attach_country("England"))
+```
+
+To strengthen the application of the model to the sparse Canadian data, we want to apply it to a similarly sparse subsample of the very complete UK data.
+
+# Experimental design
+
+The main task here is to emulate the sparsity of the Canadian data to some part of the UK data. The closest comparison is likely to be for England, as it has a similar number of sub-regions as the number of PTs in Canada (exact numbers of PTs depends on the PT-similarity metric as we do not have these metrics for all PTs in our standardized data). The PT-similarity metrics we have for England are: Gini index, percentage of children not in low-income families. (There may be data on vaccine hesitancy, but we have not looked for it yet.)
+
+We will want to run the same experiment (N reps) for each PT similarity metric:
+
+1. Subsample the England data to mimic the CA data sparsity ("training" data)
+    - Quantify the CA data as a vector of the number of data points available by PT
+    - Sample this vector without replacement 8 times (to match the number of regions in England); call this the "sample size vector".
+    - For each region of England, draw V vaccine coverage estimates, where V corresponds to an entry of the sample size vector.
+    - Designate the rest of the data as "test" data
+2. Select GP model hyperparameters based on training data
+3. Train the model on training data with selected hyperparameters
+4. Calculate an accuracy score for the test data
+
+Then we can summarize accuracy for each PT similarity metric.
+
+## Calculating accuracy
+
+To calculate an accuracy score based on test data, it seems reasonable to use the posterior predictive density (PPD) in some way. However, I don't think summing the (L)PPD values will result in an intuitively interpretable accuracy score, because it's not giving us values that are readily interpretable. Point densities are not probabilities. These values are useful _in comparisson_, _i.e._, if looking for a model that is more or less predictive of left-out data than another one, but it's not straight forward to interpret. 
+
+How should we define the accuracy, then? I discussed this with David Champredon, and we came to the following idea:
+
+1. For each test point, choose an acceptable level of error, _e.g._, within 5% of the true vaccine coverage (the "target interval").
+2. Retrieve parameters for the fitted model's (Normal) posterior predictive density at the test point (distribution mean and variance).
+3. Calculate the density's probability mass captured within the target interval (difference between a Normal _cumulative_ distribution function evaluated at the edges of the target interval). This tells us how likely it is that the model would have predicted the true value given our chosen error tolerance.
+
+For instance, say true vaccine coverage is 80% for kids aged 7 in London. We choose an error tolerance of 5%, because epidemiologically, these are "similar enough" values. Then our target interval is 77.5%-82.5%. Suppose 70% of the fitted model's probability mass is in that interval; then our model had a 70% chance of predicting the true value with an acceptable amount of error. The more error we tolerate, the higher the accuracy, but this way the accuracy is informed directly by the real-world application, and so it can be interpretted.
+
+The procedure above could be repeated for each test point, and then we could compute summary statistics on it: an average accuracy score along with a range or confidence interval.
+
+The above is a little simplified because we haven't accounted for measurement error in vaccine coverage estimates. Copilot assures me that this is simply handled by "inflating uncertainty via convolution".
+
+## Implementation via Copilot
+
+IP: The following was generated by Copilot and annotated by me.
+
+We assess the accuracy of probabilistic predictions of a response variable \(z \in (0,1)\)
+(e.g., population-level vaccine coverage) as a function of predictors \((x,y)\).
+The model is fit on a transformed scale using a logit transformation and centering,
+and accuracy is evaluated using an application-defined tolerance on the original scale.
+
+The method accounts for both model uncertainty and measurement error in the observed response values.
+
+### Model setup
+
+Let:
+
+- \((x_a, y_a)\) denote predictor values for test point \(a\)
+- \(z_a\) denote the observed response
+- \(z_{\text{true},a}\) denote the latent true response
+- \(\mathcal D = \{(\underline{x}, \underline{z})\}\) denote training
+
+The response is transformed as:
+\[
+w = \operatorname{logit}(z) - c,
+\]
+where \(c\) is a centering constant computed from the training data.
+
+IP: centred using mean of training response variable.
+
+The fitted model yields:
+\[
+w_{\text{true},a} \mid x_a, y_a, \mathcal D
+\sim \mathcal N(\mu_a, \sigma_a^2).
+\]
+
+IP: I have now verified that these parameters for these Normals can be retrieved "in bulk" (across a set of test points) from `fit_GP2()`,  a new function that repackages a portion of code used in `compute_posterior2D()`---the stuff before the call to `draw_from_rmnorm()`. We just need to set `xygrid` to be the set of predictor coordinates for each test point. We want the vector of means and the diagonal of the covariance matrix; while the full vector of means and covariance matrix parameterize the **joint** posterior, because of the marginalizations property of Normals, the vector of means and the diagonal of the covariance matrix parameterize the set of **marginal** posteriors (one per test point). We actually do want marginal posteriors instead of joint for our accuracy calculation because the chance of simultaneously observing all test points in the model approaches zero as the number of test points increases (too high-dimensional!)
+
+IP: I originally implemented `fit_GP()` by repackaging code from `compute_posterior2D()` but have since re-implemented using a Cholesky decomposition to invert the covariance matrix of observed vs observed since it is a symmetric positive definite matrix. The reimplementation is `fit_GP2()`. I kept both implementations around to make unit testing between them easy.
+
+IP: Note that the equations used in `fit_GP()` and `fit_GP2()` represent vector versions of the equations from [Liza's notes](https://github.com/phac-modelling-hub/immunity-landscape/issues/4); that is, they work for a vector of tests points, not just a single one.
+
+Observed responses satisfy:
+\[
+z_a = z_{\text{true},a} + e_a,
+\qquad e_a \sim \mathcal N(0, \psi^2).
+\]
+
+Using a first-order approximation, measurement error on the transformed scale is:
+\[
+\psi_{w,a}^2 \approx \frac{\psi^2}{z_a^2 (1 - z_a)^2}.
+\]
+
+### Accuracy definition
+
+Let \( \varepsilon > 0 \) denote an absolute tolerance on the original scale.
+
+We define:
+\[
+A_a =
+\Pr\!\left(
+|z_{\text{true},a} - z_a| \le \varepsilon
+\mid \mathcal D
+\right).
+\]
+
+
+Define bounds on the original scale:
+\[
+z_a^- = \max(z_a - \varepsilon, \epsilon), \qquad
+z_a^+ = \min(z_a + \varepsilon, 1 - \epsilon),
+\]
+where \(\epsilon\) is a small constant to avoid boundary issues.
+
+Transform these bounds:
+\[
+\ell_a = \operatorname{logit}(z_a^-) - c,\qquad
+u_a    = \operatorname{logit}(z_a^+) - c.
+\]
+
+Then:
+\[
+A_a =
+\Phi\!\left(
+\frac{u_a - \mu_a}{\sqrt{\sigma_a^2 + \psi_{w,a}^2}}
+\right)
+-
+\Phi\!\left(
+\frac{\ell_a - \mu_a}{\sqrt{\sigma_a^2 + \psi_{w,a}^2}}
+\right),
+\]
+where \(\Phi(\cdot)\) is the standard normal CDF.
+
+Overall expected accuracy across a test set of size \(m\) is computed as:
+\[
+\bar A = \frac{1}{m} \sum_{a=1}^m A_a.
+\]
+
+Uncertainty in performance may be summarized using the empirical distribution of
+the \(A_a\) values or via bootstrap resampling.
+
+### Interpretation
+
+An accuracy estimate \(\bar A = 0.70\) can be interpreted as:
+
+> Accounting for both model uncertainty (on the logit-transformed scale) and measurement error in the observed responses \(z\), the model assigns, on average, a 70% probability that held-out predictions fall within the specified tolerance on the original scale.
+
+Key properties of this accuracy score:
+- Uses full posterior predictive uncertainty for \(z \mid (x,y)\)
+- Explicitly propagates measurement error with variance \(\psi^2\)
+- Accuracy is defined on the original, interpretable scale, while model inference is performed on the logit scale
+- Measurement error is propagated using a delta-method approximation
+- Produces a smooth, probabilistic accuracy metric
+- Complements, but does not replace, calibration diagnostics such as predictive coverage
+
+Practical considerations:
+- Accuracy near \(z=0\) or \(z=1\) requires numerical stabilization
+- The delta-method approximation is most accurate when measurement error is small
+- Results are most interpretable when \(\varepsilon\) reflects a meaningful application threshold
+
+# Data exploration and prep
+
+```{r}
+#| label: n_obs_gini
+
+n_obs <- vax_gini |> group_by(country) |> select(location) |> distinct() |> count()
+```
+
+We start with an analysis of the Gini index model, which has data for `r n_obs |> filter(country == "Canada") |> pull(n)` Canadian PTs and `r n_obs |> filter(country == "England") |> pull(n)` regions of England.
+
+The age ranges in Canadian data do not exactly conincide with those found in the England data:
+
+```{r}
+vax_gini |>
+    group_by(country, location) |>
+    summarize(age_min = min(age_current), age_max = max(age_current))
+```
+
+If we filter both down to the largest intersection in age for a fair comparison, and we are left with the following ranges by location: 
+
+```{r}
+#| label: filter_data
+vax <- vax_gini |>
+    group_by(country) |>
+    mutate(age_min = min(age_current), age_max = max(age_current)) |>
+    ungroup() |>
+    mutate(age_min = max(age_min), age_max = min(age_max)) |>
+    filter(between(age_current, age_min, age_max))
+```
+
+```{r}
+vax |>
+    group_by(country) |>
+    group_split() |>
+    purrr::map(\(df){
+        df |>
+            group_by(location) |>
+            summarize(
+                age_min = min(age_current), age_max = max(age_current)
+            )
+    })
+```
+
+After filtering, we now only have 6 PTs in the Canadian data, so when testing against the England data, we will only take 6 regions at a time to fit.
+
+## Sample train and test set
+
+We start by getting the sample size of the (filtered) PT data:
+
+```{r}
+sample_size <- vax |>
+    filter(country == "Canada") |>
+    group_by(location) |>
+    summarize(n = n())
+```
+
+Pull a subset of the England data according to the PT sample sizes:
+
+```{r}
+vax_england <- filter(vax, country == "England")
+
+sample_by_location <- tibble(
+    location = sample(
+        unique(vax_england$location), 
+        size = nrow(sample_size), 
+        replace = FALSE
+    ), 
+    n = sample(sample_size$n)
+)
+
+vax_england_subset <- vax_england |>
+  right_join( # filtering join to subsample regions
+    sample_by_location,
+    by = "location"
+  )
+
+vax_train <- vax_england_subset |>
+  group_split(location) |>
+  purrr::map(\(df) slice_sample(df, n = df$n[1]) |> select(-n)) |>
+  purrr::list_rbind()
+
+vax_test <- anti_join(vax_england_subset, vax_train)
+```
+
+# Experiment implementation
+
+Fit the model to the subsampled data:
+
+```{r}
+#| label: fit_england_gini
+
+rerun <- FALSE
+if(rerun){
+    scores <- select_GP(
+        vax_train, 
+        prov_values="UK-Gini", 
+        k_list=list(ksqexp=ksqexp, kexp=kexp),  
+        l1=c(1,1.25,1.5,1.75,2,2.25,2.5), 
+        l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), 
+        b=c(0.5,1,1.5), 
+        meas_error=c(0.5,0.1,0.05,0.01,0)
+    )
+
+    # temp save since the above takes a while to run
+    if(!dir.exists(here::here("results", "tmp"))) dir.create(here::here("results", "tmp"))
+    fit <- list(
+        scores = scores,
+        train = vax_train,
+        test = vax_test,
+        prov_values = prov_values,
+        last_agecurrent = last_agecurrent
+    )
+    saveRDS(fit, here::here("results", "tmp", "fit_england_gini.rds"))
+} else {
+    fit <- readRDS(here::here("results", "tmp", "fit_england_gini.rds"))
+}
+
+# retreive optimal hyperparameters
+fit_opt <- fit$scores |> arrange(desc(lppd_exact)) |> slice(1)
+```
+
+## Prototype
+
+IP: everything below needs to be updated, starting with the definition of `compute_accuracy()` based on the algorithm suggested by Copilot to incorporate measurement error in all response variables (including the "true" test values).
+
+```{r}
+#| label: compute_accuracy
+
+error_tolerance <- 0.05 # 5%
+
+acc <- compute_accuracy(
+    train = fit$train, 
+    test = fit$test,
+    error_tolerance = error_tolerance,
+    last_agecurrent = fit$last_agecurrent,
+    prov_values = fit$prov_values,
+    k = get(fit_opt$k_name),
+    l1 = fit_opt$l1,
+    l2 = fit_opt$l2,
+    b = fit_opt$b,
+    meas_error = fit_opt$meas_error
+)
+```
+
+```{r}
+#| label: plot_accuracy
+
+ggplot(data = tibble::tibble(acc = acc), aes(x = acc)) +
+    geom_histogram() +
+    geom_vline(aes(xintercept = mean(acc)), colour = "red", linetype = "solid") + 
+    annotate("text", x = mean(acc), y = 5, label = "Mean", colour = "red", hjust = -0.5, vjust = -1) + 
+    labs(
+        title = "Distribution of accuracy across test points",
+         x = "Accuracy",
+         y = "Count"
+    )
+```
+
+Let's look at true value vs accuracy to see if there is a correlation (so perhaps the model only correctly predicts values within a certain range):
+
+```{r}
+pp_acc <- ggplot(data = tibble::tibble(true = vax_test$value, acc = acc), aes(x = true, y = acc, colour = acc)) +
+    geom_point() +
+    scale_x_continuous(limits = range(vax_england$value)) +
+    labs(
+        title = "True Value vs Accuracy",
+        x = "True Value",
+        y = "Accuracy"
+    )
+
+pp_acc
+```
+
+Doesn't seem to be the case... How hard of a prediction problem is this? Here are distributions of the test and train data sampled here under the accuracy scores:
+
+```{r}
+pp_dist <- dplyr::bind_rows(
+    dplyr::mutate(vax_test, type = "test"),
+    dplyr::mutate(vax_train, type = "train")
+) |>
+    ggplot(aes(x = value, fill = type)) +
+    geom_histogram() +
+    scale_x_continuous(limits = range(vax_england$value)) +
+    facet_grid(rows = vars(type)) +
+    labs(
+        title = "Distribution of vaccine coverage values in England",
+        x = "Vaccine Coverage",
+        y = "Count"
+    )
+
+library(patchwork)
+pp_acc / pp_dist
+```
+
+There is high accuracy for test points in the range that overlaps with the bulk of the training data, but there is also reasonably high accuracy outside of this range! The model seems to be doing something in extrapolating from the training data...
+
+Another way to visualize would be to create a plot of posterior draws by age and region, include the train obs as black points, and then test obs coloured by accuracy (on a continuous scale between 0 and 1).[^1] This would help us see which points have been easily predicted and which have not. Though this is already, to some extent, eye-ballable when test points are plotted overtop of posterior draws because that already gives an impression of prediction mean/variance under the test point... so maybe not worth spending time on?
+
+[^1]: I think this could be done relatively easily, but it would be good to repurpose existing code to plot posterior draws for this (Liza suggests using `plot_posterior2D()`)?
+
+Note, the above is just for one test set, so we would want to repeat this process multiple times (with different random subsamples of the England data). That would give us multiple sets of accuracy scores, and we could run summary stats on this. We could then also run a sensitivity analysis of these scores to the error tolerance to show just how robust the framework is. 
+
+The above is also only for the Gini model. We could repeat for the low-income model and then compare accuracy values between them to see if one PT similarity metric is potentially more predictive of vaccine coverage than the other.
+
+This is getting to be a bit of a data heavy experiment... may want to consider moving to a `{targets}` pipeline.

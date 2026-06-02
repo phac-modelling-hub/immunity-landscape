@@ -23,7 +23,7 @@ select_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_
   
   # compute lppd for all combinations of parameters
   combinations <- tidyr::expand_grid(k_tibble, l1, l2, b, meas_error)  # functions need to be protected in a list
-  combinations <- combinations %>% mutate(lppd_exact = pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd(  # method 2: compute lppd analytically
+  combinations <- combinations %>% mutate(lppd_exact = purrr::pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd(  # method 2: compute lppd analytically
     vax_dataset = vax_dataset,
     first_agecurrent = first_agecurrent,
     last_agecurrent = last_agecurrent,
@@ -34,6 +34,5 @@ select_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_
     b = ..4,
     meas_error = ..5))) %>%
     select(-k) %>% mutate(model_no = row_number(), .before = 1)
-
   return(combinations)
 }

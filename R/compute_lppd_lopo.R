@@ -26,8 +26,8 @@ compute_lppd_lopo <- function(vax_dataset, first_agecurrent=5, last_agecurrent=2
   prov_values <- prov_values*l2  # scale province values by l2
   yobs <- prov_values[vax_dataset %>% pull(location)]  # this includes scaling by l2
   zobs <- vax_dataset %>% pull(value)
-  centring_term <- mean(logit(zobs))
-  logit_zobs_centred <- logit(zobs) - centring_term  # apply logistic transform and centre the data around mean 0
+  centring_term <- mean(LaplacesDemon::logit(zobs))
+  logit_zobs_centred <- LaplacesDemon::logit(zobs) - centring_term  # apply logistic transform and centre the data around mean 0
   
   # calculate koo, the covariance matrix of training+test points
   xyobs <- tibble(x=xobs,y=yobs)
