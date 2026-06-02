@@ -100,7 +100,4 @@ comparison <- vax_filt %>%
   arrange(location)
 
 comparison
-<<<<<<< HEAD
 ```
-
-======= \`\`\` \>\>\>\>\>\>\> b15f232 (cleaning lopo_vs_loo_test file)
