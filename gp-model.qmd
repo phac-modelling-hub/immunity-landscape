@@ -745,137 +745,7 @@ example <- compute_lppd_lopo(vax_cleanVH, prov_values="vaccine_hesitancy", k=kex
 example
 ```
 
-The above diagnostic plot allows us to explore the relative contribution of each province to the total log posterior predictive density (after scaling by \# of observations). For the GDP model framework, we see that for poor models, there is a large contribution from the ?tail-end? provinces to total lppd, whereas with our best models (largest LOO lppd / large l2), the diagnostic plot is fairly flat indicating that each province contributes equally (after scaling by \# of observations) and the model essentially collapses to an age model.
-
-```{r}
-#| label: lopo_investigation1
-
-#' GDP model framework
-#' explore province predictability (LOPO lppd) for one model e.g. best model from model selection
-model_2087 <- compute_lppd_lopo(vax_clean, prov_values="GDP", k=ksqexp, l1=2.5, l2=250, b=0.5, meas_error=0.1)
-prov_values <- extract_province_relation("GDP", vax_dataset=vax_clean)
-plot(x=prov_values[names(model_2087$mean_lppd_by_province)], y=model_2087$mean_lppd_by_province, xlab = "province, by e.g. GDP value", ylab = "Mean LOPO lppd", main = "Province predictability for model_2087 (best)")
-max(model_2087$mean_lppd_by_province) - min(model_2087$mean_lppd_by_province)  # small difference == age model
-#' compare to a poor model
-model_1515 <- compute_lppd_lopo(vax_clean, prov_values="GDP", k=ksqexp, l1=2.25, l2=0.2, b=1.5, meas_error=0)
-plot(x=prov_values[names(model_1515$mean_lppd_by_province)], y=model_1515$mean_lppd_by_province, xlab = "province, by e.g. GDP value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1515 (worst)")
-max(model_1515$mean_lppd_by_province) - min(model_1515$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
-
-
-#' LI model framework
-#' explore province predictability (LOPO lppd) for one model e.g. best model from model selection
-model_1982 <- compute_lppd_lopo(vax_cleanLI, prov_values="low_income_families", k=ksqexp, l1=2.5, l2=25, b=0.5, meas_error=0.1)
-prov_values <- extract_province_relation("low_income_families", vax_dataset=vax_cleanLI)
-plot(x=prov_values[names(model_1982$mean_lppd_by_province)], y=model_1982$mean_lppd_by_province, xlab = "province, by e.g. LI value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1982 (best)")
-max(model_1982$mean_lppd_by_province) - min(model_1982$mean_lppd_by_province)  # small difference == age model
-#' compare to a poor model
-model_1515 <- compute_lppd_lopo(vax_cleanLI, prov_values="low_income_families", k=ksqexp, l1=2.25, l2=0.2, b=1.5, meas_error=0)
-plot(x=prov_values[names(model_1515$mean_lppd_by_province)], y=model_1515$mean_lppd_by_province, xlab = "province, by e.g. LI value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1515 (worst)")
-max(model_1515$mean_lppd_by_province) - min(model_1515$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
-
-
-#' VH model framework
-#' explore province predictability (LOPO lppd) for one model e.g. best model from model selection
-model_1937 <- compute_lppd_lopo(vax_cleanVH, prov_values="vaccine_hesitancy", k=ksqexp, l1=2.5, l2=6, b=0.5, meas_error=0.1)
-prov_values <- extract_province_relation("vaccine_hesitancy", vax_dataset=vax_cleanVH)
-plot(x=prov_values[names(model_1937$mean_lppd_by_province)], y=model_1937$mean_lppd_by_province, xlab = "province, by e.g. VH value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1937 (best)")
-max(model_1937$mean_lppd_by_province) - min(model_1937$mean_lppd_by_province)  # small difference == age model
-#' compare to a poor model
-model_1215 <- compute_lppd_lopo(vax_cleanVH, prov_values="vaccine_hesitancy", k=ksqexp, l1=2, l2=0.1, b=1.5, meas_error=0)
-plot(x=prov_values[names(model_1215$mean_lppd_by_province)], y=model_1215$mean_lppd_by_province, xlab = "province, by e.g. VH value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1215 (worst)")
-max(model_1215$mean_lppd_by_province) - min(model_1215$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
-
-
-#' Gini model framework
-#' explore province predictability (LOPO lppd) for one model e.g. best model from model selection
-model_2072 <- compute_lppd_lopo(vax_clean, prov_values="Gini", k=ksqexp, l1=2.5, l2=10, b=0.5, meas_error=0.1)
-prov_values <- extract_province_relation("Gini", vax_dataset=vax_clean)
-plot(x=prov_values[names(model_2072$mean_lppd_by_province)], y=model_2072$mean_lppd_by_province, xlab = "province, by e.g. Gini value", ylab = "Mean LOPO lppd", main = "Province predictability for model_2072 (best)")
-max(model_2072$mean_lppd_by_province) - min(model_2072$mean_lppd_by_province)  # small difference == age model
-#' compare to a poor model
-model_1895 <- compute_lppd_lopo(vax_clean, prov_values="Gini", k=ksqexp, l1=2.5, l2=0.1, b=0.5, meas_error=0)
-plot(x=prov_values[names(model_1895$mean_lppd_by_province)], y=model_1895$mean_lppd_by_province, xlab = "province, by e.g. Gini value", ylab = "Mean LOPO lppd", main = "Province predictability for model_1895 (worst)")
-max(model_1895$mean_lppd_by_province) - min(model_1895$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
-```
-
-We can also explore the difference `delta` between LOO lppd and LOPO lppd. Similar values indicate weak province predictability ie. that provinces are independent and our model is essentially behaving as an age model. From the plots, we see that this happens with large l2.
-
-```{r}
-#| label: lopo_investigation2
-
-#' GDP model framework
-#' load model selection results and plot difference between LOPO and LOO lppd's
-delta_plot <- read_csv(here::here("results", "GPcombinations_GDP_witherror.csv"))  # load a model selection csv file
-delta_plot <- delta_plot %>% arrange(l2) %>%  # sort by increasing l2
-  mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
-delta_plot %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
- xlim(0,250)
-
-
-#' LI model framework
-#' load model selection results and plot difference between LOPO and LOO lppd's
-delta_plot2 <- read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))  # load a model selection csv file
-delta_plot2 <- delta_plot2 %>% arrange(l2) %>%  # sort by increasing l2
-  mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
-delta_plot2 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
- xlim(0,250)
-
-
-#' VH model framework
-#' load model selection results and plot difference between LOPO and LOO lppd's
-delta_plot3 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv"))  # load a model selection csv file
-delta_plot3 <- delta_plot3 %>% arrange(l2) %>%  # sort by increasing l2
-  mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
-delta_plot3 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
-  xlim(0,250)
-
-#' Gini model framework
-#' load model selection results and plot difference between LOPO and LOO lppd's
-delta_plot4 <- read_csv(here::here("results", "GPcombinations_Gini_witherror.csv"))  # load a model selection csv file
-delta_plot4 <- delta_plot4 %>% arrange(l2) %>%  # sort by increasing l2
-  mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
-delta_plot4 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
-  xlim(0,250)
-
-
-#' An alternative visualisation is to look at the difference between LOO and LOPO for each best model:
-best_gdp <- delta_plot %>% filter(lppd_exact==max(lppd_exact))
-best_li <- delta_plot2 %>% filter(lppd_exact==max(lppd_exact))
-best_vh <- delta_plot3 %>% filter(lppd_exact==max(lppd_exact))
-best_gini <- delta_plot4 %>% filter(lppd_exact==max(lppd_exact))
-```
-
-This leads to the question: do any of our modelling frameworks utilise relation between provinces/regions? Consider the England LI model. From model selection, this framework does not favour largest l2 (best LOO lppd currently gives l2=3.5, compared to the plausible upper limit of 25). Repeat the LOPO analysis for England LI. Take code from uk code snippet above.
-
-```{r}
-#| label: lopo_investigation3
-
-#' England LI model framework
-#' load England vaccine coverage data
-vax_england <- read_csv("data/ukhsa-chart-download-mmr1-regions.csv") %>%  # data for MMR1 coverage aged 5y from UKHSA (regions of England)
-  mutate(age = 5, n_doses="1+") %>% mutate(value=metric_value/100, location=geography, year_report=year) %>%
-  mutate(age_current = current_year - year_report + age) %>% select(location, year_report, age, n_doses, value, age_current)
-
-#' explore province predictability (LOPO lppd) for one model e.g. best model from model selection
-model_1698 <- compute_lppd_lopo(vax_england, prov_values="UK-low_income_families", k=ksqexp, l1=2.25, l2=3.5, b=0.5, meas_error=0.05)
-prov_values <- extract_province_relation("UK-low_income_families", vax_dataset=vax_england)
-plot(x=prov_values[names(model_1698$mean_lppd_by_province)], y=model_1698$mean_lppd_by_province, xlab = "region of England, by e.g. LI value", ylab = "Mean LOPO lppd", main = "Region predictability for model_1698 (best)")
-max(model_1698$mean_lppd_by_province) - min(model_1698$mean_lppd_by_province)  # small difference == age model
-#' compare to a poor model
-model_950 <- compute_lppd_lopo(vax_england, prov_values="UK-low_income_families", k=ksqexp, l1=1.75, l2=0.1, b=0.5, meas_error=0)
-plot(x=prov_values[names(model_950$mean_lppd_by_province)], y=model_950$mean_lppd_by_province, xlab = "region of England, by e.g. LI value", ylab = "Mean LOPO lppd", main = "Region predictability for model_950 (worst)")
-max(model_950$mean_lppd_by_province) - min(model_950$mean_lppd_by_province)  # large difference == provinces contribute differently == relation between provinces
-
-#' load model selection results and plot difference between LOPO and LOO lppd's
-delta_plot4 <- read_csv(here::here("results", "GPcombinations_englandLI_witherror.csv"))  # load a model selection csv file
-delta_plot4 <- delta_plot4 %>% arrange(l2) %>%  # sort by increasing l2
-  mutate(delta=lppd_LOPO - lppd_exact)  # compute difference between LOPO lppd and LOO lppd
-delta_plot4 %>% ggplot(aes(x = l2, y = delta)) + geom_point() + ylim(-5000, 5000) + ylab("LOPO - LOO") + # plot delta for increasing l2
- scale_x_continuous(breaks = seq(0, max(delta_plot4$l2), by=50))
-
-```
-
-We then had further discussions into these LOPO investigations and came up with a fourth more-interpretive analysis: Really we are interested in how each province compares to being left out of the age+province model, compared to just an age model. Do provinces matter?
+We then had further discussions into possible LOPO investigations and settled on the fourth more-interpretive analysis: Really we are interested in how each province compares to being left out of the age+province model, compared to just an age model. Do provinces matter?
 
 For this, we wish to compare lppd for one province in the best age+province model case (best l2) to just the age model (e.g. l2=500). The function `compute_lppd_lopo` already outputs the lppd for each province so we utilise this.
 
@@ -886,11 +756,11 @@ For this, we wish to compare lppd for one province in the best age+province mode
 # model configurations
 l2_lim <- list(Gini = c(0.1, 50), LI = c(0.2, 25), VH = c(0.1,  8))
 model_configs <- list(Gini = list(csv="GPcombinations_Gini_witherror.csv", prov_values="Gini", l2_lim=l2_lim$Gini, title_lab="Gini",
-                                  vax_dataset=vax_clean),
+                                  vax_dataset=vax_clean, meas_error=0.05),
                       LI = list(csv="GPcombinations_lowincome_witherror.csv", prov_values="low_income_families", l2_lim=l2_lim$LI, title_lab="LI",
-                                vax_dataset=vax_cleanLI),
+                                vax_dataset=vax_cleanLI, meas_error=0.05),
                       VH = list(csv="GPcombinations_vaccinehesitancy_witherror.csv", prov_values="vaccine_hesitancy", l2_lim=l2_lim$VH, 
-                                title_lab="VH", vax_dataset=vax_cleanVH))
+                                title_lab="VH", vax_dataset=vax_cleanVH, meas_error=0.05))
 
 lopo_comparisons <- list()
 prop_summaries   <- list()
@@ -900,8 +770,8 @@ p_diffs          <- list()
 for (model_name in names(model_configs)) {
   cfg <- model_configs[[model_name]]
   
-  # extract parameter values for best model
-  best_model <- read_csv(here::here("results", cfg$csv)) %>% filter(l2 <= cfg$l2_lim[2], l2 >= cfg$l2_lim[1]) %>% slice_max(lppd_exact, n=1)
+  # extract parameter values for best model (fixed meas_error)
+  best_model <- read_csv(here::here("results", cfg$csv)) %>% filter(l2 <= cfg$l2_lim[2], l2 >= cfg$l2_lim[1]) %>% filter(meas_error == cfg$meas_error) %>% slice_max(lppd_exact, n=1)
   k         <- get(best_model$k_name)
   l1        <- best_model$l1
   l2        <- best_model$l2
@@ -915,7 +785,7 @@ for (model_name in names(model_configs)) {
   # compare for each province
   lopo_comparisons[[model_name]] <- tibble(province = names(best_model_lopo$mean_lppd_by_province), best_model = best_model_lopo$mean_lppd_by_province,
     age_model  = age_model_lopo$mean_lppd_by_province, diff = best_model_lopo$mean_lppd_by_province - age_model_lopo$mean_lppd_by_province) %>%
-    left_join(cfg$vax_dataset %>% distinct(location, pt), by = c("province" = "location"))
+    left_join(cfg$vax_dataset %>% distinct(location, pt), by = c("province" = "location"))  # append 2-letter pt abbreviation for plotting
   
   # proportion positive vs negative
   prop_summaries[[model_name]] <- lopo_comparisons[[model_name]] %>% summarise(prop_best_wins = mean(diff > 0), prop_age_wins = mean(diff < 0))
@@ -926,7 +796,7 @@ for (model_name in names(model_configs)) {
     geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.5) +
     scale_fill_manual(values = c("TRUE" = "#2166ac", "FALSE" = "#d73027"), labels = c("TRUE" = "Full model preferred", "FALSE" = "Age model preferred"),
                       name = NULL) +
-    labs(x = "Province", y = "Difference in mean LPPD per province", title = paste0("Relative LOPO performance (", cfg$title_lab, " model)")) +
+    labs(x = "Province", y = "Difference in mean LPPD per province", title = paste0("Relative LOOP performance (", cfg$title_lab, " model)")) +
     ylim(-0.75,0.75) + theme_minimal()
 }
 
@@ -1048,32 +918,4 @@ SBC_results %>% filter(sample=="full") %>%
 # stats to report - per-parameter recovery rate
 SBC_results %>% group_by(sample) %>%
   summarise(k=mean(k_correct), l1=mean(l1_correct), l2=mean(l2_correct), b=mean(b_correct), normalized_score=mean(normalized_score), exact=mean(exact_recovery))
-
-# # other visualisations for interest
-# # histogram of normalised scores - overall recovery quality
-# SBC_results %>%
-#   ggplot(aes(x=normalized_score, fill=sample)) +
-#   geom_histogram(binwidth=0.05, position="dodge") +
-#   labs(x="Normalised score (0=worst, 1=exact recovery)", y="Count") +
-#   theme_minimal()
-# # true vs predicted scatterplots per parameter - to spot bias/clustering
-# SBC_results %>%
-#   select(i, sample, true_l1, true_l2, true_b, predicted_l1, predicted_l2, predicted_b) %>%
-#   pivot_longer(-c(i, sample), names_to=c("type","param"), names_sep="_(?=l1|l2|b)") %>%
-#   pivot_wider(names_from=type, values_from=value) %>%
-#   ggplot(aes(x=true, y=predicted)) +
-#   geom_jitter(width=0.05, height=0.05, alpha=0.5) +
-#   geom_abline(linetype="dashed") +
-#   facet_grid(sample ~ param, scales="free") +
-#   theme_minimal()
-# # normalised score heatmap by true l1/l2 - to show which region of parameter space is poorly identified - this is only meaningful with many runs
-# SBC_results %>%
-#   group_by(sample, true_l1, true_l2) %>%
-#   summarise(mean_score=mean(normalized_score), .groups="drop") %>%
-#   ggplot(aes(x=factor(true_l2), y=factor(true_l1), fill=mean_score)) +
-#   geom_tile() +
-#   scale_fill_gradient(low="white", high="red") +
-#   facet_wrap(~sample) +
-#   labs(x="true l2", y="true l1") +
-#   theme_minimal()
 ```
