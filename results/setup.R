@@ -4,6 +4,7 @@
 
 library(here)
 library(ggrepel)
+library(ggplot2)
 
 # ── Helper: extract and run a named chunk from a .qmd file ────────────────────
 source_qmd_chunk <- function(qmd_file, chunk_label) {
