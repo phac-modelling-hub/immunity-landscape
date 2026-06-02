@@ -35,9 +35,6 @@ model_configs <- list(
   )
 )
 
-first_agecurrent <- 5
-last_agecurrent <- 21
-
 # ── 1. Model selection (overwrites existing GPcombinations CSVs) ───────────────
 rerun_select_GP <- F
 if (rerun_select_GP == T) {
@@ -152,68 +149,8 @@ vax_clean %>%
 
 ## add statistical test
 
-
 # ── N. England model selection + posteriors ────────────────────────────────────
-# cat("Loading England data...\n")
-# current_year <- as.integer(format(Sys.Date(), "%Y"))
-# vax_england <- read_csv(here::here("data", "ukhsa-chart-download-mmr1-regions.csv"),
-#                         show_col_types = FALSE) %>%
-#   mutate(age         = 5,
-#          n_doses     = "1+",
-#          value       = metric_value / 100,
-#          location    = geography,
-#          year_report = year,
-#          age_current = current_year - year_report + age) %>%
-#   select(location, year_report, age, n_doses, value, age_current)
-# 
-# england_model_configs <- list(
-#   Gini = list(prov_values = "UK-Gini",               meas_error = 0.05,
-#               model_selection_csv = "GPcombinations_englandGini_witherror.csv", title_lab = "Gini"),
-#   LI   = list(prov_values = "UK-low_income_families", meas_error = 0.05,
-#               model_selection_csv = "GPcombinations_englandLI_witherror.csv",   title_lab = "Low-income")
-# )
-# 
-# cat("Running England model selection...\n")
-# for (nm in names(england_model_configs)) {
-#   ecfg <- england_model_configs[[nm]]
-#   cat(" England", nm, "\n")
-#   select_GP(
-#     vax_england,
-#     prov_values = ecfg$prov_values,
-#     k_list      = list(ksqexp = ksqexp, kexp = kexp),
-#     l1          = c(1, 1.25, 1.5, 1.75, 2, 2.25, 2.5),
-#     l2          = c(0.1, 0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10,
-#                     25, 50, 75, 100, 150, 200, 250, 500),
-#     b           = c(0.5, 1, 1.5),
-#     meas_error  = c(0.5, 0.1, 0.05, 0.01, 0)
-#   ) %>%
-#     readr::write_csv(here::here("results", ecfg$model_selection_csv))
-# }
-# 
-# england_best_params <- imap(england_model_configs, function(ecfg, nm) {
-#   best <- read_csv(here::here("results", ecfg$model_selection_csv), show_col_types = FALSE) %>%
-#     slice_max(lppd_exact, n = 1)
-#   list(k_name = best$k_name, l1 = best$l1, l2 = best$l2, b = best$b,
-#        meas_error = ecfg$meas_error)
-# })
-# 
-# cat("Running England posteriors...\n")
-# for (nm in names(england_model_configs)) {
-#   ebp <- england_best_params[[nm]]
-#   cat(" England", nm, sprintf("(k=%s l1=%.2f l2=%.2f b=%.2f psi=%.2f)\n",
-#                                ebp$k_name, ebp$l1, ebp$l2, ebp$b, ebp$meas_error))
-#   run_GP(
-#     vax_dataset = vax_england,
-#     prov_values = england_model_configs[[nm]]$prov_values,
-#     k           = get(ebp$k_name),
-#     l1          = ebp$l1,
-#     l2          = ebp$l2,
-#     b           = ebp$b,
-#     meas_error  = ebp$meas_error,
-#     show_plots  = FALSE
-#   ) %>%
-#     saveRDS(here::here("results", paste0("posterior_england_", nm, ".rds")))
-# }
+# In separate workflow -- see repo README.
 
 # ── 7. SBC (overwrites SBC_results_Gini.rds; synthetic CSVs not saved) ────────
 rerun_SBC <- F

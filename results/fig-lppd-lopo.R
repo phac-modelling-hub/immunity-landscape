@@ -15,11 +15,10 @@ fig_lopo_combined <- ggplot(lopo_all, aes(x = pt, y = diff, fill = diff > 0)) +
   scale_fill_manual(
     values = colours_lopo,
     labels = c("TRUE" = "Full model preferred", "FALSE" = "Age model preferred"),
-    name   = NULL
-  ) +
+    name   = NULL) +
   facet_wrap(~ model, ncol = 1, scales = "free_x") +
-  labs(x     = "Province",
-       y     = "Difference in mean LPPD per province") +
+  labs(x     = "PT",
+       y     = "Difference in mean LPPD per PT") +
   ylim(-0.75, 0.75)
 
 ggsave(here::here("results", "fig-lppd-lopo.pdf"),

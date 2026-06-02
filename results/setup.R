@@ -23,6 +23,10 @@ source_qmd_chunk <- function(qmd_file, chunk_label) {
 # ── Run gp-model.qmd initial_setup chunk ──────────────────────────────────────
 source_qmd_chunk(here::here("gp-model.qmd"), "initial_setup")
 
+# --- Ages ---------------------------------------------------------------------
+first_agecurrent <- 5
+last_agecurrent <- 21
+
 # ── Figure save dimensions ─────────────────────────────────────────────────────
 fig_w <- 7.29   # inches
 fig_h <- 4.51   # inches

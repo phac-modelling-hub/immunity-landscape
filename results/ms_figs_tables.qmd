@@ -45,16 +45,14 @@ fig_lopo_combined
 
 ```{r}
 #| label: fig-provinces-test
-source(here::here("results", "fig-provinces-test.R"))
-fig_provinces_test
+source(here::here("results", "fig-provinces-test.R"))  # *we plan to replace this plot with a plot equiv to the ages test!
+fig_provinces_test  # values for AR and NR currently missing
 ```
 
 ```{r}
 #| label: fig-lppd-heatmaps
 source(here::here("results", "fig-lppd-heatmaps.R"))
-fig_heatmap_Gini
-fig_heatmap_LI
-fig_heatmap_VH
+fig_heatmaps
 ```
 
 ```{r}
@@ -65,19 +63,13 @@ fig_ages_test2
 ```
 
 ```{r}
-#| label: fig-england
+#| label: fig-england  
 #| eval: FALSE
-source(here::here("results", "fig-england.R"))
+source(here::here("results", "fig-england.R"))  # Irena to add England figs here
 fig_england_posterior_Gini
 fig_england_posterior_LI
 fig_england_heatmap_Gini
 fig_england_heatmap_LI
-```
-
-```{r}
-#| label: fig-kexp-example
-source(here::here("results", "fig-kexp-example.R"))
-fig_kernels
 ```
 
 ## Tables

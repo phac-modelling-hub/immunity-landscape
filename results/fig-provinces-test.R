@@ -20,18 +20,18 @@ prov_all <- bind_rows(
          model = "Vaccine hesitancy", x_label = "Vaccine hesitancy index")
 ) %>%
   mutate(model = factor(model, levels = c("Gini", "Low-income", "Vaccine hesitancy"))) %>%
-  left_join(vax_means_prov, by = "location")
+  left_join(vax_means_prov, by = "location")  # note this plot needs a value for Atlantic Region and Northern Region to be added, but we are planning to scrap the plot anyway!
 
 fig_provinces_test <- ggplot(prov_all,
                              aes(x = indicator, y = mean_coverage * 100, label = pt)) +
   geom_point(size = 2) +
   ggrepel::geom_text_repel(size = 3, max.overlaps = 20) +
-  scale_y_continuous(name = "Mean 1+ dose coverage (%)", limits = c(0, 100)) +
+  scale_y_continuous(name = "Mean 1+ dose coverage (%)", limits = c(70, 100)) +
   facet_wrap(~ model, scales = "free_x", nrow = 1,
              labeller = labeller(model = function(x) {
                c("Gini"              = "Gini index",
-                 "Low-income"        = "Low-income families (%)",
-                 "Vaccine hesitancy" = "Vaccine hesitancy index")[x]
+                 "Low-income"        = "Percentage of children not in low-income families (%)",
+                 "Vaccine hesitancy" = "Percentage of parents who are not vaccine-hesitant (%)")[x]
              })) +
   labs(x = NULL)
 
