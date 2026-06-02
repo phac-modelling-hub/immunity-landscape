@@ -10,6 +10,12 @@ This project uses `{renv}` to manage R package versions. If you are unfamiliar w
 
 When opening this project in a R session, be sure that the `{renv}` project has been activated. Be sure to resolve any inconsistencies in the state of the project when prompted. When you open this project for the first time, you will need to `renv::restore()` to install all a packages required by this project.
 
+# Working with the code
+
+## Generating manuscript figures
+
+Manuscript figures are generated in `ms_figs_table.qmd`, which refers to a number of stand-alone scripts called`results/fig-*.R` files. To (re)generate figs, run the `setup` chunk in `ms_figs_table.qmd`, then run the chunk corresponding to the figure you want to regenerate.
+
 # Conventions
 
 ## Keeping notes with Quarto
