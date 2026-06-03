@@ -3,7 +3,6 @@ title: "measles_prelim-vax-coverage-data-processing"
 editor: visual
 ---
 
-
 ```{r}
 #| label: setup
 #| echo: false
@@ -49,7 +48,7 @@ parse_age_groups <- function(df, col, last_age = 99){
 }
 ```
 
-We've collected a large dataset of vaccine coverage data (see `measles_vax-coverage-data.qmd`). Here we carry out preliminary data processing tasks, largely following the 'take 2' approach outlined in `measles_prelim-vax-coverage-data.qmd` but with some changes outlined below (*).
+We've collected a large dataset of vaccine coverage data (see `measles_vax-coverage-data.qmd`). Here we carry out preliminary data processing tasks, largely following the 'take 2' approach outlined in `measles_prelim-vax-coverage-data.qmd` but with some changes outlined below (\*).
 
 ## Read data
 
@@ -65,7 +64,6 @@ vax_schedule <- readr::read_csv(here::here("data", "measles_raw", "vax_schedule.
 current_year <- as.integer(format(Sys.Date(), "%Y")) # for ageing estimates
 age_pre1970 <- current_year - 1969 # min age of those born strictly before 1970
 ```
-
 
 ## Split off 18+ estimates
 
@@ -111,7 +109,7 @@ vax_parsed <- vax_raw |>
   parse_age_groups(age)
 ```
 
-## Round ages for data from non-integer ages and keep (e.g. QC) (*)
+## Round ages for data from non-integer ages and keep (e.g. QC) (\*)
 
 ```{r}
 #| label: non_integer_ages
@@ -200,7 +198,7 @@ adjust_X_by_unvaccinated_subgroup <- function(df, popsize, pt, prop_unvaccinated
 
 ## Collapse exactly 1 and exactly 2 dose types to 1+
 
-For data with exactly 1 dose and exactly 2 dose, Ontario's is the only data in which the sum of the coverage estimates across dose types (0, 1, 2) is 1, _i.e._ the estimates are consistent and therefore valid. (See `measles_prelim-vax-coverage-modelling.qmd` take 2 approach for full details).
+For data with exactly 1 dose and exactly 2 dose, Ontario's is the only data in which the sum of the coverage estimates across dose types (0, 1, 2) is 1, *i.e.* the estimates are consistent and therefore valid. (See `measles_prelim-vax-coverage-modelling.qmd` take 2 approach for full details).
 
 Thus, for ON we will sum 1 and 2 dose coverage as reported to get a true 1+ estimate.
 
@@ -224,7 +222,7 @@ vax_new <- vax_aged %>%
   bind_rows(vax_ON)
 ```
 
-And then relabel all estimates of 1/1+ to "1+" (because after dealing with Ontario, all 1 and 1+ data does truly represent "at least one dose" now). (*)
+And then relabel all estimates of 1/1+ to "1+" (because after dealing with Ontario, all 1 and 1+ data does truly represent "at least one dose" now). (\*)
 
 ```{r}
 #| label: correct_1_and_1+_labels
@@ -242,7 +240,7 @@ vax_corrected_labs2 <- vax_corrected_labs %>% mutate(n_doses = if_else(n_doses =
 
 ## De-duplicate
 
-Take the most recent estimates by current age _and dose_, where there are duplicates. (*)
+Take the most recent estimates by current age *and dose*, where there are duplicates. (\*)
 
 ```{r}
 #| label: take2_dedupe
@@ -253,11 +251,11 @@ vax_dedupe <- vax_corrected_labs2 %>%
   filter(year_report == max(year_report)) 
 ```
 
-Some provinces have two estimates for the same year, for different dosages. We do not need to remove these - this could be useful information to pull from and/or for validation (*). Note the GP model currently filters out all 2/2+ estimates anyway.
+Some provinces have two estimates for the same year, for different dosages. We do not need to remove these - this could be useful information to pull from and/or for validation (\*). Note the GP model currently filters out all 2/2+ estimates anyway.
 
 ## Fill in year_birth, reattach aNICS estimates and prioritise provincial data if there are duplicates
 
-Fill in year_birth where it is missing, reattach adults estimates, and prioritise provincial data over aNICS where there are duplicates (because this only happens in Alberta current age 21+, where the provincial data is fairly recent (reporting age 17) and expected to have better sampling? than aNICS). (*)
+Fill in year_birth where it is missing, reattach adults estimates, and prioritise provincial data over aNICS where there are duplicates (because this only happens in Alberta current age 21+, where the provincial data is fairly recent (reporting age 17) and expected to have better sampling? than aNICS). (\*)
 
 ```{r}
 #| label: year_birth_and_aNICS
@@ -271,7 +269,7 @@ vax_clean <- vax_clean_noadults %>% mutate(priority = 1L) %>%
   ungroup() %>% select(-priority)
 ```
 
-## Plot and export 
+## Plot and export
 
 Here's what the data looks like:
 
@@ -285,8 +283,8 @@ vax_clean |> #filter(n_doses == "1+") |>
   xlim(1, 30) +
   ylim(0, 1)
 ```
-The changes made in this file compared to the preliminary modelling file (all marked with an *) have recovered 6 more data points in BC, 5 more data points in AB, and 8 more data points in QC. These all previously got removed when taking the most recent estimates regardless of dose type (as in done in `measles_prelim-vax-coverage-modelling.qmd`). 
-We can now export vax_clean for use in `gp_model.qmd`:
+
+The changes made in this file compared to the preliminary modelling file (all marked with an \*) have recovered 6 more data points in BC, 5 more data points in AB, and 8 more data points in QC. These all previously got removed when taking the most recent estimates regardless of dose type (as in done in `measles_prelim-vax-coverage-modelling.qmd`). We can now export vax_clean for use in `gp_model.qmd`:
 
 ```{r}
 #| label: export_vax_clean
