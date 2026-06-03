@@ -26,6 +26,20 @@ fig_data_plot
 ```
 
 ```{r}
+#| label: fig-england
+# placeholder for model fits to full england data (results/fig-england.R)
+# do we want this in the supp instead...?
+```
+
+```{r}
+#| label: fig-england-accuracy
+#| need to run the targets pipeline first to get the results... this will take ~1 hr on a basic laptop as it involves 40 hyperparameter selection processes!
+#| targets::tar_make(accuracy)
+source(here::here("results", "fig-england-accuracy.R"))
+fig_england_accuracy
+```
+
+```{r}
 #| label: fig-posterior-draws
 source(here::here("results", "fig-posterior-draws.R"))
 fig_posterior_Gini
