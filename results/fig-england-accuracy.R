@@ -13,7 +13,7 @@ df <- purrr::map(branch_names, function(nm) {
 
 # --- Across reps
 
-# Distribution of accuracy across reps
+# Panel A: distribution of accuracy across reps
 fig_england_accuracy <- ggplot(df, aes(x = score)) +
   geom_histogram(bins = 20) +
   geom_vline(xintercept = mean(df$score), linetype = "dashed", color = "red") +
@@ -34,3 +34,36 @@ fig_england_accuracy <- ggplot(df, aes(x = score)) +
     x = "Accuracy per test point",
     y = "Count of test points"
   )
+
+# Panel B: posterior draws with test points overtop, coloured by accuracy
+
+# use make_england_posterior_plot()
+# need 
+# - posterior object: output from run_GP()
+# - obs_df
+# - title
+
+# pull data and hyperparameters for specific subsample
+id_branch <- 5
+targets::tar_load(data_split, branch = id_branch)
+targets::tar_load(fit_hp, branch = id_branch)
+train <- data_split[[which(str_detect(names(data_split), "train"))]]
+prov_values <- fit_hp[[which(str_detect(names(fit_hp), "prov_relation"))]]
+hyperparams <- fit_hp[[which(str_detect(names(fit_hp), "(?<!score_)hyperparams"))]]
+
+post_england_subsample <- run_GP(
+  vax_dataset = train,
+  prov_values = prov_values,
+  k = get(hyperparams$k_name),
+  l1 = hyperparams$l1,
+  l2 = hyperparams$l2,
+  b = hyperparams$b,
+  meas_error = hyperparams$meas_error,
+  show_plots = FALSE
+)
+
+make_england_posterior_plot(
+  post2D = post_england_subsample,
+  obs_df = train,
+  title = "Posterior draws for one England subsample"
+)

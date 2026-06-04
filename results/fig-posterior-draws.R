@@ -10,48 +10,6 @@ obs_Gini <- vax_clean   %>% filter(age_current >= first_agecurrent, age_current 
 obs_LI   <- vax_cleanLI %>% filter(age_current >= first_agecurrent, age_current <= last_agecurrent, n_doses != "2+")
 obs_VH   <- vax_cleanVH %>% filter(age_current >= first_agecurrent, age_current <= last_agecurrent, n_doses != "2+")
 
-make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = NULL, cnics_df = NULL) {
-  obs_df <- obs_df %>%
-    mutate(y_label = factor(location, levels = levels(post2D$y_label)))
-
-  p <- ggplot(post2D) +
-    geom_point(aes(x=x_i, y=post2D_constrained*100, group=factor(draw)), alpha=0.1) +
-    geom_line(aes(x = x_i, y = post2D_constrained * 100, group = factor(draw)),
-              alpha = 0.15, linewidth = 0.3) +
-    geom_point(data = obs_df,
-               aes(x = age_current, y = value * 100, shape = n_doses),
-               colour = "red") +
-    scale_shape_manual(values = shapes_doses, name = NULL, labels = c("1+" = "1+ dose (provincial)")) +
-    scale_x_continuous(name = "Current age", limits = c(first_agecurrent, last_agecurrent),
-                       breaks = seq(5, 21, by = 5)) +
-    scale_y_continuous(name = "Vaccine coverage (%)", limits = c(0, 100)) +
-    facet_wrap(~ y_label)
-
-  if (show_unobs && !is.null(unobs_df)) {
-    unobs_df <- unobs_df %>%
-      mutate(y_label    = factor(location, levels = levels(post2D$y_label)),
-             point_type = "2+ dose (provincial)")
-    
-    overlay_df <- unobs_df
-    
-    if (!is.null(cnics_df)) {
-      cnics_df <- cnics_df %>%
-        mutate(y_label    = factor(location, levels = levels(post2D$y_label)),
-               point_type = "1+ dose (cNICS)")
-      overlay_df <- bind_rows(overlay_df, cnics_df)
-    }
-    
-    p <- p +
-      geom_point(data = overlay_df,
-                 aes(x = age_current, y = value * 100, colour = point_type),
-                 size = 1.2, shape = 16) +
-      scale_colour_manual(values = c("2+ dose (provincial)" = "green", "1+ dose (cNICS)" = "lightgreen"), name = NULL)
-  }
-  
-  p <- p + theme(legend.position = "none")
-  p
-}
-
 fig_posterior_Gini <- make_posterior_plot(post_Gini, obs_Gini)
 fig_posterior_LI   <- make_posterior_plot(post_LI,   obs_LI)
 fig_posterior_VH   <- make_posterior_plot(post_VH,   obs_VH)

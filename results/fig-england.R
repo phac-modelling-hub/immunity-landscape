@@ -17,22 +17,6 @@ england_obs <- read_csv(here::here("data", "ukhsa-chart-download-mmr1-regions.cs
   select(location, age_current, value, n_doses)
 
 # ── Posterior plots ────────────────────────────────────────────────────────────
-make_england_posterior_plot <- function(post2D, obs_df, title = NULL) {
-  obs_df <- obs_df %>%
-    mutate(y_label = factor(location, levels = levels(post2D$y_label)))
-
-  p <- ggplot(post2D) +
-    geom_line(aes(x = x_i, y = post2D_constrained * 100, group = factor(draw)),
-              alpha = 0.15, linewidth = 0.3) +
-    geom_point(data = obs_df, aes(x = age_current, y = value * 100),
-               colour = "red", size = 1.5, shape = 16) +
-    scale_x_continuous(name = "Current age", limits = c(5, 21),
-                       breaks = seq(5, 21, by = 5)) +
-    scale_y_continuous(name = "Vaccine coverage (%)", limits = c(0, 100)) +
-    facet_wrap(~ y_label)
-  if (!is.null(title)) p <- p + ggtitle(title)
-  p
-}
 
 fig_england_posterior_Gini <- make_england_posterior_plot(
   post_england_Gini, england_obs, "England — Gini model posterior"
