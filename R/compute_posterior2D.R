@@ -20,7 +20,7 @@
 #' @param meas_error if specified, measurement error is included (numeric)
 compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA, ndrws=50, prov_levels, b=1, meas_error=NA) {
 
-  fit <- fit_GP2(xvals, yvals, xobs, yobs, zobs, k=k, l1=l1, b=b, meas_error=meas_error)
+  fit <- fit_GP2(xvals = xvals, yvals = yvals, xobs = xobs, yobs = yobs, zobs = zobs, k = k, l1 = l1, b = b, meas_error = meas_error)
 
   # draw from the posterior distribution
   draw_from_rmnorm(
@@ -32,7 +32,7 @@ compute_posterior2D <- function(xvals, yvals, xobs, yobs, zobs, k=ksqexp, l1=NA,
     prov_levels = prov_levels
   ) |>
     dplyr::rename(post2D = value) |>
-    dplyr::mutate(post2D_constrained = LaplacesDemon::invlogit(post2D + centring_term)) |>
+    dplyr::mutate(post2D_constrained = LaplacesDemon::invlogit(post2D + fit$centering_term)) |>
     dplyr::relocate(post2D, .after = y_label)
 }
 
