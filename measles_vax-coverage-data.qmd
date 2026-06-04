@@ -82,7 +82,8 @@ data_dict <- tibble::tribble(
   "year_birth", "birth year", "numeric",
   "age", "age when coverage was estimated", "character",
   "n_doses", "number of doses used to determine vaccine coverage", "character",
-  "value", "vaccine coverage as a proportion", "numeric"
+  "value", "vaccine coverage as a proportion", "numeric",
+  "source", "data source, be it the province/territory (PT), cNICS, or ANICS)", "character"
 )
 
 DT::datatable(data_dict)
@@ -128,9 +129,9 @@ We used the latest version, which is from 2023.
 > \[...\] Indigenous populations for measles vaccine
 
 ```{r}
-#| label: vax_CA_adult
+#| label: vax_aNICS
 
-vax_CA <- (read_excel(here::here("data", "measles_raw", "vax_canada_adults_2023.xlsx")) 
+vax_aNICS <- (read_excel(here::here("data", "measles_raw", "vax_canada_adults_2023.xlsx")) 
  |> filter(Vaccine == "Measles")
  |> mutate(across(everything(), as.character))
  |> select(-Vaccine)
@@ -150,11 +151,12 @@ vax_CA <- (read_excel(here::here("data", "measles_raw", "vax_canada_adults_2023.
    year_report = 2023,
    age = "18+",
    n_doses = "1+",
-   value = as.numeric(value)
+   value = as.numeric(value),
+   source = "aNICS"
  )
 )
 
-DT::datatable(vax_CA)
+DT::datatable(vax_aNICS)
 ```
 
 # PTs for which provincial data sources are used {#provincial}
@@ -185,7 +187,8 @@ vax_NL <- tibble::tibble(
   year_report = 2022,
   age = c("2", "4"),
   n_doses = rep("2", 2), 
-  value = c(0.947, 0.926)
+  value = c(0.947, 0.926),
+  source = "PT"
 )
 
 DT::datatable(vax_NL)
@@ -221,7 +224,8 @@ vax_PE <- tibble::tibble(
   year_report = c(2024, 2023, 2023, 2023, 2023, 2023, 2017),
   year_birth = c(2017, 2016, 2015, 2014, 2013, 2012, 2009),
   n_doses = "2",
-  value = c(0.915,0.893, 0.922, 0.941, 0.93, 0.927, 0.958)
+  value = c(0.915,0.893, 0.922, 0.941, 0.93, 0.927, 0.958),
+  source = "PT"
 )
 
 DT::datatable(vax_PE |> arrange(year_birth))
@@ -325,7 +329,8 @@ vax_QC1 <- tibble::tibble(
   year_report  = c(2012, 2014, 2016, 2019, 2021),
   age = "1.25", # 15 months
   n_doses = "1+", 
-  value =  c(0.909, 0.932, 0.927, 0.949, 0.922)
+  value =  c(0.909, 0.932, 0.927, 0.949, 0.922),
+  source = "PT"
 )
 
 
@@ -337,7 +342,8 @@ vax_QC2 <- tibble::tibble(
   year_report  = rep(c(2012, 2014, 2016, 2019, 2021),2),
   age = "2",
   n_doses = c(rep("1+",5), rep("2+", 5)),
-  value =  c(0.958, 0.967, 0.963, 0.971, 0.95, 0.839, 0.886, 0.905, 0.919, 0.886)
+  value =  c(0.958, 0.967, 0.963, 0.971, 0.95, 0.839, 0.886, 0.905, 0.919, 0.886),
+  source = "PT"
 )
 
 # this incorporates data from the MSSS
@@ -348,7 +354,8 @@ vax_QC3 <- data.frame(
   year_report  = rep(c(2021),2),
   age = c("6-11", "12-16"),
   n_doses = "2+",
-  value =  c(0.88, 0.92) 
+  value =  c(0.88, 0.92),
+  source = "PT"
 )
 
 vax_QC <- rbind(vax_QC1, vax_QC2, vax_QC3)
@@ -408,7 +415,8 @@ vax_ON <- (here::here("data", "measles_raw", "vax_ontario.csv")
     year_report = as.numeric(str_extract(Year, "^[[:digit:]]+")),
     age = as.character(Age),
     n_doses = "2",
-    value = Coverage/100
+    value = Coverage/100,
+    source = "PT"
   )
 )
 
@@ -454,6 +462,7 @@ vax_ON_dose <- (here::here("data", "measles_raw", "vax_ontario_dose.csv")
   )
   |> mutate(n_doses = if_else(n_doses == "2", "2+", n_doses)) # clarify that '2' doses is actually two or more
   |> arrange(location, age)
+  |> dplyr::mutate(source = "PT")
 )
 
 DT::datatable(vax_ON_dose)
@@ -577,7 +586,8 @@ vax_MB <- lapply(sheets_MB, parse_sheet) |> bind_rows() |> filter(vaccine=="Meas
   location, 
   year_report = 2023,
   age, value
-) |> left_join(schedule, by = join_by(age)) |> relocate(n_doses, .before = value)
+) |> left_join(schedule, by = join_by(age)) |> relocate(n_doses, .before = value) |> 
+  dplyr::mutate(source = "PT")
 
 DT::datatable(vax_MB)
 ```
@@ -634,7 +644,7 @@ vax_AB <- read.csv(here::here("data", "measles_raw", "vax_alberta.csv"))  %>%
 # relabel 1-dose to 1+ where needed
 vax_AB <- vax_AB %>% mutate(age = year_report - year_birth) %>%
   mutate(dose_corrected = ifelse(n_doses=="1" & (age>2 | (age==2 & year_birth>2019)), "1+", n_doses)) %>%
-  mutate(n_doses = dose_corrected) %>% select(-dose_corrected, -age)
+  mutate(n_doses = dose_corrected) %>% select(-dose_corrected, -age) |> dplyr::mutate(source = "PT")
 
 #Alberta
 DT::datatable(vax_AB |> arrange(year_birth))
@@ -744,7 +754,7 @@ parse_sheet <- function(sheet_name){
 # get data
 sheets <- readxl::excel_sheets(file_BC)
 age_sheets <- sheets[grepl("age", sheets)]
-vax_BC <- lapply(age_sheets, parse_sheet) |> bind_rows() 
+vax_BC <- lapply(age_sheets, parse_sheet) |> bind_rows() |> dplyr::mutate(source = "PT")
 
 DT::datatable(vax_BC)
 ```
@@ -786,7 +796,8 @@ vax_NT <- tibble::tibble(
   year_report  = 2023,
   age = "2",
   n_doses = "1+" , 
-  value =  0.85
+  value =  0.85,
+  source = "PT"
 )
 
 DT::datatable(vax_NT)
@@ -799,104 +810,71 @@ DT::datatable(vax_NT)
 plot_coverage(vax_NT)
 ```
 
-# PTs for which the cNICS data summary is used {#cNICS}
+# cNICS data {#cNICS}
 
-We could not find any publicly available for **Nova Scotia or Nunavut**.
-Instead, we pulled estimates from
-[cNICS](https://www.canada.ca/en/public-health/services/immunization-vaccines/vaccination-coverage/2021-highlights-childhood-national-immunization-coverage-survey.html).
+We also pulled estimates from
+[cNICS](https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=5185) for all PTs. For **Nova Scotia, Nunavut, Saskatchewan, New Brunswick, Yukon**, these are the only publicly available estimates for children.
 
 For cNICS:
 
--   Estimates were obtained from Table 2a ("Estimated vaccine coverage
-    of routine childhood vaccines by 2 years of age across provinces and
-    territories: cNICS, Canada, 2017 vs. 2021")
--   Estimates are presented in terms of a value with a 95% CI. Below we
-    only capture the value.
--   Proportions are estimated for children aged 2 with *at least* one
-    dose.
-
-## Nova Scotia
+-   By-PT estimates were obtained from [Statistics Canada Table 13-10-0870-01  Vaccine coverage estimates for recommended vaccines in children and pregnant women](https://doi.org/10.25318/1310087001-eng)
+-   cNICS reports a value with a 95% CI. Below we only capture the value.
+-   For measles, estimates are available for two and seven year olds, though the latter is only available for 2013. We assume proportions are estimated for *at least* one dose as the number of doses does not seem to be captured in the questionnaire with respect to measles (just whether or not the child has been vaccinated for measles).
 
 ```{r}
-#| label: vax_NS
-#| fig-height: 3
+#| label: vax_cNICS
 
-vax_NS <- tibble::tibble(
-  pt = "NS",
-  location = "Nova Scotia",
-  year_report = c(2017, 2021),
-  age = "2",
-  n_doses = "1+",
-  value =  c(0.871, 0.936)
-)
-
-DT::datatable(vax_NS)
+vax_cNICS <- suppressWarnings(readr::read_csv(here::here("data", "1310087001-eng.csv"), skip = 13, col_names = c("location", "age", "year_report", "value"), na = c("", "NA", ".."), show_col_types = FALSE)) |>
+  tidyr::fill(location, age, .direction = "down") |>
+  dplyr::mutate(
+    age = str_extract(age, "\\d+(?=-year-old)"),
+    n_doses = "1+",
+    value = value/100,
+    source = "cNICS"
+  ) |>
+  dplyr::left_join(
+    pt_lookup(), by = join_by(location)
+  ) |>
+  dplyr::transmute(
+    pt, location, year_report, age, n_doses, value, source
+  ) |>
+  tidyr::drop_na()
 ```
 
 ```{r}
-#| label: NS_plot
+#| label: cNICS_plot
 
-plot_coverage(vax_NS)
-```
-
-## Nunavut
-
-We omit the 2021 estimate, which is exceedingly low and includes [the following footnote](https://www.canada.ca/en/public-health/services/immunization-vaccines/vaccination-coverage/2021-highlights-childhood-national-immunization-coverage-survey.html#tbl2anE):
-
-> Estimates and confidence intervals are of marginal quality due to high sampling variability and should be used with caution.
-
-```{r}
-#| label: vax_NU
-
-vax_NU <- tibble::tibble(
-  pt = "NU", 
-  location = "Nunavut",
-  year_report  = 2017,
-  age = "2",
-  n_doses = "1+" , 
-  value =  0.887
-)
-
-DT::datatable(vax_NU)
-```
-
-```{r}
-#| label: NU_plot
-#| fig-height: 3
-
-plot_coverage(vax_NU)
+plot_coverage(vax_cNICS)
 ```
 
 # Summary across PTs {#summary-across-pts}
 
-The following plot includes the data across provinces collected *as is*
-(not including 18+ coverage from aNICS):
-
+We aggregate and export the standardized data across sources:
 ```{r}
-#| label: collect_vax_dfs
-
-df_names <- c(paste0("vax_", pt_lookup() |> filter(!(pt %in% c("CA", "SK", "NB", "YT"))) |> pull(pt)), "vax_ON_dose")
-vax <- lapply(df_names, get) |> bind_rows() # aggregated df for kids estimates (for plotting here)
-```
-
-We also export our standardized dataset.
-
-```{r}
-#| label: export_vax
+#| label: collect_export_vax
 #| eval: true
 
+df_names <- c(
+  paste0("vax_", 
+    c("NL", "PE", "QC", "ON", "MB", "AB", "BC", "NT", # PT data
+      "cNICS", "aNICS")), 
+  "vax_ON_dose"
+  )
+vax <- lapply(df_names, get) |> bind_rows() # all estimates
+
 vax |>
-  # attach adult estimates from aNICS
-  bind_rows(vax_CA) |> 
   # enforce variable ordering as in data dictionary
   select(all_of(data_dict$variable)) |>
   readr::write_csv(here::here("data", "measles_vax-coverage-data.csv"))
 ```
 
+How much data is available from each PT (cNICS and aNICS excluded) can be seen from the following plot:
+
 ```{r}
 #| label: manipulate_age_data
 
 vax_plot  <- vax %>%
+  filter(source == "PT") %>%
   mutate(age = ifelse(is.na(age) & !is.na(year_report) & !is.na(year_birth), year_report - year_birth, age)) %>%
   # keep only PT-level data
   left_join(pt_lookup(), join_by(pt), suffix = c("", ".pt")) %>%
@@ -931,7 +909,7 @@ vax_plot2 <- (vax_plot |>
 plot_coverage(vax_plot2, x = "age_current", ncol = 5) + th
 ```
 
-Note that this calculation is rather rough and would likely result in an
+Note that this calculation is rather rough and could result in an
 *underestimate* of vaccine coverage; all of these estimates are at least
 a year old, and it's possible that more vaccines have been administered
 to these cohorts in the meantime. It's worth noting that
@@ -972,13 +950,13 @@ vax_plot2 |>
 
 # Basic data analysis
 
-We wish to understand how many observations we have of a given type to aid with selection of appropriate statistical modelling methods. Number of observations by province, by birth cohort etc. can be extracted from the `vax` dataframe (note aNICS data not currently included):
+We wish to understand how many observations we have of a given type to aid with selection of appropriate statistical modelling methods. Number of observations by province, by birth cohort etc. can be extracted from the `vax` dataframe (excluding aNICS):
 
 ```{r}
 #| label: data_analysis
 
 #' set up data frames
-vax_all <- vax %>% mutate(age = ifelse(is.na(age) & !is.na(year_report) & !is.na(year_birth), year_report - year_birth, age)) %>%
+vax_all <- vax |> filter(source != "aNICS") %>% mutate(age = ifelse(is.na(age) & !is.na(year_report) & !is.na(year_birth), year_report - year_birth, age)) %>%
   numericize(age) %>% mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - round(age), year_birth)) %>% select(-zone_type)  # manipulate age data and year_birth data to fill in blanks
 
 vax_provincial <- vax_all %>% left_join(pt_lookup(), join_by(pt), suffix = c("", ".pt")) %>% filter(location == location.pt) %>% select(-location.pt)  # filter out sub-province etc data
