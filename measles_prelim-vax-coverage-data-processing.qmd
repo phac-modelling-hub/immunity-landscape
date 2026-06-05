@@ -38,7 +38,7 @@ expand_age <- function(df, new_ages){
 #'
 #' @param df data frame
 #' @param col column to transform, as a symbol
-parse_age_groups <- function(df, col, last_age = 99){
+parse_age_groups <- function(df, col, last_age = 21){
   df |>
     rowwise() |> 
     mutate(
@@ -48,7 +48,7 @@ parse_age_groups <- function(df, col, last_age = 99){
 }
 ```
 
-We've collected a large dataset of vaccine coverage data (see `measles_vax-coverage-data.qmd`). Here we carry out preliminary data processing tasks, largely following the 'take 2' approach outlined in `measles_prelim-vax-coverage-data.qmd` but with some changes outlined below (\*).
+We've collected a large dataset of vaccine coverage data (see `measles_vax-coverage-data.qmd`). Here we carry out data processing tasks as outlined in the methods of our ms.
 
 ## Read data
 
@@ -59,43 +59,14 @@ We've collected a large dataset of vaccine coverage data (see `measles_vax-cover
 PT_lookup <- readr::read_csv(here::here("data", "pt_lookup.csv"), show_col_types = FALSE)
 popsize <- read_csv(here::here("data", "popsize.csv"), show_col_types = FALSE)
 vax_raw <- readr::read_csv(here::here("data", "measles_vax-coverage-data.csv"), show_col_types = FALSE) |> filter(location %in% unique(PT_lookup$nm_en))
-vax_schedule <- readr::read_csv(here::here("data", "measles_raw", "vax_schedule.csv"), show_col_types = FALSE)
 
 current_year <- as.integer(format(Sys.Date(), "%Y")) # for ageing estimates
-age_pre1970 <- current_year - 1969 # min age of those born strictly before 1970
 ```
 
-## Split off 18+ estimates
+## Remove low Nunavut point
 
 ```{r}
-#| label: spilt_data
-
-vax_split <- vax_raw |>
-  mutate(aNICS = (age == "18+" & !is.na(age)))
-
-vax_raw <- vax_split |> filter(!aNICS) |> select(-aNICS)
-vax_aNICS <- vax_split |> 
-  filter(aNICS) |> 
-  select(-aNICS) |>
-  # prepare for attaching later
-  # age estimates
-  mutate(age_current = pull_first(age) + (current_year - year_report)) |> transmute(
-    pt, n_doses, 
-    age_current, value,
-  ) |>
-  # complete age group by pt and n_doses and repeat only obs for all current ages (don't bother estimating for those born 1970 or later---we handle their vax coverage separately)
-  group_by(pt, n_doses) |> 
-  expand_age(new_ages = c(age_pre1970-1)) |>
-  mutate(
-    source = "aNICS",
-    value = na.approx(value, rule = 2) 
-  )
-
-vax_aNICS_full <- vax_split |> filter(aNICS) |> select(-aNICS) |> group_by(pt, location, year_report) |>
-  mutate(age_current = pull_first(age) + (current_year - year_report)) |> 
-  group_by(pt, location, year_report, age, n_doses) |> expand_age(new_ages = c(age_pre1970-1)) |>
-  mutate(value = na.approx(value, rule = 2)) |> mutate(year_birth = current_year - age_current) |>
-  mutate(age = year_report - year_birth) |> transmute(pt, location, year_report, year_birth, age, n_doses, value, age_current)
+vax_raw <- vax_raw |> filter(!(pt == "NU" & year_report == 2021))
 ```
 
 ## Parse ages and doses
@@ -104,17 +75,13 @@ vax_aNICS_full <- vax_split |> filter(aNICS) |> select(-aNICS) |> group_by(pt, l
 #| label: parse_ages_and_doses
 
 vax_parsed <- vax_raw |>
+  # parse aNICS "18+" as 18
+  mutate(age = if_else(source == "aNICS", "18", age)) |>
   # parse age groups into single-year ages
   mutate(age = if_else(is.na(age), as.character(year_report-year_birth), age)) |> # fill in age at report where not present
-  parse_age_groups(age)
-```
-
-## Round ages for data from non-integer ages and keep (e.g. QC) (\*)
-
-```{r}
-#| label: non_integer_ages
-
-vax_parsed2 <- vax_parsed |> mutate(age = round(age))
+  parse_age_groups(age) |>
+  # round non-integer ages (QC)
+  mutate(age = round(age))
 ```
 
 ## Age the estimates to current year
@@ -122,78 +89,8 @@ vax_parsed2 <- vax_parsed |> mutate(age = round(age))
 ```{r}
 #| label: age_estimates
 
-vax_aged <- vax_parsed2 |> 
-  mutate(age_current = age + (current_year - year_report)) |>
-  # filter out ages over 99 (ABM max)
-  filter(age_current < 100)
-```
-
-## Set up "coverage" functions for infants and those born before 1970
-
-```{r}
-#| label: attach_immunity_fns
-
-#' Attach immunity assumption for those born before 1970
-#' 
-#' @param df data frame matching format expected for input into ABM
-#' @param age_pre1970 minimum age of those born in 1970 and before
-attach_immunity_pre1970 <- function(df, age_pre1970){
-  # add coverage for those born in 1970 and before
-  bind_rows(
-    df, 
-    tibble(
-      day = 1,
-      prov = PT_lookup$al_code,
-      age_min = age_pre1970,
-      age_max = 99,
-      zone = "",
-      vstatus = "None",
-      percent = 1,
-      label = "1-dose-pre-1970"
-    )
-  )
-}
-
-#' Attach maternal immunity assumption for infants
-#' 
-#' @param df data frame matching format expected for input into ABM
-attach_immunity_maternal <- function(df){
-  # add coverage infants under 1 year old
-  bind_rows(
-    df,
-    tibble(
-      day = 1,
-      prov = PT_lookup$al_code,
-      age_min = 0,
-      age_max = 0,
-      zone = "",
-      vstatus = "None",
-      percent = 0.25,
-      label = "maternal-immunity"
-      )
-    )
-}
-
-#' Adjust vaccine coverage estimate for zone X by assuming an unvaccinated subgroup in the PT
-#' 
-#' @param df dataframe of vaccine coverage (`value`) by population centre (`zone`) and province (`pt`) 
-#' @param popsize dataframe of population sizes (read from `data/popsize.csv`)
-#' @param pt PTs to adjust
-#' @param prop_unvaccinated Proportion of the PT population that is unvaccinated
-adjust_X_by_unvaccinated_subgroup <- function(df, popsize, pt, prop_unvaccinated){
-  adj <- popsize |>
-    filter(pt %in% {{pt}}) |>
-    mutate(
-      prop_adj = (prop_pop_rural-prop_unvaccinated)/prop_pop_rural
-    ) |>
-    select(pt, prop_adj)
-    
-  
-  df |>
-    left_join(adj, by = join_by(pt)) |>
-    mutate(value = if_else(zone == "X" & !is.na(prop_adj), value*prop_adj, value)) |>
-    select(-prop_adj)
-}
+vax_aged <- vax_parsed |> 
+  mutate(age_current = age + (current_year - year_report))
 ```
 
 ## Collapse exactly 1 and exactly 2 dose types to 1+
@@ -212,8 +109,8 @@ vax_ON <- vax_aged %>%
     pt == "ON",
     n_doses %in% c("1","2+") # keep 1 and 2+ doses (compatible estimates)
   ) %>%
-  #sum the uptake for each year to give estimates for 1+
-  group_by(pt, location, year_report, year_birth, age, age_current) %>%
+  # sum the uptake for each year to give estimates for 1+
+  group_by(pt, location, year_report, year_birth, age, age_current, source) %>%
   summarise(value = sum(value), .groups = "drop") %>%
   mutate(n_doses = "1+")  # (*)
 
@@ -222,51 +119,55 @@ vax_new <- vax_aged %>%
   bind_rows(vax_ON)
 ```
 
-And then relabel all estimates of 1/1+ to "1+" (because after dealing with Ontario, all 1 and 1+ data does truly represent "at least one dose" now). (\*)
+And then relabel all estimates of 1/1+ to "1+" (because after dealing with Ontario, all 1 and 1+ data does truly represent "at least one dose" now). Also relabel all 2/2+ to "2+" as these data all now represent "two or more doses".
 
 ```{r}
-#| label: correct_1_and_1+_labels
+#| label: correct_dose_labels
 
-vax_corrected_labs <- vax_new %>% mutate(n_doses = if_else(n_doses == "1", "1+", n_doses))
-```
-
-And relabel all 2/2+ to "2+" as these data all now represent "two or more doses".
-
-```{r}
-#| label: correct_2_and_2+_labels
-
-vax_corrected_labs2 <- vax_corrected_labs %>% mutate(n_doses = if_else(n_doses == "2", "2+", n_doses))
+vax_corrected_labs <- vax_new %>% 
+  mutate(n_doses = if_else(n_doses == "1", "1+", n_doses)) %>% 
+  mutate(n_doses = if_else(n_doses == "2", "2+", n_doses))
 ```
 
 ## De-duplicate
 
-Take the most recent estimates by current age *and dose*, where there are duplicates. (\*)
+Between PT-reported data and estimates from national surveys, prioritize PT-reported data per age and dose number. If duplicates still exist (within PT-reported data), take the most recent estimate.
 
 ```{r}
 #| label: take2_dedupe
 
-vax_dedupe <- vax_corrected_labs2 %>%
-  # choose the most recent estimate (by current age and dose type) using year reported
+vax_dedupe <- vax_corrected_labs %>%
+  # prioritize PT-reported data over national surveys
+  mutate(source_priority = if_else(source == "PT", 1L, 2L)) %>%
   group_by(pt, location, age_current, n_doses) %>%
-  filter(year_report == max(year_report)) 
+  filter(source_priority == min(source_priority)) %>%
+  # if still duplicates within PT, keep the most recent estimate
+  filter(year_report == max(year_report)) %>%
+  ungroup() %>%
+  select(-source_priority)
 ```
 
-Some provinces have two estimates for the same year, for different dosages. We do not need to remove these - this could be useful information to pull from and/or for validation (\*). Note the GP model currently filters out all 2/2+ estimates anyway.
+## Fill in year_birth, where missing
 
-## Fill in year_birth, reattach aNICS estimates and prioritise provincial data if there are duplicates
-
-Fill in year_birth where it is missing, reattach adults estimates, and prioritise provincial data over aNICS where there are duplicates (because this only happens in Alberta current age 21+, where the provincial data is fairly recent (reporting age 17) and expected to have better sampling? than aNICS). (\*)
+(Unsure if this is still used, but keeping in as not to break anything...)
 
 ```{r}
 #| label: year_birth_and_aNICS
 
-vax_clean_noadults <- vax_dedupe %>% ungroup() %>% 
+vax_clean <- vax_dedupe %>% 
   mutate(year_birth = ifelse(is.na(year_birth) & !is.na(year_report) & !is.na(age), year_report - age, year_birth))
+```
 
-vax_clean <- vax_clean_noadults %>% mutate(priority = 1L) %>%
-  bind_rows(vax_aNICS_full %>% filter(age == 18) %>% mutate(priority = 2L)) %>%  # attach one adult estimate from aNICS for each province (age 18)
-  group_by(pt, location, age_current, n_doses) %>% filter(priority == min(priority)) %>% # prioirtise provincial data when there are duplicates between provincial data and aNICS
-  ungroup() %>% select(-priority)
+## Filter age range
+
+```{r}
+#| label: filter_age_range
+
+first_agecurrent <- 5
+last_agecurrent <- 21
+vax_clean <- vax_clean %>% filter(
+    between(age_current, first_agecurrent, last_agecurrent)
+)
 ```
 
 ## Plot and export
@@ -276,25 +177,11 @@ Here's what the data looks like:
 ```{r}
 #| label: plot
 
-vax_clean |> #filter(n_doses == "1+") |>
+vax_clean |> 
   ggplot(aes(x = age_current, y = value)) +
-  geom_point(aes(shape = n_doses)) + 
+  geom_point(aes(shape = n_doses, colour = n_doses)) + 
   facet_wrap(~location) +
-  xlim(1, 30) +
-  ylim(0, 1)
-```
-
-The changes made in this file compared to the preliminary modelling file (all marked with an \*) have recovered 6 more data points in BC, 5 more data points in AB, and 8 more data points in QC. These all previously got removed when taking the most recent estimates regardless of dose type (as in done in `measles_prelim-vax-coverage-modelling.qmd`).
-
-Finally, we just need to restrict ourselves to a consistent age range for the study:
-
-```{r}
-#| label: filter_vax_clean
-first_agecurrent <- 5
-last_agecurrent <- 21
-vax_clean <- vax_clean %>% filter(
-    between(age_current, first_agecurrent, last_agecurrent)
-)
+  xlim(1, 21)
 ```
 
 We can now export `vax_clean` for use in `gp_model.qmd`:
@@ -303,9 +190,10 @@ We can now export `vax_clean` for use in `gp_model.qmd`:
 #| label: export_vax_clean
 
 # model input data (1+ doses)
-vax_clean |> dplyr::filter(n_doses != "2+") %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-cleaned.csv"))
+vax_input <- vax_clean |> dplyr::filter(n_doses != "2+") 
+readr::write_csv(vax_input, here::here("data", "measles_vax-coverage-data-cleaned.csv"))
 # 2+ doses for plot overlay
 vax_clean |> dplyr::filter(n_doses == "2+") %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-cleaned_2plus.csv"))
 # model input data without adults
-vax_clean_noadults %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-cleaned_noadults.csv"))
+vax_input |> filter(source != "aNICS") %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-cleaned_noadults.csv"))
 ```
