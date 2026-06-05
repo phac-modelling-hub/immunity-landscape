@@ -43,12 +43,11 @@ attach_country <- function(df, country) {
 #' countries.
 prep_vax_data <- function(file_canada, file_england) {
   current_year <- as.integer(format(Sys.Date(), "%Y"))
-
+  
   vax_clean <- readr::read_csv(
     file_canada,
     show_col_types = FALSE
-  ) |>
-    filter(!(pt %in% c("SK", "YT", "NB")))
+  ) |> dplyr::select(-source)
 
   vax_england <- readr::read_csv(
     file_england,
@@ -62,18 +61,11 @@ prep_vax_data <- function(file_canada, file_england) {
       age_current = current_year - year_report + age
     ) |>
     select(location, year_report, age, n_doses, value, age_current)
-
+    
   bind_rows(
     vax_clean |> attach_country("Canada"),
     vax_england |> attach_country("England")
-  ) |>
-    filter(n_doses == "1+") |>
-    # filter to common ages
-    group_by(country) |>
-    mutate(age_min = min(age_current), age_max = max(age_current)) |>
-    ungroup() |>
-    mutate(age_min = max(age_min), age_max = min(age_max)) |>
-    filter(between(age_current, age_min, age_max))
+  )
 }
 
 #' Compute per-location sample sizes from Canadian data

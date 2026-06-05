@@ -4,8 +4,6 @@
 #' Note: scaling by l2 happens inside the function.
 #' 
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
-#' @param first_agecurrent first age for the GP model, i.e. smallest x-variable entry (numeric)
-#' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
 #' @param prov_values named ordered vector giving numerical y-axis values associated to each province, unscaled
 #' OR a character from the following list:
 #'          - "GDP"
@@ -19,9 +17,8 @@
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
 #' @param meas_error if specified, measurement error is included (numeric)
-compute_lppd <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_values, k=ksqexp, l1=NA, l2=NA, b=1, meas_error=NA) {
-  # prepare observed data (training+test)
-  vax_dataset <- vax_dataset %>% filter((age_current>=first_agecurrent) & (age_current<=last_agecurrent) & n_doses!="2+")  # filter out unused data (2-dose & older/younger ages)
+compute_lppd <- function(vax_dataset, prov_values, k=ksqexp, l1=NA, l2=NA, b=1, meas_error=NA) {
+
   xobs <- vax_dataset %>% pull(age_current)
   prov_values <- extract_province_relation(prov_values, vax_dataset=vax_dataset)
   prov_values <- prov_values*l2  # scale province values by l2
@@ -64,8 +61,8 @@ compute_lppd <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, pr
 #' Prepare inputs needed to compute posterior predictive density (PPD)
 #' @inheritParams compute_lppd2
 #' @return List containing `vax_dataset`, `bottom` (matrix for denominator of PPD mean equation), logit_zobs_centred (centred and transformed response values), and centring_term (mean of transformed response values used to centre them)
-prepare_ppd_inputs <- function(vax_dataset, first_agecurrent = 5, last_agecurrent = 21, prov_values, k = ksqexp, l1 = NA, l2 = NA, b = 1, meas_error = NA) {
-  vax_dataset <- vax_dataset %>% filter((age_current>=first_agecurrent) & (age_current<=last_agecurrent) & n_doses!="2+")  # filter out unused data (2-dose & older/younger ages)
+prepare_ppd_inputs <- function(vax_dataset, prov_values, k = ksqexp, l1 = NA, l2 = NA, b = 1, meas_error = NA) {
+
   xobs <- vax_dataset %>% dplyr::pull(age_current)
   prov_values <- extract_province_relation(prov_values, vax_dataset = vax_dataset)
   prov_values <- prov_values * l2
@@ -117,8 +114,6 @@ compute_ppd_params <- function(prep, indx = NULL) {
 #' Note: scaling by l2 happens inside the function.
 #' 
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
-#' @param first_agecurrent first age for the GP model, i.e. smallest x-variable entry (numeric)
-#' @param last_agecurrent last age for the GP model, i.e. largest x-variable entry (numeric)
 #' @param prov_values named ordered vector giving numerical y-axis values associated to each province, unscaled
 #' OR a character from the following list:
 #'          - "GDP"
@@ -132,8 +127,8 @@ compute_ppd_params <- function(prep, indx = NULL) {
 #' @param l2 relative lengthscale of x values to y values, for use with covariance functions ksqexp and kexp
 #' @param b scale for covariance function determining the output variance
 #' @param meas_error if specified, measurement error is included (numeric)
-compute_lppd2 <- function(vax_dataset, first_agecurrent = 5, last_agecurrent = 21, prov_values, k = ksqexp, l1 = NA, l2 = NA, b = 1, meas_error = NA) {
-  ppd_inputs <- prepare_ppd_inputs(vax_dataset = vax_dataset, first_agecurrent = first_agecurrent, last_agecurrent = last_agecurrent, prov_values = prov_values, k = k, l1 = l1, l2 = l2, b = b, meas_error = meas_error)
+compute_lppd2 <- function(vax_dataset, prov_values, k = ksqexp, l1 = NA, l2 = NA, b = 1, meas_error = NA) {
+  ppd_inputs <- prepare_ppd_inputs(vax_dataset = vax_dataset, prov_values = prov_values, k = k, l1 = l1, l2 = l2, b = b, meas_error = meas_error)
   ppd_params <- compute_ppd_params(prep = ppd_inputs, indx = NULL)
 
   lppds <- -0.5 * log(ppd_params$ppd_vars) -

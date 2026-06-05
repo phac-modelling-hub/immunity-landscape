@@ -284,11 +284,28 @@ vax_clean |> #filter(n_doses == "1+") |>
   ylim(0, 1)
 ```
 
-The changes made in this file compared to the preliminary modelling file (all marked with an \*) have recovered 6 more data points in BC, 5 more data points in AB, and 8 more data points in QC. These all previously got removed when taking the most recent estimates regardless of dose type (as in done in `measles_prelim-vax-coverage-modelling.qmd`). We can now export vax_clean for use in `gp_model.qmd`:
+The changes made in this file compared to the preliminary modelling file (all marked with an \*) have recovered 6 more data points in BC, 5 more data points in AB, and 8 more data points in QC. These all previously got removed when taking the most recent estimates regardless of dose type (as in done in `measles_prelim-vax-coverage-modelling.qmd`).
+
+Finally, we just need to restrict ourselves to a consistent age range for the study:
+
+```{r}
+#| label: filter_vax_clean
+first_agecurrent <- 5
+last_agecurrent <- 21
+vax_clean <- vax_clean %>% filter(
+    between(age_current, first_agecurrent, last_agecurrent)
+)
+```
+
+We can now export `vax_clean` for use in `gp_model.qmd`:
 
 ```{r}
 #| label: export_vax_clean
 
-vax_clean %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-cleaned.csv"))
+# model input data (1+ doses)
+vax_clean |> dplyr::filter(n_doses != "2+") %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-cleaned.csv"))
+# 2+ doses for plot overlay
+vax_clean |> dplyr::filter(n_doses == "2+") %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-cleaned_2plus.csv"))
+# model input data without adults
 vax_clean_noadults %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-cleaned_noadults.csv"))
 ```

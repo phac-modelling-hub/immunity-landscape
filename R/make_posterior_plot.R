@@ -10,8 +10,8 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
                aes(x = age_current, y = value, shape = n_doses),
                colour = "red") +
     scale_shape_manual(values = shapes_doses, name = NULL, labels = c("1+" = "1+ dose (provincial)")) +
-    scale_x_continuous(name = "Current age", limits = c(first_agecurrent, last_agecurrent),
-                       breaks = seq(5, 21, by = 5)) +
+    scale_x_continuous(name = "Current age", limits = c(min(post2D$x_i), max(post2D$x_i)),
+                       breaks = seq(min(post2D$x_i), max(post2D$x_i), by = 5)) +
     scale_y_continuous(name = "Vaccine coverage", labels = scales::label_percent(), limits = c(0, 100)) +
     facet_wrap(~ y_label)
 

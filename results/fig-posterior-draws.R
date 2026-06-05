@@ -6,9 +6,9 @@ post_Gini <- readRDS(here::here("results", "posterior_Gini.rds"))
 post_LI   <- readRDS(here::here("results", "posterior_LI.rds"))
 post_VH   <- readRDS(here::here("results", "posterior_VH.rds"))
 
-obs_Gini <- vax_clean   %>% filter(age_current >= first_agecurrent, age_current <= last_agecurrent, n_doses != "2+")
-obs_LI   <- vax_cleanLI %>% filter(age_current >= first_agecurrent, age_current <= last_agecurrent, n_doses != "2+")
-obs_VH   <- vax_cleanVH %>% filter(age_current >= first_agecurrent, age_current <= last_agecurrent, n_doses != "2+")
+obs_Gini <- vax_clean
+obs_LI   <- vax_cleanLI
+obs_VH   <- vax_cleanVH
 
 fig_posterior_Gini <- make_posterior_plot(post_Gini, obs_Gini)
 fig_posterior_LI   <- make_posterior_plot(post_LI,   obs_LI)
@@ -55,8 +55,8 @@ fig_posterior_combined <- ggplot(post_all) +
              aes(x = age_current, y = value * 100, shape = n_doses),
              colour = "red", size = 1.2) +
   scale_shape_manual(values = shapes_doses, name = "Doses") +
-  scale_x_continuous(name = "Current age", limits = c(first_agecurrent, last_agecurrent),
-                     breaks = seq(5, 21, by = 5)) +
+  scale_x_continuous(name = "Current age", limits = c(min(post_all$x_i), max(post_all$x_i)),
+                     breaks = seq(min(post_all$x_i), max(post_all$x_i), by = 5)) +
   scale_y_continuous(name = "Vaccine coverage (%)", limits = c(0, 100)) +
   facet_grid(model ~ province, scales = "free_x", space = "free_x") +
   theme(legend.position = "none")
@@ -65,12 +65,11 @@ ggsave(here::here("results", "fig-posterior-draws.pdf"),
        fig_posterior_combined, width = fig_w * 2, height = fig_h * 1.5)
 
 # ── Gini with unobserved overlay (2+ dose data and cNICS) ────────────────────────────────
-unobs_Gini <- vax_clean %>%  #need to add cnics here
-  filter(age_current >= first_agecurrent, age_current <= last_agecurrent, n_doses == "2+") %>%
+unobs_Gini <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned_2plus.csv")) %>%
   select(age_current, location, value)
 
 cnics_Gini <- vax_cNICS %>%
-  filter(age_current >= first_agecurrent, age_current <= last_agecurrent,
+  filter(age_current >= 5, age_current <= 21,
          n_doses == "1+") %>%
   select(age_current, location, value)
 

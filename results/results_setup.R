@@ -190,7 +190,7 @@ if (rerun_SBC == T) {
     params <- list(k = k, k_name = k_object$name, l1 = l1, l2 = l2, b = b, meas_error = meas_error)  # save param values
     
     #' set up xvals and yvals (mirroring run_GP internals)
-    xvals      <- first_agecurrent:last_agecurrent
+    xvals      <- 5:21
     prov_vals  <- extract_province_relation("Gini", vax_dataset = vax_clean)
     prov_levels <- names(prov_vals)
     yvals      <- prov_vals * l2
@@ -217,7 +217,6 @@ if (rerun_SBC == T) {
     
     # partial synthetic data (only the same (age,province) pairs of vax_clean)
     partial_data_points <- vax_clean %>%
-      filter(age_current >= first_agecurrent, age_current <= last_agecurrent, n_doses != "2+") %>%
       distinct(age_current, location)
     ms_partial <- select_GP(
       synthetic_data %>% semi_join(partial_data_points, by = c("age_current", "location")),
