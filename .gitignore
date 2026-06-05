@@ -41,3 +41,4 @@ immunity-landscape.Rproj
 
 **/*.quarto_ipynb
 .positai
+_targets/
