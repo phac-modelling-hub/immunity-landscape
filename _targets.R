@@ -13,7 +13,7 @@ targets::tar_option_set(
 )
 
 # source all functions in R/
-invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))\
+invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
 
 # --- pipeline ---
 
