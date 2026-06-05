@@ -117,12 +117,8 @@ split_train_test <- function(vax, sample_size, id_rep) {
   vax_england <- filter(vax, country == "England")
 
   sample_by_location <- tibble(
-    location = sample(
-      unique(vax_england$location),
-      size = nrow(sample_size),
-      replace = FALSE
-    ),
-    n = sample(sample_size$n)
+    location = unique(vax_england$location),
+    n = sample(sample_size$n, size = length(unique(vax_england$location)), replace = FALSE)
   )
 
   vax_england_subset <- vax_england |>
@@ -137,7 +133,7 @@ split_train_test <- function(vax, sample_size, id_rep) {
     vax_england_subset, vax_train,
     by = join_by(
       country, location, year_report, year_birth, age,
-      n_doses, value, age_current, age_min, age_max
+      n_doses, value, age_current
     )
   )
 
