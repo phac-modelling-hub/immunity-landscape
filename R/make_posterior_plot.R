@@ -3,16 +3,16 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
     mutate(y_label = factor(location, levels = levels(post2D$y_label)))
 
   p <- ggplot(post2D) +
-    geom_point(aes(x=x_i, y=post2D_constrained*100, group=factor(draw)), alpha=0.1) +
-    geom_line(aes(x = x_i, y = post2D_constrained * 100, group = factor(draw)),
+    geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) +
+    geom_line(aes(x = x_i, y = post2D_constrained , group = factor(draw)),
               alpha = 0.15, linewidth = 0.3) +
     geom_point(data = obs_df,
-               aes(x = age_current, y = value * 100, shape = n_doses),
+               aes(x = age_current, y = value, shape = n_doses),
                colour = "red") +
     scale_shape_manual(values = shapes_doses, name = NULL, labels = c("1+" = "1+ dose (provincial)")) +
     scale_x_continuous(name = "Current age", limits = c(first_agecurrent, last_agecurrent),
                        breaks = seq(5, 21, by = 5)) +
-    scale_y_continuous(name = "Vaccine coverage (%)", limits = c(0, 100)) +
+    scale_y_continuous(name = "Vaccine coverage", labels = scales::label_percent(), limits = c(0, 100)) +
     facet_wrap(~ y_label)
 
   if (show_unobs && !is.null(unobs_df)) {
@@ -40,19 +40,27 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
   p
 }
 
-make_england_posterior_plot <- function(post2D, obs_df, title = NULL) {
-  obs_df <- obs_df %>%
-    mutate(y_label = factor(location, levels = levels(post2D$y_label)))
+make_england_posterior_plot <- function(post2D, obs_df = NULL, title = NULL) {
 
   p <- ggplot(post2D) +
-    geom_line(aes(x = x_i, y = post2D_constrained * 100, group = factor(draw)),
+    geom_line(aes(x = x_i, y = post2D_constrained , group = factor(draw)),
               alpha = 0.15, linewidth = 0.3) +
-    geom_point(data = obs_df, aes(x = age_current, y = value * 100),
-               colour = "red", size = 1.5, shape = 16) +
     scale_x_continuous(name = "Current age", limits = c(5, 21),
                        breaks = seq(5, 21, by = 5)) +
-    scale_y_continuous(name = "Vaccine coverage (%)", limits = c(0, 100)) +
+    scale_y_continuous(name = "Vaccine coverage"
+    , labels = scales::label_percent()
+    # , limits = c(0, 100)
+    ) +
     facet_wrap(~ y_label)
+
+  # add optional elements
+  if (!is.null(obs_df)) {
+    obs_df <- obs_df %>%
+      mutate(y_label = factor(location, levels = levels(post2D$y_label)))
+
+    p <- p + geom_point(data = obs_df, aes(x = age_current, y = value),
+                        colour = "red", size = 1.5, shape = 16)
+  }
   if (!is.null(title)) p <- p + ggtitle(title)
   p
 }
