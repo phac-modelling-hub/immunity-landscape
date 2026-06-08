@@ -33,6 +33,7 @@ fig_data_plot
 
 ```{r}
 #| label: fig-england-accuracy
+#| eval: false
 #| need to run the targets pipeline first to get the results... this will take ~1 hr on a basic laptop as it involves 40 hyperparameter selection processes!
 #| targets::tar_make(accuracy)
 source(here::here("results", "fig-england-accuracy.R"))
