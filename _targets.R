@@ -9,7 +9,7 @@ library(crew)
 
 targets::tar_option_set(
   packages = c("dplyr", "ggplot2", "readr", "purrr", "tibble"),
-  controller = crew_controller_local(workers = parallel::detectCores())
+  controller = crew_controller_local(workers = parallel::detectCores()-1)
 )
 
 # source all functions in R/

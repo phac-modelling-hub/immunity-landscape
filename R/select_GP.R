@@ -21,14 +21,19 @@ select_GP <- function(vax_dataset, prov_values, ndrws=100, k_list=list(ksqexp=ks
   
   # compute lppd for all combinations of parameters
   combinations <- tidyr::expand_grid(k_tibble, l1, l2, b, meas_error)  # functions need to be protected in a list
-  combinations <- combinations %>% mutate(lppd_exact = purrr::pmap_dbl(list(k, l1, l2, b, meas_error), ~ compute_lppd(  # method 2: compute lppd analytically
-    vax_dataset = vax_dataset,
-    prov_values = prov_values,
-    k = ..1,
-    l1 = ..2,
-    l2 = ..3,
-    b = ..4,
-    meas_error = ..5))) %>%
-    select(-k) %>% mutate(model_no = row_number(), .before = 1)
+  combinations <- combinations %>% mutate(lppd_exact = purrr::pmap_dbl(
+        list(k, l1, l2, b, meas_error),
+        \(k_fn, l1_val, l2_val, b_val, me_val) compute_lppd(
+          vax_dataset = vax_dataset,
+          prov_values = prov_values,
+          k = k_fn,
+          l1 = l1_val,
+          l2 = l2_val,
+          b = b_val,
+          meas_error = me_val
+        )
+      )) %>%
+        select(-k) %>% mutate(model_no = row_number(), .before = 1)
   return(combinations)
 }
+
