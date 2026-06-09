@@ -80,8 +80,18 @@ prep_vax_data <- function(file_canada, file_england) {
 #' @return A tibble with columns `location` and `n`, giving the number of
 #'   rows per Canadian location.
 get_sample_sizes <- function(vax) {
+  age_range <- vax |>
+    filter(country == "England") |>
+    summarize(
+      min = min(age_current, na.rm = TRUE),
+      max = max(age_current, na.rm = TRUE)
+    )
+
   vax |>
-    filter(country == "Canada") |>
+    filter(
+      country == "Canada",
+      between(age_current, age_range$min, age_range$max)
+    ) |>
     group_by(location) |>
     summarize(n = n(), .groups = "drop")
 }
@@ -126,7 +136,7 @@ split_train_test <- function(vax, sample_size, id_rep) {
 
   vax_train <- vax_england_subset |>
     group_split(location) |>
-    purrr::map(\(df) slice_sample(df, n = df$n[1]) |> select(-n)) |>
+    purrr::map(\(df) slice_sample(df, n = unique(df$n)) |> select(-n)) |>
     purrr::list_rbind()
 
   vax_test <- anti_join(
