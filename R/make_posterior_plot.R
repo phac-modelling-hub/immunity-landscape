@@ -12,7 +12,8 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
     scale_shape_manual(values = shapes_doses, name = NULL, labels = c("1+" = "1+ dose (provincial)")) +
     scale_x_continuous(name = "Current age", limits = c(min(post2D$x_i), max(post2D$x_i)),
                        breaks = seq(min(post2D$x_i), max(post2D$x_i), by = 5)) +
-    scale_y_continuous(name = "Vaccine coverage", labels = scales::label_percent(), limits = c(0, 100)) +
+    scale_y_continuous(name = "Vaccine coverage", labels = scales::label_percent()
+    ) +
     facet_wrap(~ y_label)
 
   if (show_unobs && !is.null(unobs_df)) {
@@ -31,7 +32,7 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
     
     p <- p +
       geom_point(data = overlay_df,
-                 aes(x = age_current, y = value * 100, colour = point_type),
+                 aes(x = age_current, y = value, colour = point_type),
                  size = 1.2, shape = 16) +
       scale_colour_manual(values = c("2+ dose (provincial)" = "green", "1+ dose (cNICS)" = "lightgreen"), name = NULL)
   }
@@ -49,7 +50,6 @@ make_england_posterior_plot <- function(post2D, obs_df = NULL, title = NULL) {
                        breaks = seq(5, 21, by = 5)) +
     scale_y_continuous(name = "Vaccine coverage"
     , labels = scales::label_percent()
-    # , limits = c(0, 100)
     ) +
     facet_wrap(~ y_label)
 
