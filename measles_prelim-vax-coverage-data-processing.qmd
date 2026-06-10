@@ -107,6 +107,7 @@ NB: Note that the Ontario data came from two sources, one with 0, 1, and 2 doses
 vax_ON <- vax_aged %>%
   filter(
     pt == "ON",
+    source == "PT",
     n_doses %in% c("1","2+") # keep 1 and 2+ doses (compatible estimates)
   ) %>%
   # sum the uptake for each year to give estimates for 1+
@@ -114,8 +115,9 @@ vax_ON <- vax_aged %>%
   summarise(value = sum(value), .groups = "drop") %>%
   mutate(n_doses = "1+")  # (*)
 
+# replace only the ON PT data with the version above
 vax_new <- vax_aged %>%
-  filter(pt != "ON") %>%
+  filter(!(pt == "ON" & source == "PT")) %>%
   bind_rows(vax_ON)
 ```
 
