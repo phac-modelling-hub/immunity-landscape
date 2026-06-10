@@ -32,13 +32,13 @@ data_dir <- file.path("data", "CNICS-ANICS_raw")
 
 This `.csv` isn't structured in the most machine-readible way, but we can make it work if needed. Searching through the doc for measles, I see the following relevant tables:
 
--   Table 7a. Routine vaccine coverage by vaccine, overall, by sex, by age group, among adults with chronic health conditions, and among health care workers, Canada, 2023"
+- Table 7a. Routine vaccine coverage by vaccine, overall, by sex, by age group, among adults with chronic health conditions, and among health care workers, Canada, 2023"
 
--   Table 7b. Routine vaccine coverage by vaccine, by province/territory, Canada, 2023
+- Table 7b. Routine vaccine coverage by vaccine, by province/territory, Canada, 2023
 
--   Table 10. Respondents' intention to get vaccinated¹, overall, by sex, by age group, among people with chronic health conditions, and among health care workers, Canada, 2023
+- Table 10. Respondents' intention to get vaccinated¹, overall, by sex, by age group, among people with chronic health conditions, and among health care workers, Canada, 2023
 
-    -   ¹Among non-immunized individuals and those who responded "Don't know" or "Prefer not to answer" when asked about their vaccination status
+  - ¹Among non-immunized individuals and those who responded "Don't know" or "Prefer not to answer" when asked about their vaccination status
 
 Unfortunately, there is no view of the responses with vaccine coverage by age group **and** PT. However, the age groups are more granular than 18+ estimates reported in top-level summaries...
 
@@ -55,11 +55,11 @@ filename <- here::here(data_dir, "13100870.csv")
 
 Some key info from the metadata file:
 
--   The Childhood National Immunization Coverage Survey (CNICS) has been conducted nationally every two years since 2011 and by province/territory every four years since 2013.
+- The Childhood National Immunization Coverage Survey (CNICS) has been conducted nationally every two years since 2011 and by province/territory every four years since 2013.
 
--   All participants were asked to provide information on their children's immunization through the child's vaccination record and were also asked to complete and return by mail a form that provides consent for Statistics Canada to contact their child's health care provider to obtain their child's vaccine history.
+- All participants were asked to provide information on their children's immunization through the child's vaccination record and were also asked to complete and return by mail a form that provides consent for Statistics Canada to contact their child's health care provider to obtain their child's vaccine history.
 
-    -   Starting in 2019, respondents from Prince Edward Island and Manitoba (the only jurisdictions with current registry data sharing agreements) were asked for consent to use their child immunization data if present in provincial registries.
+  - Starting in 2019, respondents from Prince Edward Island and Manitoba (the only jurisdictions with current registry data sharing agreements) were asked for consent to use their child immunization data if present in provincial registries.
 
 Thankfully, this dataset is somewhat machine readible! It looks like this dataset might contain all the CNICS data (since 2021)? Let's filter down to just measles...
 

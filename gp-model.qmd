@@ -367,7 +367,7 @@ The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`. A
 ```{r}
 #| label: auto2D
 
-run_GP(vax_clean)
+run_GP(vax_clean, prov_values = "Gini", meas_error=0.05)
 ```
 
 ## Running with cNICS data
