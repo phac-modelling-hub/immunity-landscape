@@ -1,6 +1,5 @@
 ---
 title: "Clean collated vaccine coverage data for input into GP models"
-editor: visual
 ---
 
 ```{r}
@@ -186,7 +185,7 @@ vax_clean |>
   xlim(1, 21)
 ```
 
-We can now export `vax_clean` for use in `gp_model.qmd`:
+We can now export `vax_clean` for use in `3_gp-model.qmd`:
 
 ```{r}
 #| label: export_vax_clean

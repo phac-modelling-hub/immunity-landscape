@@ -819,7 +819,9 @@ For cNICS:
 
 -   By-PT estimates were obtained from [Statistics Canada Table 13-10-0870-01  Vaccine coverage estimates for recommended vaccines in children and pregnant women](https://doi.org/10.25318/1310087001-eng)
 -   cNICS reports a value with a 95% CI. Below we only capture the value.
--   For measles, estimates are available for two and seven year olds, though the latter is only available for 2013. We assume proportions are estimated for *at least* one dose as the number of doses does not seem to be captured in the questionnaire with respect to measles (just whether or not the child has been vaccinated for measles).
+-   For measles, estimates are available for two and seven year olds, though the latter is only available for 2013. cNICS reports "recommended" publicly-funded vaccines for children at different ages. 
+  - We can safely assume age 2 means at least one ("1+") dose of a measles vaccine.
+  - For age 7, it seems to be the case that in 2013, all PTs recommended a second measles dose some time before that age, so we will assume these coverage estimates are for at least 2 ("2+") doses.
 
 ```{r}
 #| label: vax_cNICS
@@ -828,9 +830,15 @@ vax_cNICS <- suppressWarnings(readr::read_csv(here::here("data", "1310087001-eng
   tidyr::fill(location, age, .direction = "down") |>
   dplyr::mutate(
     age = str_extract(age, "\\d+(?=-year-old)"),
-    n_doses = "1+",
     value = value/100,
     source = "cNICS"
+  ) |>
+  dplyr::mutate(
+    n_doses = case_when(
+      age == "2" ~ "1+",
+      age == "7" ~ "2+",
+      TRUE ~ NA_character_
+    )
   ) |>
   dplyr::left_join(
     pt_lookup(), by = join_by(location)

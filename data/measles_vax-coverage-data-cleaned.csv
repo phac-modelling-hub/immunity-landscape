@@ -41,44 +41,32 @@ NT,Northwest Territories,2023,2021,2,1+,0.85,PT,5
 NL,Newfoundland and Labrador,2013,2011,2,1+,0.951,cNICS,15
 NL,Newfoundland and Labrador,2017,2015,2,1+,0.969,cNICS,11
 NL,Newfoundland and Labrador,2021,2019,2,1+,0.97,cNICS,7
-NL,Newfoundland and Labrador,2013,2006,7,1+,0.843,cNICS,20
 PE,Prince Edward Island,2013,2011,2,1+,0.902,cNICS,15
 PE,Prince Edward Island,2017,2015,2,1+,0.932,cNICS,11
 PE,Prince Edward Island,2021,2019,2,1+,0.98,cNICS,7
-PE,Prince Edward Island,2013,2006,7,1+,0.8420000000000001,cNICS,20
 NS,Nova Scotia,2013,2011,2,1+,0.866,cNICS,15
 NS,Nova Scotia,2017,2015,2,1+,0.871,cNICS,11
 NS,Nova Scotia,2021,2019,2,1+,0.936,cNICS,7
-NS,Nova Scotia,2013,2006,7,1+,0.7170000000000001,cNICS,20
 NB,New Brunswick,2013,2011,2,1+,0.926,cNICS,15
 NB,New Brunswick,2017,2015,2,1+,0.92,cNICS,11
 NB,New Brunswick,2021,2019,2,1+,0.943,cNICS,7
-NB,New Brunswick,2013,2006,7,1+,0.923,cNICS,20
 ON,Ontario,2013,2011,2,1+,0.928,cNICS,15
 ON,Ontario,2021,2019,2,1+,0.92,cNICS,7
-ON,Ontario,2013,2006,7,1+,0.887,cNICS,20
-QC,Quebec,2013,2006,7,1+,0.911,cNICS,20
 MB,Manitoba,2013,2011,2,1+,0.835,cNICS,15
 MB,Manitoba,2017,2015,2,1+,0.861,cNICS,11
 MB,Manitoba,2021,2019,2,1+,0.871,cNICS,7
-MB,Manitoba,2013,2006,7,1+,0.7659999999999999,cNICS,20
 SK,Saskatchewan,2013,2011,2,1+,0.901,cNICS,15
 SK,Saskatchewan,2017,2015,2,1+,0.895,cNICS,11
 SK,Saskatchewan,2021,2019,2,1+,0.914,cNICS,7
-SK,Saskatchewan,2013,2006,7,1+,0.789,cNICS,20
 AB,Alberta,2013,2011,2,1+,0.82,cNICS,15
-BC,British Columbia,2013,2006,7,1+,0.835,cNICS,20
 YT,Yukon,2013,2011,2,1+,0.852,cNICS,15
 YT,Yukon,2017,2015,2,1+,0.91,cNICS,11
 YT,Yukon,2021,2019,2,1+,0.853,cNICS,7
-YT,Yukon,2013,2006,7,1+,0.775,cNICS,20
 NT,Northwest Territories,2013,2011,2,1+,0.84,cNICS,15
 NT,Northwest Territories,2017,2015,2,1+,0.918,cNICS,11
 NT,Northwest Territories,2021,2019,2,1+,0.908,cNICS,7
-NT,Northwest Territories,2013,2006,7,1+,0.884,cNICS,20
 NU,Nunavut,2013,2011,2,1+,0.7979999999999999,cNICS,15
 NU,Nunavut,2017,2015,2,1+,0.887,cNICS,11
-NU,Nunavut,2013,2006,7,1+,0.648,cNICS,20
 NL,Newfoundland and Labrador,2023,2005,18,1+,0.897,aNICS,21
 PE,Prince Edward Island,2023,2005,18,1+,0.899,aNICS,21
 NS,Nova Scotia,2023,2005,18,1+,0.887,aNICS,21
