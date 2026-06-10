@@ -14,7 +14,7 @@ When opening this project in a R session, be sure that the `{renv}` project has 
 
 ## Generating manuscript figures
 
-Manuscript figures are generated in `ms_figs_table.qmd`, which refers to a number of stand-alone scripts called`results/fig-*.R` files. To (re)generate figs, run the `setup` chunk in `ms_figs_table.qmd`, then run the chunk corresponding to the figure you want to regenerate.
+Manuscript figures are generated in `results/ms_figs_table.qmd`, which refers to a number of stand-alone scripts called`results/fig-*.R` files. To (re)generate figs, run the `setup` chunk in `ms_figs_table.qmd`, then run the chunk corresponding to the figure you want to regenerate (or run the entire notebook from top to bottom).
 
 # Conventions
 

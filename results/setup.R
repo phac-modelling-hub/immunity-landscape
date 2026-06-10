@@ -21,7 +21,7 @@ source_qmd_chunk <- function(qmd_file, chunk_label) {
 }
 
 # ── Run gp-model.qmd initial_setup chunk ──────────────────────────────────────
-source_qmd_chunk(here::here("gp-model.qmd"), "initial_setup")
+source_qmd_chunk(here::here("3_gp-model.qmd"), "initial_setup")
 
 # ── Figure save dimensions ─────────────────────────────────────────────────────
 fig_w <- 7.29   # inches
