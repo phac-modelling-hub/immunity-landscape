@@ -1,5 +1,5 @@
 ---
-title: "Compiling a measles vaccination coverage dataset"
+title: "Collating a measles vaccination coverage dataset"
 author:
   - name: Rachael Milwid
     email: rachael.milwid@phac-aspc.gc.ca

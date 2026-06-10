@@ -1,5 +1,5 @@
 ---
-title: "measles_prelim-vax-coverage-data-processing"
+title: "Clean collated vaccine coverage data for input into GP models"
 editor: visual
 ---
 
@@ -48,7 +48,7 @@ parse_age_groups <- function(df, col, last_age = 21){
 }
 ```
 
-We've collected a large dataset of vaccine coverage data (see `measles_vax-coverage-data.qmd`). Here we carry out data processing tasks as outlined in the methods of our ms.
+We've collected a large dataset of vaccine coverage data (see `1_collate-data.qmd`). Here we carry out data cleaning tasks to prepare it for input into GP models. These steps are also outlined in the methods of our ms.
 
 ## Read data
 
