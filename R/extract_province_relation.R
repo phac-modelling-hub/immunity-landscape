@@ -20,9 +20,10 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
         dplyr::mutate(value = log(Dollars))
       
     } else if (data=="low_income_families") {  # % children in low-income families (Health Inequalities Data Tool, Low-Income Cut-Off, age-standardized rate)
-      province_relation_data <- readr::read_csv(here::here("data", "health-ineq-data-tool-children-in-low-income-families-LICO-ASR.csv"), show_col_types = F) %>%
-        dplyr::filter(Sex == "Both sexes") %>% dplyr::mutate(value = (`Age-standardized rate`), location = stringi::stri_trans_general(Region, "latin-ascii")) %>% dplyr::select(location, value)  
-      province_relation_data <- province_relation_data %>% dplyr::mutate(value = as.numeric(value)) %>% dplyr::arrange(value)
+      province_relation_data <- readr::read_csv(here::here("data", "health-ineq-data-tool-children-in-low-income-families-LICO-detailed.csv"), show_col_types = F, skip = 3) %>%
+        dplyr::select(Geography, Stratifier, Sex, Numerator, Denominator, `Age-standardized rate`) %>% dplyr::filter(Sex == "Both sexes", Stratifier == "Overall") %>% 
+        dplyr::mutate(location = Geography, crude_value = (100*as.numeric(Numerator)/as.numeric(Denominator))) %>% mutate(value=round(crude_value, 2)) %>% dplyr::select(location, value)  
+      province_relation_data <- province_relation_data %>% dplyr::arrange(value)
 
     } else if (data=="vaccine_hesitancy") {  # vaccine hesitancy among parents (cNICS, refuse all + hesitant)
       province_relation_data <- readr::read_csv(here::here("data", "cNICS-vaccine-hesitancy.csv"), show_col_types = F) %>%
