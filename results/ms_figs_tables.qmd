@@ -74,11 +74,10 @@ fig_heatmaps
 #| label: fig-ages-test
 source(here::here("results", "fig-ages-test.R"))
 fig_ages_test1
-fig_ages_test2
 ```
 
 ```{r}
-#| label: fig-england  
+#| label: fig-england
 #| eval: FALSE
 source(here::here("results", "fig-england.R"))  # Irena to add England figs here
 fig_england_posterior_Gini

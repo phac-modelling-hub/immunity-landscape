@@ -19,7 +19,7 @@ fig_lopo_combined <- ggplot(lopo_all, aes(x = pt, y = diff, fill = diff > 0)) +
   facet_wrap(~ model, ncol = 1, scales = "free_x") +
   labs(x     = "PT",
        y     = "Difference in mean LPPD per PT") +
-  ylim(-0.75, 0.75)
+  ylim(-0.25, 0.25)
 
 ggsave(here::here("results", "fig-lppd-lopo.pdf"),
        fig_lopo_combined, width = fig_w, height = fig_h * 2.2)

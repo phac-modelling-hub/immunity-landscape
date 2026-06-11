@@ -47,6 +47,10 @@ obs_all <- bind_rows(
     province = factor(province, levels = prov_order_all)
   )
 
+pt_labels <- pt_lookup() %>% select(location, pt) %>% deframe()
+pt_labels["Atlantic region"] <- "AR"
+pt_labels["Northern region"] <- "NR"
+
 fig_posterior_combined <- ggplot(post_all) +
   geom_line(aes(x = x_i, y = post2D_constrained * 100,
                 group = interaction(draw, province)),
@@ -57,8 +61,9 @@ fig_posterior_combined <- ggplot(post_all) +
   scale_shape_manual(values = shapes_doses, name = "Doses") +
   scale_x_continuous(name = "Current age", limits = c(min(post_all$x_i), max(post_all$x_i)),
                      breaks = seq(min(post_all$x_i), max(post_all$x_i), by = 5)) +
-  scale_y_continuous(name = "Vaccine coverage (%)", limits = c(0, 100)) +
-  facet_grid(model ~ province, scales = "free_x", space = "free_x") +
+  scale_y_continuous(name = "Vaccine coverage (%)") +
+  facet_grid(model ~ province, scales = "free_x", space = "free_x",
+             labeller = labeller(province = as_labeller(pt_labels))) +
   theme(legend.position = "none")
 
 ggsave(here::here("results", "fig-posterior-draws.pdf"),
@@ -71,4 +76,4 @@ unobs_Gini <- readr::read_csv(here::here("data", "measles_vax-coverage-data-clea
 fig_posterior_Gini_unobs <- make_posterior_plot(post_Gini, obs_Gini, show_unobs = TRUE, unobs_df = unobs_Gini) +
   theme(legend.position = "bottom")
 ggsave(here::here("results", "fig-posterior-draws_Gini_unobs.pdf"),
-       fig_posterior_Gini_unobs, width = fig_w, height = fig_h)
+       fig_posterior_Gini_unobs, width = fig_w, height = fig_h * 1.5)

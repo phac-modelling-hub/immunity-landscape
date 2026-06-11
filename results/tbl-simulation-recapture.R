@@ -1,5 +1,5 @@
 # tbl-simulation-recapture.R
-# Table simulation-recapture: SBC summary statistics.
+# Table simulation-recapture: SBC summary statistics for Gini.
 
 SBC_results <- readRDS(here::here("results", "SBC_results_Gini.rds"))
 

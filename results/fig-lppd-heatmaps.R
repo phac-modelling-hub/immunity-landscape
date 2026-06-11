@@ -9,7 +9,7 @@ fig_heatmaps <- list(read_csv(here::here("results", "GPcombinations_lowincome_wi
          lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
   ggplot(aes(x = l2, y = l1, fill = lppd_capped)) +
   geom_tile() +
-  scale_fill_gradient(low = "white", high = "darkgreen", na.value = "white", name = "lppd > -100") +
+  scale_fill_gradient(low = "white", high = "darkblue", na.value = "white", name = "lppd > -100") +
   facet_grid(rows = vars(model, k_name), cols = vars(meas_error), scales = "free_x",
              labeller = labeller(meas_error = function(x) paste0("\u03c8 = ", x))) +
   labs(x = "l2", y = "l1") +
