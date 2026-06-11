@@ -27,7 +27,7 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
 
     } else if (data=="vaccine_hesitancy") {  # vaccine hesitancy among parents (cNICS, refuse all + hesitant)
       province_relation_data <- readr::read_csv(here::here("data", "cNICS-vaccine-hesitancy.csv"), show_col_types = F) %>%
-        dplyr::mutate(value = 100 - (refuse_all + hesitant)) %>% dplyr::arrange(value)  # 100-X for positive trend
+        dplyr::mutate(value = (refuse_all + hesitant)) %>% dplyr::arrange(value)
 
     } else if (data=="Gini") {  # Gini index on adjusted household after-tax income, currently mean of 2015 and 2020 values
       province_relation_data <- readr::read_csv(here::here("data", "9810009601_databaseLoadingData_StatCanGini.csv"), show_col_types = F) %>%
