@@ -36,7 +36,7 @@ model_configs <- list(
 )
 
 # ── 1. Model selection (overwrites existing GPcombinations CSVs) ───────────────
-rerun_select_GP <- F
+rerun_select_GP <- T
 if (rerun_select_GP == T) {
   cat("Running model selection...\n")
   for (nm in names(model_configs)) {
@@ -131,16 +131,10 @@ compute_pairwise_diffs <- function(df) {
 }
 
 vax_clean %>%
-  filter(n_doses %in% c("1", "1+"), age_current >= 5, age_current <= 21) %>%
+  filter(age_current >= 5, age_current <= 21) %>%
   group_by(location) %>%
   group_modify(~ compute_pairwise_diffs(.x)) %>%
   saveRDS(here::here("results", "ages_test_1plus.rds"))
-
-vax_clean %>%
-  filter(n_doses %in% c("2", "2+"), age_current >= 5, age_current <= 21) %>%
-  group_by(location) %>%
-  group_modify(~ compute_pairwise_diffs(.x)) %>%
-  saveRDS(here::here("results", "ages_test_2plus.rds"))
 
 ## add a statistical test here
 
@@ -152,8 +146,8 @@ vax_clean %>%
 # ── N. England model selection + posteriors ────────────────────────────────────
 # In separate workflow -- see repo README.
 
-# ── 7. SBC (overwrites SBC_results_Gini.rds; synthetic CSVs not saved) ────────
-rerun_SBC <- F
+# ── 7. SBC for Gini (overwrites SBC_results_Gini.rds; synthetic CSVs not saved) ────────
+rerun_SBC <- T
 if (rerun_SBC == T) {
   cat("Running SBC...\n")
   
@@ -166,11 +160,11 @@ if (rerun_SBC == T) {
     true_model <- modelselection %>%
       filter(k_name == params$k_name, l1 == params$l1, l2 == params$l2,
              b == params$b, meas_error == params$meas_error) %>%
-      select(-model_no, -lppd_LOPO) %>%
+      select(-model_no) %>%
       rename_with(~ paste0("true_", .x))
     predicted_model <- modelselection %>%
       slice_max(lppd_exact, n = 1) %>%
-      select(-model_no, -lppd_LOPO) %>%
+      select(-model_no) %>%
       rename_with(~ paste0("predicted_", .x))
     true_model %>%
       mutate(i = i, sample = sample_name, .before = 1) %>%
