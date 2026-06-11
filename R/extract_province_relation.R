@@ -19,14 +19,15 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
       province_relation_data <- readr::read_csv(here::here("data", "3610040201-noSymbol.csv"), show_col_types = F) %>%
         dplyr::mutate(value = log(Dollars))
       
-    } else if (data=="low_income_families") {  # % children in low-income families (Health Inequalities Data Tool, Market Basket Measure, age-standardized rate)
-      province_relation_data <- readr::read_csv(here::here("data", "health-ineq-data-tool-children-in-low-income-families-MBM-ASR.csv"), show_col_types = F) %>%
-        dplyr::filter(Sex == "Both sexes") %>% dplyr::mutate(value = (100 - `Age-standardized rate`), location = stringi::stri_trans_general(Region, "latin-ascii")) %>% dplyr::select(location, value)  # 100-X for positive trend
-      province_relation_data <- province_relation_data %>% dplyr::mutate(value = as.numeric(value)) %>% dplyr::arrange(value)
+    } else if (data=="low_income_families") {  # % children in low-income families (Health Inequalities Data Tool, Low-Income Cut-Off, age-standardized rate)
+      province_relation_data <- readr::read_csv(here::here("data", "health-ineq-data-tool-children-in-low-income-families-LICO-detailed.csv"), show_col_types = F, skip = 3) %>%
+        dplyr::select(Geography, Stratifier, Sex, Numerator, Denominator, `Age-standardized rate`) %>% dplyr::filter(Sex == "Both sexes", Stratifier == "Overall") %>% 
+        dplyr::mutate(location = Geography, crude_value = (100*as.numeric(Numerator)/as.numeric(Denominator))) %>% mutate(value=round(crude_value, 2)) %>% dplyr::select(location, value)  
+      province_relation_data <- province_relation_data %>% dplyr::arrange(value)
 
     } else if (data=="vaccine_hesitancy") {  # vaccine hesitancy among parents (cNICS, refuse all + hesitant)
       province_relation_data <- readr::read_csv(here::here("data", "cNICS-vaccine-hesitancy.csv"), show_col_types = F) %>%
-        dplyr::mutate(value = 100 - (refuse_all + hesitant)) %>% dplyr::arrange(value)  # 100-X for positive trend
+        dplyr::mutate(value = (refuse_all + hesitant)) %>% dplyr::arrange(value)
 
     } else if (data=="Gini") {  # Gini index on adjusted household after-tax income, currently mean of 2015 and 2020 values
       province_relation_data <- readr::read_csv(here::here("data", "9810009601_databaseLoadingData_StatCanGini.csv"), show_col_types = F) %>%
