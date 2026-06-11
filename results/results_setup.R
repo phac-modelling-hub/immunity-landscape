@@ -6,7 +6,7 @@
 # l2_lim: plausible range for l2 used to filter the model selection grid before
 #         identifying the best model. meas_error is chosen separately from the
 #         CSV selection (edit here to change the value used for posteriors/LOPO).
-l2_lim <- list(Gini = c(0.1, 50), LI = c(0.2, 25), VH = c(0.1, 8))
+l2_lim <- list(Gini = c(0.1, 50), LI = c(0.2, 250), VH = c(0.1, 8))
 
 model_configs <- list(
   Gini = list(
@@ -184,7 +184,7 @@ if (rerun_SBC == T) {
     k_object <- k_select(sample(0:1, 1))
     k  <- k_object$fn
     l1 <- sample(c(1, 1.25, 1.5, 1.75, 2, 2.25, 2.5), 1)
-    l2 <- sample(c(0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25), 1)
+    l2 <- sample(c(0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25, 50), 1)
     b  <- sample(c(0.5, 1, 1.5), 1)
     meas_error <- 0
     params <- list(k = k, k_name = k_object$name, l1 = l1, l2 = l2, b = b, meas_error = meas_error)  # save param values
@@ -211,7 +211,7 @@ if (rerun_SBC == T) {
     ms_full <- select_GP(synthetic_data, prov_values = "Gini",
                          k_list     = list(ksqexp = ksqexp, kexp = kexp),
                          l1         = c(1, 1.25, 1.5, 1.75, 2, 2.25, 2.5),
-                         l2         = c(0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25),
+                         l2         = c(0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25, 50),
                          b          = c(0.5, 1, 1.5),
                          meas_error = c(0))
     
@@ -223,7 +223,7 @@ if (rerun_SBC == T) {
       prov_values = "Gini",
       k_list      = list(ksqexp = ksqexp, kexp = kexp),
       l1          = c(1, 1.25, 1.5, 1.75, 2, 2.25, 2.5),
-      l2          = c(0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25),
+      l2          = c(0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25, 50),
       b           = c(0.5, 1, 1.5),
       meas_error  = c(0)
     )
