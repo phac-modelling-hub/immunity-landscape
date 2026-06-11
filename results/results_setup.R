@@ -47,7 +47,7 @@ if (rerun_select_GP == T) {
       prov_values = cfg$prov_values,
       k_list      = list(ksqexp = ksqexp, kexp = kexp),
       l1          = c(1, 1.25, 1.5, 1.75, 2, 2.25, 2.5),
-      l2          = c(0.1, 0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25, 50),
+      l2          = c(0.1, 0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25, 50, 75, 100, 150, 200, 250, 500),
       b           = c(0.5, 1, 1.5),
       meas_error  = c(0.5, 0.1, 0.05, 0.01, 0)
     ) %>%
@@ -142,12 +142,12 @@ vax_clean %>%
   group_modify(~ compute_pairwise_diffs(.x)) %>%
   saveRDS(here::here("results", "ages_test_2plus.rds"))
 
-## add a stastical test here
+## add a statistical test here
 
 # ── 6. PT relation assumption test (saved as provinces_test_*.rds) ───────────────
 ## no results need to be generated here for the main test plot
 
-## add statistical test
+## add a statistical test here
 
 # ── N. England model selection + posteriors ────────────────────────────────────
 # In separate workflow -- see repo README.
@@ -184,7 +184,7 @@ if (rerun_SBC == T) {
     k_object <- k_select(sample(0:1, 1))
     k  <- k_object$fn
     l1 <- sample(c(1, 1.25, 1.5, 1.75, 2, 2.25, 2.5), 1)
-    l2 <- sample(c(0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25, 50), 1)
+    l2 <- sample(c(0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25, 50), 1)  # bounded by l2 limits
     b  <- sample(c(0.5, 1, 1.5), 1)
     meas_error <- 0
     params <- list(k = k, k_name = k_object$name, l1 = l1, l2 = l2, b = b, meas_error = meas_error)  # save param values
