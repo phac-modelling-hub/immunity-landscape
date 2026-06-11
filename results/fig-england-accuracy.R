@@ -45,7 +45,7 @@ panel_A <- ggplot(df, aes(x = score)) +
 # - title
 
 # pull data and hyperparameters for specific subsample
-id_branch <- 5
+id_branch <- 3
 targets::tar_load(data_split, branch = id_branch)
 targets::tar_load(fit_hp, branch = id_branch)
 train <- data_split[[which(str_detect(names(data_split), "train"))]]
@@ -90,7 +90,7 @@ panel_B <- make_england_posterior_plot(
   # test data with accuracy scores
   geom_point(data = test, aes(x = age_current, y = value, colour = accuracy_score),
              size = 1.5, shape = 16) +
-  viridis::scale_colour_viridis(option = "turbo", direction = -1, begin = 0.35, labels = scales::label_percent(), limits = c(min(scores), 1)) +
+  viridis::scale_colour_viridis(option = "turbo", direction = -1, begin = 0.35, labels = scales::label_percent(), limits = c(0, 1)) +
   labs(
     title = "B: Posterior draws from model fit",
     subtitle = "for one subsample of the England data",
