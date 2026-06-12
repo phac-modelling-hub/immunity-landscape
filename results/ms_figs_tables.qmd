@@ -60,8 +60,10 @@ fig_lopo_combined
 
 ```{r}
 #| label: fig-provinces-test
-source(here::here("results", "fig-provinces-test.R"))  # *we plan to replace this plot with a plot equiv to the ages test!
-fig_provinces_test  # values for AR and NR currently missing
+source(here::here("results", "fig-provinces-test.R"))
+fig_pt_test1
+fig_pt_test2
+fig_pt_test3
 ```
 
 ```{r}
@@ -73,7 +75,8 @@ fig_heatmaps
 ```{r}
 #| label: fig-ages-test
 source(here::here("results", "fig-ages-test.R"))
-fig_ages_test1
+fig_ages_test_all
+fig_ages_test_PTs
 ```
 
 ```{r}

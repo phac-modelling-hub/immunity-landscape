@@ -36,7 +36,7 @@ model_configs <- list(
 )
 
 # ── 1. Model selection (overwrites existing GPcombinations CSVs) ───────────────
-rerun_select_GP <- T
+rerun_select_GP <- F
 if (rerun_select_GP == T) {
   cat("Running model selection...\n")
   for (nm in names(model_configs)) {
@@ -131,15 +131,55 @@ compute_pairwise_diffs <- function(df) {
 }
 
 vax_clean %>%
-  filter(age_current >= 5, age_current <= 21) %>%
   group_by(location) %>%
   group_modify(~ compute_pairwise_diffs(.x)) %>%
-  saveRDS(here::here("results", "ages_test_1plus.rds"))
+  saveRDS(here::here("results", "ages_test_alldata.rds"))
+
+vax_clean %>%
+  filter(source=="PT") %>%
+  group_by(location) %>%
+  group_modify(~ compute_pairwise_diffs(.x)) %>%
+  saveRDS(here::here("results", "ages_test_PTdata.rds"))
 
 ## add a statistical test here
 
-# ── 6. PT relation assumption test (saved as provinces_test_*.rds) ───────────────
-## no results need to be generated here for the main test plot
+# ── 6. PT relation assumption test (saved as provinces_test.rds) ───────────────
+compute_pairwise_PT_diffs <- function(df, prov_values_name) {
+  ind    <- extract_province_relation(prov_values_name, vax_dataset = df)
+  ind_df <- tibble(location = names(ind), indicator = as.numeric(ind))
+  
+  df <- df %>% 
+    left_join(ind_df, by = "location")
+
+  pairs <- expand_grid(pt1 = df$indicator, pt2 = df$indicator) %>%
+    filter(pt1 < pt2) %>%
+    left_join(df %>% select(pt1 = indicator, cov1 = value), by = "pt1") %>%
+    left_join(df %>% select(pt2 = indicator, cov2 = value), by = "pt2") %>%
+    mutate(diff      = abs(cov1 - cov2),
+           pt_gap   = pt2 - pt1)
+  
+  pt_range <- max(df$indicator) - min(df$indicator)
+  pairs %>% mutate(gap_group = case_when(pt_gap <= pt_range/10 ~ "Similar (within 10% of range)",
+                                         pt_gap <= pt_range/4 ~ "Somewhat similar (10-25% of range)",
+                                         pt_gap <= pt_range/2 ~ "Somewhat distant (25-50% of range)",
+                                         pt_gap  > pt_range/2 ~ "Distant (>50% apart)"))
+}
+
+vax_clean %>%
+  group_by(age_current) %>%
+  group_modify(~ compute_pairwise_PT_diffs(.x, "Gini")) %>%
+  mutate(model = "Gini") %>%
+  saveRDS(here::here("results", "provinces_test_Gini.rds"))
+vax_cleanLI %>%
+  group_by(age_current) %>%
+  group_modify(~ compute_pairwise_PT_diffs(.x, "low_income_families")) %>%
+  mutate(model = "LI") %>%
+  saveRDS(here::here("results", "provinces_test_LI.rds"))
+vax_cleanVH %>%
+  group_by(age_current) %>%
+  group_modify(~ compute_pairwise_PT_diffs(.x, "vaccine_hesitancy")) %>%
+  mutate(model = "VH") %>%
+  saveRDS(here::here("results", "provinces_test_VH.rds"))
 
 ## add a statistical test here
 
@@ -147,7 +187,7 @@ vax_clean %>%
 # In separate workflow -- see repo README.
 
 # ── 7. SBC for Gini (overwrites SBC_results_Gini.rds; synthetic CSVs not saved) ────────
-rerun_SBC <- T
+rerun_SBC <- F
 if (rerun_SBC == T) {
   cat("Running SBC...\n")
   

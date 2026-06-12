@@ -1,41 +1,39 @@
 # fig-provinces-test.R
-# Supp Figure provinces-test: SES indicator value vs mean 1+ dose coverage by province.
-# All three indicators combined into a single faceted figure.
+# Supp Figure provinces-test x3
 
-vax_means_prov <- vax_clean %>%
-  filter(age_current >= 5, age_current <= 21, n_doses != "2+") %>%
-  group_by(location, pt) %>%
-  summarise(mean_coverage = mean(value), .groups = "drop")
+province_pairs_Gini <- readRDS(here::here("results", "provinces_test_Gini.rds"))
+province_pairs_LI <- readRDS(here::here("results", "provinces_test_LI.rds"))
+province_pairs_VH <- readRDS(here::here("results", "provinces_test_VH.rds"))
 
-gini_vec <- extract_province_relation("Gini",               vax_dataset = vax_clean)
-li_vec   <- extract_province_relation("low_income_families", vax_dataset = vax_cleanLI)
-vh_vec   <- extract_province_relation("vaccine_hesitancy",   vax_dataset = vax_cleanVH)
+gap_colours <- c("Similar (within 10% of range)"   = "#1b7837",
+                 "Somewhat similar (10-25% of range)"  = "#5aae61",
+                 "Somewhat distant (25-50% of range)"  = "#a6dba0",
+                 "Distant (>50% apart)" = "#d9f0d3")
 
-prov_all <- bind_rows(
-  tibble(location = names(gini_vec), indicator = as.numeric(gini_vec),
-         model = "Gini", x_label = "Gini index"),
-  tibble(location = names(li_vec),   indicator = as.numeric(li_vec),
-         model = "Low-income", x_label = "Low-income families (%)"),
-  tibble(location = names(vh_vec),   indicator = as.numeric(vh_vec),
-         model = "Vaccine hesitancy", x_label = "Vaccine hesitancy index")
-) %>%
-  mutate(model = factor(model, levels = c("Gini", "Low-income", "Vaccine hesitancy"))) %>%
-  left_join(vax_means_prov, by = "location")  # note this plot needs a value for Atlantic Region and Northern Region to be added, but we are planning to scrap the plot anyway!
+# enforce ordering of gap_group factor levels from scale above
+province_pairs_Gini$gap_group <- factor(province_pairs_Gini$gap_group, levels = names(gap_colours))
+province_pairs_LI$gap_group <- factor(province_pairs_LI$gap_group, levels = names(gap_colours))
+province_pairs_VH$gap_group <- factor(province_pairs_VH$gap_group, levels = names(gap_colours))
 
-fig_provinces_test <- ggplot(prov_all,
-                             aes(x = indicator, y = mean_coverage * 100, label = pt)) +
-  geom_point(size = 2) +
-  ggrepel::geom_text_repel(size = 3, max.overlaps = 20) +
-  scale_y_continuous(name = "Mean 1+ dose coverage (%)", limits = c(70, 100)) +
-  facet_wrap(~ model, scales = "free_x", nrow = 1,
-             labeller = labeller(model = function(x) {
-               c("Gini"              = "Gini index",
-                 "Low-income"        = "Percentage of children not in low-income families (%)",
-                 "Vaccine hesitancy" = "Percentage of parents who are not vaccine-hesitant (%)")[x]
-             })) +
-  labs(x = NULL)
+fig_pt_test1 <- ggplot(province_pairs_Gini, aes(x = diff * 100, fill = gap_group)) +
+  geom_histogram(binwidth = 2, boundary = 0, position = position_stack(reverse = TRUE)) +
+  scale_fill_manual(values = gap_colours, name = "PT similarity by Gini index") +
+  facet_wrap(~ age_current) +
+  labs(x = "Absolute difference in vaccine coverage (%)", y = "Number of PT pairs")
+fig_pt_test2 <- ggplot(province_pairs_LI, aes(x = diff * 100, fill = gap_group)) +
+  geom_histogram(binwidth = 2, boundary = 0, position = position_stack(reverse = TRUE)) +
+  scale_fill_manual(values = gap_colours, name = "PT similarity by children in low-income families") +
+  facet_wrap(~ age_current) +
+  labs(x = "Absolute difference in vaccine coverage (%)", y = "Number of PT pairs")
+fig_pt_test3 <- ggplot(province_pairs_VH, aes(x = diff * 100, fill = gap_group)) +
+  geom_histogram(binwidth = 2, boundary = 0, position = position_stack(reverse = TRUE)) +
+  scale_fill_manual(values = gap_colours, name = "PT similarity by vaccine hesitancy") +
+  facet_wrap(~ age_current) +
+  labs(x = "Absolute difference in vaccine coverage (%)", y = "Number of PT pairs")
 
-ggsave(here::here("results", "fig-provinces-test.pdf"),
-       fig_provinces_test, width = fig_w * 1.5, height = fig_h)
-ggsave(here::here("results", "fig-provinces-test.jpeg"),
-       fig_provinces_test, width = fig_w * 1.5, height = fig_h, dpi = 300)
+ggsave(here::here("results", "fig-pt-test1.pdf"),  fig_pt_test1, width = fig_w, height = fig_h)
+ggsave(here::here("results", "fig-pt-test1.jpeg"), fig_pt_test1, width = fig_w, height = fig_h, dpi = 300)
+ggsave(here::here("results", "fig-pt-test2.pdf"),  fig_pt_test2, width = fig_w, height = fig_h)
+ggsave(here::here("results", "fig-pt-test2.jpeg"), fig_pt_test2, width = fig_w, height = fig_h, dpi = 300)
+ggsave(here::here("results", "fig-pt-test3.pdf"),  fig_pt_test3, width = fig_w, height = fig_h)
+ggsave(here::here("results", "fig-pt-test3.jpeg"), fig_pt_test3, width = fig_w, height = fig_h, dpi = 300)
