@@ -130,18 +130,55 @@ compute_pairwise_diffs <- function(df) {
                                  age_gap  > 3 ~ ">3 years apart"))
 }
 
-vax_clean %>%
+age_pairs_all <- vax_clean %>%
   group_by(location) %>%
-  group_modify(~ compute_pairwise_diffs(.x)) %>%
+  group_modify(~ compute_pairwise_diffs(.x)) 
+age_pairs_all %>%
   saveRDS(here::here("results", "ages_test_alldata.rds"))
 
-vax_clean %>%
+age_pairs_PTs <- vax_clean %>%
   filter(source=="PT") %>%
   group_by(location) %>%
-  group_modify(~ compute_pairwise_diffs(.x)) %>%
+  group_modify(~ compute_pairwise_diffs(.x)) 
+age_pairs_PTs %>%
   saveRDS(here::here("results", "ages_test_PTdata.rds"))
 
-## add a statistical test here
+# Age bootstrap test
+run_age_bootstrap <- function(vax_df, age_pairs_df, n_boot = 1000, seed = 42) {
+  
+  filter_gap <- function(df, max_gap) {
+    if (is.infinite(max_gap)) df else filter(df, age_gap <= max_gap)
+  }
+  
+  gap_levels <- c("1 year apart", "2 years apart", "3 years apart", ">3 years apart")
+  
+  obs_stats <- sapply(gap_levels, \(g) age_pairs_df %>% filter(gap_group == g) %>% pull(diff) %>% mean())
+  
+  set.seed(seed)
+  null_mat <- replicate(n_boot, {
+    shuffled <- vax_df %>%
+      group_by(location) %>%
+      mutate(value = sample(value)) %>%  # shuffle coverage within province
+      ungroup() %>%
+      group_by(location) %>%
+      group_modify(~ compute_pairwise_diffs(.x)) %>%
+      ungroup()
+    sapply(gap_levels, \(g) shuffled %>% filter(gap_group == g) %>% pull(diff) %>% mean())
+  })
+  # null_mat: 4 rows (gap thresholds) × n_boot cols
+  
+  p_vals <- sapply(gap_levels, \(nm) mean(null_mat[nm, ] <= obs_stats[nm]))  # one-tailed: is real lower than null?
+  
+  list(obs = obs_stats, null = null_mat, p = p_vals)
+}
+
+age_pairs_alldata <- readRDS(here::here("results", "ages_test_alldata.rds"))
+boot_ages_all <- run_age_bootstrap(vax_clean, age_pairs_alldata)
+saveRDS(boot_ages_all, here::here("results", "ages_bootstrap_all.rds"))
+
+age_pairs_PTdata <- readRDS(here::here("results", "ages_test_PTdata.rds"))
+boot_ages_PTs <- run_age_bootstrap(vax_clean %>% filter(source == "PT"), age_pairs_PTdata)
+saveRDS(boot_ages_PTs, here::here("results", "ages_bootstrap_PTs.rds"))
 
 # ── 6. PT relation assumption test (saved as provinces_test.rds) ───────────────
 compute_pairwise_PT_diffs <- function(df, prov_values_name) {
@@ -165,23 +202,93 @@ compute_pairwise_PT_diffs <- function(df, prov_values_name) {
                                          pt_gap  > pt_range/2 ~ "Distant (>50% apart)"))
 }
 
-vax_clean %>%
+pt_pairs1 <- vax_clean %>%
   group_by(age_current) %>%
   group_modify(~ compute_pairwise_PT_diffs(.x, "Gini")) %>%
-  mutate(model = "Gini") %>%
+  mutate(model = "Gini") 
+pt_pairs1 %>%
   saveRDS(here::here("results", "provinces_test_Gini.rds"))
-vax_cleanLI %>%
+pt_pairs2 <- vax_cleanLI %>%
   group_by(age_current) %>%
   group_modify(~ compute_pairwise_PT_diffs(.x, "low_income_families")) %>%
-  mutate(model = "LI") %>%
+  mutate(model = "LI") 
+pt_pairs2 %>%
   saveRDS(here::here("results", "provinces_test_LI.rds"))
-vax_cleanVH %>%
+pt_pairs3 <-vax_cleanVH %>%
   group_by(age_current) %>%
   group_modify(~ compute_pairwise_PT_diffs(.x, "vaccine_hesitancy")) %>%
-  mutate(model = "VH") %>%
+  mutate(model = "VH") 
+pt_pairs3 %>%
   saveRDS(here::here("results", "provinces_test_VH.rds"))
 
-## add a statistical test here
+# PT bootstrap test
+run_pt_bootstrap <- function(vax_df, province_pairs_df, prov_values_name, n_boot = 1000, seed = 42) {
+  
+  gap_levels <- c("Similar (within 10% of range)",
+                  "Somewhat similar (10-25% of range)",
+                  "Somewhat distant (25-50% of range)",
+                  "Distant (>50% apart)")
+  
+  obs_stats <- sapply(gap_levels, \(g) province_pairs_df %>% filter(gap_group == g) %>% pull(diff) %>% mean())
+  
+  # Pre-compute pair structure once — gap_group doesn't change across iterations
+  ind       <- extract_province_relation(prov_values_name, vax_dataset = vax_df)
+  ind_df    <- tibble(location = names(ind), indicator = as.numeric(ind))
+  pt_range  <- max(ind_df$indicator) - min(ind_df$indicator)
+  
+  pair_structure <- vax_df %>%
+    left_join(ind_df, by = "location") %>%
+    group_by(age_current) %>%
+    group_modify(~ {
+      locs <- unique(.x$location)
+      expand_grid(loc1 = locs, loc2 = locs) %>%
+        filter(loc1 < loc2) %>%
+        left_join(.x %>% select(loc1 = location, ind1 = indicator), by = "loc1") %>%
+        left_join(.x %>% select(loc2 = location, ind2 = indicator), by = "loc2") %>%
+        mutate(pt_gap    = abs(ind1 - ind2),
+               gap_group = case_when(
+                 pt_gap <= pt_range/10 ~ "Similar (within 10% of range)",
+                 pt_gap <= pt_range/4  ~ "Somewhat similar (10-25% of range)",
+                 pt_gap <= pt_range/2  ~ "Somewhat distant (25-50% of range)",
+                 pt_gap  > pt_range/2  ~ "Distant (>50% apart)"
+               )) %>%
+        select(loc1, loc2, gap_group)
+    }) %>%
+    ungroup()
+  
+  set.seed(seed)
+  null_mat <- replicate(n_boot, {
+    shuffled_cov <- vax_df %>%
+      group_by(age_current) %>%
+      mutate(value = sample(value)) %>%
+      ungroup() %>%
+      select(age_current, location, value)
+    
+    null_pairs <- pair_structure %>%
+      left_join(shuffled_cov %>% rename(loc1 = location, cov1 = value), by = c("age_current", "loc1")) %>%
+      left_join(shuffled_cov %>% rename(loc2 = location, cov2 = value), by = c("age_current", "loc2")) %>%
+      mutate(diff = abs(cov1 - cov2))
+    
+    sapply(gap_levels, \(g) null_pairs %>% filter(gap_group == g) %>% pull(diff) %>% mean())
+  })
+  
+  p_vals <- sapply(gap_levels, \(nm) mean(null_mat[nm, ] <= obs_stats[nm]))
+  
+  list(obs = obs_stats, null = null_mat, p = p_vals)
+}
+
+province_pairs_Gini <- readRDS(here::here("results", "provinces_test_Gini.rds"))
+boot_pt_Gini <- run_pt_bootstrap(vax_clean, province_pairs_Gini, "Gini")
+saveRDS(boot_pt_Gini, here::here("results", "pt_bootstrap_Gini.rds"))
+
+province_pairs_LI <- readRDS(here::here("results", "provinces_test_LI.rds"))
+boot_pt_LI <- run_pt_bootstrap(vax_cleanLI, province_pairs_LI, "low_income_families")
+saveRDS(boot_pt_LI, here::here("results", "pt_bootstrap_LI.rds"))
+
+province_pairs_VH <- readRDS(here::here("results", "provinces_test_VH.rds"))
+boot_pt_VH <- run_pt_bootstrap(vax_cleanVH, province_pairs_VH, "vaccine_hesitancy")
+saveRDS(boot_pt_VH, here::here("results", "pt_bootstrap_VH.rds"))
+
 
 # ── N. England model selection + posteriors ────────────────────────────────────
 # In separate workflow -- see repo README.
