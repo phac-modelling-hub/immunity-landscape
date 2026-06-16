@@ -146,13 +146,16 @@ age_pairs_PTs %>%
 # Age bootstrap test
 run_age_bootstrap <- function(vax_df, age_pairs_df, n_boot = 1000, seed = 42) {
   
+  gap_thresholds <- c("Adjacent ages"       = 1,
+                      "Up to 2 years apart" = 2,
+                      "Up to 3 years apart" = 3,
+                      "All pairs"           = Inf)
+  
   filter_gap <- function(df, max_gap) {
-    if (is.infinite(max_gap)) df else filter(df, age_gap <= max_gap)
+    if (is.infinite(max_gap)) df else filter(df, age_gap <= max_gap)  # deals with Inf
   }
   
-  gap_levels <- c("1 year apart", "2 years apart", "3 years apart", ">3 years apart")
-  
-  obs_stats <- sapply(gap_levels, \(g) age_pairs_df %>% filter(gap_group == g) %>% pull(diff) %>% mean())
+  obs_stats <- sapply(gap_thresholds, \(g) filter_gap(age_pairs_df, g) %>% pull(diff) %>% mean())
   
   set.seed(seed)
   null_mat <- replicate(n_boot, {
@@ -163,11 +166,11 @@ run_age_bootstrap <- function(vax_df, age_pairs_df, n_boot = 1000, seed = 42) {
       group_by(location) %>%
       group_modify(~ compute_pairwise_diffs(.x)) %>%
       ungroup()
-    sapply(gap_levels, \(g) shuffled %>% filter(gap_group == g) %>% pull(diff) %>% mean())
+    sapply(gap_thresholds, \(g) filter_gap(shuffled, g) %>% pull(diff) %>% mean())
   })
   # null_mat: 4 rows (gap thresholds) × n_boot cols
   
-  p_vals <- sapply(gap_levels, \(nm) mean(null_mat[nm, ] <= obs_stats[nm]))  # one-tailed: is real lower than null?
+  p_vals <- sapply(names(gap_thresholds), \(nm) mean(null_mat[nm, ] <= obs_stats[nm]))  # one-tailed: is real lower than null?
   
   list(obs = obs_stats, null = null_mat, p = p_vals)
 }
@@ -181,7 +184,7 @@ boot_ages_PTs <- run_age_bootstrap(vax_clean %>% filter(source == "PT"), age_pai
 saveRDS(boot_ages_PTs, here::here("results", "ages_bootstrap_PTs.rds"))
 
 # ── 6. PT relation assumption test (saved as provinces_test.rds) ───────────────
-compute_pairwise_PT_diffs <- function(df, prov_values_name) {
+compute_pairwise_PT_diffs <- function(df, prov_values_name) {  # compute all pairs
   ind    <- extract_province_relation(prov_values_name, vax_dataset = df)
   ind_df <- tibble(location = names(ind), indicator = as.numeric(ind))
   
@@ -224,17 +227,21 @@ pt_pairs3 %>%
 # PT bootstrap test
 run_pt_bootstrap <- function(vax_df, province_pairs_df, prov_values_name, n_boot = 1000, seed = 42) {
   
-  gap_levels <- c("Similar (within 10% of range)",
-                  "Somewhat similar (10-25% of range)",
-                  "Somewhat distant (25-50% of range)",
-                  "Distant (>50% apart)")
-  
-  obs_stats <- sapply(gap_levels, \(g) province_pairs_df %>% filter(gap_group == g) %>% pull(diff) %>% mean())
-  
   # Pre-compute pair structure once — gap_group doesn't change across iterations
   ind       <- extract_province_relation(prov_values_name, vax_dataset = vax_df)
   ind_df    <- tibble(location = names(ind), indicator = as.numeric(ind))
   pt_range  <- max(ind_df$indicator) - min(ind_df$indicator)
+  
+  gap_thresholds <- c("Within close range"    = pt_range / 10,
+                      "Within near range"     = pt_range / 4,
+                      "Within moderate range" = pt_range / 2,
+                      "All pairs"             = Inf)
+  
+  filter_gap <- function(df, max_pt_gap) {
+    if (is.infinite(max_pt_gap)) df else filter(df, pt_gap <= max_pt_gap)
+  }
+  
+  obs_stats <- sapply(gap_thresholds, \(g) filter_gap(province_pairs_df, g) %>% pull(diff) %>% mean())
   
   pair_structure <- vax_df %>%
     left_join(ind_df, by = "location") %>%
@@ -245,14 +252,8 @@ run_pt_bootstrap <- function(vax_df, province_pairs_df, prov_values_name, n_boot
         filter(loc1 < loc2) %>%
         left_join(.x %>% select(loc1 = location, ind1 = indicator), by = "loc1") %>%
         left_join(.x %>% select(loc2 = location, ind2 = indicator), by = "loc2") %>%
-        mutate(pt_gap    = abs(ind1 - ind2),
-               gap_group = case_when(
-                 pt_gap <= pt_range/10 ~ "Similar (within 10% of range)",
-                 pt_gap <= pt_range/4  ~ "Somewhat similar (10-25% of range)",
-                 pt_gap <= pt_range/2  ~ "Somewhat distant (25-50% of range)",
-                 pt_gap  > pt_range/2  ~ "Distant (>50% apart)"
-               )) %>%
-        select(loc1, loc2, gap_group)
+        mutate(pt_gap    = abs(ind1 - ind2)) %>%
+        select(loc1, loc2, pt_gap)
     }) %>%
     ungroup()
   
@@ -269,10 +270,10 @@ run_pt_bootstrap <- function(vax_df, province_pairs_df, prov_values_name, n_boot
       left_join(shuffled_cov %>% rename(loc2 = location, cov2 = value), by = c("age_current", "loc2")) %>%
       mutate(diff = abs(cov1 - cov2))
     
-    sapply(gap_levels, \(g) null_pairs %>% filter(gap_group == g) %>% pull(diff) %>% mean())
+    sapply(gap_thresholds, \(g) filter_gap(null_pairs, g) %>% pull(diff) %>% mean())
   })
   
-  p_vals <- sapply(gap_levels, \(nm) mean(null_mat[nm, ] <= obs_stats[nm]))
+  p_vals <- sapply(names(gap_thresholds), \(nm) mean(null_mat[nm, ] <= obs_stats[nm]))
   
   list(obs = obs_stats, null = null_mat, p = p_vals)
 }
