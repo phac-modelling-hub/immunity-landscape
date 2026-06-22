@@ -134,14 +134,7 @@ age_pairs_all <- vax_clean %>%
   group_by(location) %>%
   group_modify(~ compute_pairwise_diffs(.x)) 
 age_pairs_all %>%
-  saveRDS(here::here("results", "ages_test_alldata.rds"))
-
-age_pairs_PTs <- vax_clean %>%
-  filter(source=="PT") %>%
-  group_by(location) %>%
-  group_modify(~ compute_pairwise_diffs(.x)) 
-age_pairs_PTs %>%
-  saveRDS(here::here("results", "ages_test_PTdata.rds"))
+  saveRDS(here::here("results", "age_test_pairs.rds"))
 
 # Age bootstrap test
 run_age_bootstrap <- function(vax_df, age_pairs_df, n_boot = 1000, seed = 42) {
@@ -175,13 +168,9 @@ run_age_bootstrap <- function(vax_df, age_pairs_df, n_boot = 1000, seed = 42) {
   list(obs = obs_stats, null = null_mat, p = p_vals)
 }
 
-age_pairs_alldata <- readRDS(here::here("results", "ages_test_alldata.rds"))
+age_pairs_alldata <- readRDS(here::here("results", "age_test_pairs.rds"))
 boot_ages_all <- run_age_bootstrap(vax_clean, age_pairs_alldata)
-saveRDS(boot_ages_all, here::here("results", "ages_bootstrap_all.rds"))
-
-age_pairs_PTdata <- readRDS(here::here("results", "ages_test_PTdata.rds"))
-boot_ages_PTs <- run_age_bootstrap(vax_clean %>% filter(source == "PT"), age_pairs_PTdata)
-saveRDS(boot_ages_PTs, here::here("results", "ages_bootstrap_PTs.rds"))
+saveRDS(boot_ages_all, here::here("results", "age_test_bootstrap.rds"))
 
 # ── 6. PT relation assumption test (saved as provinces_test.rds) ───────────────
 compute_pairwise_PT_diffs <- function(df, prov_values_name) {  # compute all pairs
