@@ -357,10 +357,10 @@ post2D_new <- post2D %>% ungroup() %>% left_join(data_2dose, by=c("x_i","y_label
 
 We now wish to improve our basic model by adding information to the prior and experimenting with choice of covariance function and related parameters. First, define helper functions to enable easy running of the 2D model (saved in "R/"):
 
-- `compute_prior2D()`
-- `plot_prior2D()`
-- `compute_posterior2D()`
-- `plot_posterior2D()`.
+-   `compute_prior2D()`
+-   `plot_prior2D()`
+-   `compute_posterior2D()`
+-   `plot_posterior2D()`.
 
 The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`. All functions work with multiple province relation datasets.
 
@@ -387,15 +387,15 @@ See the [GitHub Issue #3](https://github.com/phac-modelling-hub/immunity-landsca
 
 We aim to find the optimal choice of model (hyperparameter values `k`, `l1`, `l2`, `b`, and measurement error `meas_error`), and validate with take-one-out cross-validation. An example algorithm is as follows:
 
-- For a given covariance function k and lengthscale parameters l1, l2, b:
+-   For a given covariance function k and lengthscale parameters l1, l2, b:
 
-  1.  Pull out one data point.
+    1.  Pull out one data point.
 
-  2.  Run GP model and compute e.g. sum squared error between posterior mean and the missing data point.
+    2.  Run GP model and compute e.g. sum squared error between posterior mean and the missing data point.
 
-  3.  Repeat for every data point (e.g. 137 model runs for the 1+ provincial data). Sum errors.
+    3.  Repeat for every data point (e.g. 137 model runs for the 1+ provincial data). Sum errors.
 
-- Select the optimal k/ l1/ l2/ b combination.
+-   Select the optimal k/ l1/ l2/ b combination.
 
 One option is to work with the posterior mean at each missing age as described. A better option is to work with a richer goodness-of-fit metric such as the (log) *posterior predictive density* at each missing age instead. This makes use of the full richness of our Gaussian Process model. We hence choose the latter metric.
 

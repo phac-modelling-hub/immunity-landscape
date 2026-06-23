@@ -16,23 +16,23 @@ df <- purrr::map(branch_names, function(nm) {
 # Panel A: distribution of accuracy across reps
 panel_A <- ggplot(df, aes(x = score)) +
   geom_histogram(bins = 20) +
-  geom_vline(xintercept = mean(df$score), color = "red") +
+  geom_vline(xintercept = mean(df$score), color = "dodgerblue") +
   annotate(
     geom = "label",
     x = mean(df$score),
-    y = 300,
+    y = 370,
     label = stringr::str_wrap(
       glue::glue("Mean accuracy: {scales::percent_format()(mean(df$score))}"),
       10
     ),
-    color = "red",
+    color = "dodgerblue",
     size = 3
   ) +
   scale_x_continuous(labels = scales::percent_format()) +
   labs(
     title = "A: Distribution of accuracy scores",
     subtitle = glue::glue("across all {length(unique(df$id_rep))} subsamplings of the England data (error tolerance: {scales::percent_format()(error_tolerance)})"),
-    x = "Accuracy per test point",
+    x = "Accuracy score",
     y = "Count of test points"
   )
 
@@ -67,6 +67,7 @@ post2D <- run_GP(
   show_plots = FALSE,
   ndrws = 100
 )
+  
 
 # prep obs
 train <- train |>
@@ -94,13 +95,15 @@ panel_B <- make_england_posterior_plot(
   labs(
     title = "B: Posterior draws from model fit",
     subtitle = "for one subsample of the England data",
-    colour = stringr::str_wrap(glue::glue("Accuracy score (the probability that the fitted model’s predictions would come within {scales::percent_format()(error_tolerance)} of the true test value)"), width = 40) 
+    colour = stringr::str_wrap("Accuracy score", width = 8)
   ) + 
   theme(
     legend.position = "bottom"
   )
 
 fig_england_accuracy <- panel_A / panel_B + patchwork::plot_layout(heights = c(1, 2))
+
+# fig_england_accuracy
 
 ggsave(
   here::here("results", "fig-england-accuracy.pdf"),
