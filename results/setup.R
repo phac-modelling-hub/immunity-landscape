@@ -28,7 +28,7 @@ fig_w <- 7.29   # inches
 fig_h <- 4.51   # inches
 
 # ── Manuscript ggplot theme ────────────────────────────────────────────────────
-theme_ms <- theme_grey(base_size = 11) +
+theme_ms <- theme_bw(base_size = 11) +
   theme(
     strip.text.x       = element_text(size = 8),
     axis.title       = element_text(size = 12),

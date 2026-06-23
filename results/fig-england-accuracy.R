@@ -108,7 +108,8 @@ fig_england_accuracy <- panel_A / panel_B + patchwork::plot_layout(heights = c(1
 ggsave(
   here::here("results", "fig-england-accuracy.pdf"),
   fig_england_accuracy, 
-  width = fig_w, height = 1.5*fig_h
+  width = fig_w, height = 1.5*fig_h,
+  dpi = 300
 )
 
 ggsave(
