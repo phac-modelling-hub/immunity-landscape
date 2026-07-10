@@ -26,11 +26,13 @@ age_pairs_1plus$gap_group <- factor(age_recode[age_pairs_1plus$gap_group], level
 fig_ages_test_all <- ggplot(age_pairs_1plus, aes(x = diff * 100, fill = gap_group)) +
   geom_histogram(binwidth = 2, boundary = 0, position = position_stack(reverse = TRUE)) +
   scale_fill_manual(values = gap_colours, name = stringr::str_wrap("Gap between pairs", width = 12)) +
-  facet_wrap(~ location, ncol = 3) +
+  facet_wrap(~ location, labeller = labeller(location = \(x) stringr::str_wrap(x, width = 22)), ncol = 3) +
   labs(
     title = "A: Among pairs of ages by PT",
     x = "Absolute difference in vaccine coverage (%)", y = "Number of age pairs") +
-  theme(plot.title = element_text(size = 14))
+  theme(
+    plot.title = element_text(size = 14)
+  )
 
 # --- Provinces test data and figures ---
 
@@ -68,7 +70,7 @@ ggsave(
   here::here("results", "fig-combined-tests.jpeg"),
   fig_combined_tests,
   width = 1.25*fig_w,
-  height = 1.25*fig_h,
+  height = 1.45*fig_h,
   dpi = 300
 )
 
@@ -76,6 +78,6 @@ ggsave(
   here::here("results", "fig-combined-tests.pdf"),
   fig_combined_tests,
   width = 1.25*fig_w,
-  height = 1.25*fig_h,
+  height = 1.45*fig_h,
   dpi = 300
 )

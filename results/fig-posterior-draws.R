@@ -14,12 +14,12 @@ fig_posterior_Gini <- make_posterior_plot(post_Gini, obs_Gini)
 fig_posterior_LI   <- make_posterior_plot(post_LI,   obs_LI)
 fig_posterior_VH   <- make_posterior_plot(post_VH,   obs_VH)
 
-ggsave(here::here("results", "fig-posterior-draws_Gini.pdf"),
-       fig_posterior_Gini, width = fig_w, height = fig_h)
-ggsave(here::here("results", "fig-posterior-draws_LI.pdf"),
-       fig_posterior_LI, width = fig_w, height = fig_h)
-ggsave(here::here("results", "fig-posterior-draws_VH.pdf"),
-       fig_posterior_VH, width = fig_w, height = fig_h)
+# ggsave(here::here("results", "fig-posterior-draws_Gini.pdf"),
+#        fig_posterior_Gini, width = fig_w, height = fig_h)
+# ggsave(here::here("results", "fig-posterior-draws_LI.pdf"),
+#        fig_posterior_LI, width = fig_w, height = fig_h)
+# ggsave(here::here("results", "fig-posterior-draws_VH.pdf"),
+#        fig_posterior_VH, width = fig_w, height = fig_h)
 
 # Combine into one plot with facet_grid
 # Province ordering: Gini order first, then any VH-unique region names appended
@@ -66,14 +66,22 @@ fig_posterior_combined <- ggplot(post_all) +
              labeller = labeller(province = as_labeller(pt_labels))) +
   theme(legend.position = "none")
 
-ggsave(here::here("results", "fig-posterior-draws.pdf"),
-       fig_posterior_combined, width = fig_w * 2, height = fig_h * 1.5)
+# ggsave(here::here("results", "fig-posterior-draws.pdf"),
+#        fig_posterior_combined, width = fig_w * 2, height = fig_h * 1.5)
 
 # ── Gini with unobserved overlay (2+ dose data) ────────────────────────────────
 unobs_Gini <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned_2plus.csv")) %>%
   select(age_current, location, value)
 
 fig_posterior_Gini_unobs <- make_posterior_plot(post_Gini, obs_Gini, show_unobs = TRUE, unobs_df = unobs_Gini) +
-  theme(legend.position = "bottom")
+  labs(title = "Posterior draws from model fit") +
+  theme(legend.position = "inside",
+    legend.position.inside = c(0.98, -0.05),   # bottom-right
+    legend.justification = c(1, 0)
+)
+fig_posterior_Gini_unobs
+
+ggsave(here::here("results", "fig-posterior-draws_Gini_unobs.jpeg"),
+       fig_posterior_Gini_unobs, width = fig_w, height = fig_h, dpi = 300)
 ggsave(here::here("results", "fig-posterior-draws_Gini_unobs.pdf"),
-       fig_posterior_Gini_unobs, width = fig_w, height = fig_h * 1.5)
+       fig_posterior_Gini_unobs, width = fig_w, height = fig_h)

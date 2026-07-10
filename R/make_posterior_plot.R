@@ -8,8 +8,9 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
               alpha = 0.15, linewidth = 0.3) +
     geom_point(data = obs_df,
                aes(x = age_current, y = value, shape = n_doses),
-               colour = "red") +
-    scale_shape_manual(values = shapes_doses, name = NULL, labels = c("1+" = "1+ dose (provincial)")) +
+               colour = "grey50",
+              size = 2) +
+    scale_shape_manual(values = shapes_doses, name = NULL, labels = c("1+" = "Training data (1+ doses)")) +
     scale_x_continuous(name = "Current age", limits = c(min(post2D$x_i), max(post2D$x_i)),
                        breaks = seq(min(post2D$x_i), max(post2D$x_i), by = 5)) +
     scale_y_continuous(name = "Vaccine coverage", labels = scales::label_percent()
@@ -19,7 +20,7 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
   if (show_unobs && !is.null(unobs_df)) {
     unobs_df <- unobs_df %>%
       mutate(y_label    = factor(location, levels = levels(post2D$y_label)),
-             point_type = "2+ dose (provincial)")
+             point_type = "Comparison (2+ doses)")
     
     overlay_df <- unobs_df
     
@@ -33,8 +34,8 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
     p <- p +
       geom_point(data = overlay_df,
                  aes(x = age_current, y = value, colour = point_type),
-                 size = 1.2, shape = 16) +
-      scale_colour_manual(values = c("2+ dose (provincial)" = "green", "1+ dose (cNICS)" = "lightgreen"), name = NULL)
+                 size = 2, shape = 16) +
+      scale_colour_manual(values = c("Comparison (2+ doses)" = "#00ca5eff", "1+ dose (cNICS)" = "#208ceaff"), name = NULL)
   }
   
   p <- p + theme(legend.position = "none")
