@@ -326,6 +326,7 @@ compute_accuracy <- function(fit_hp, error_tolerance = 0.05, last_agecurrent = 2
   list(
     id_rep = id_rep,
     fit_data = fit_data,
+    prov_relation = prov_relation,
     score_accuracy = A
   )
 }
