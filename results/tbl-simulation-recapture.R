@@ -28,19 +28,21 @@ tbl_sbc <- SBC_results %>%
          `b correct`             = b_correct,
          `Mean normalised score` = mean_norm_score)
 
-tbl_sbc %>%
+tbl_sbc_1 <- tbl_sbc %>%
   flextable() %>%
   colformat_double(digits = 2) %>%
-  set_table_properties(width = 1, layout = "autofit") %>%
-  save_as_docx(path = here::here("results", "tbl-simulation-recapture.docx"))
+  set_table_properties(width = 1, layout = "autofit") 
+
+save_as_docx(tbl_sbc_1, path = here::here("results", "tbl-simulation-recapture.docx"))
 
 # ── Per-iteration detail (partial dataset) ────────────────────────────────────
-SBC_results %>%
+tbl_sbc_2 <- SBC_results %>%
   filter(sample == "partial") %>%
   select(i, true_k_name, true_l1, true_l2, true_b,
          predicted_k_name, predicted_l1, predicted_l2, predicted_b,
          normalized_score, exact_recovery) %>%
   arrange(i) %>%
   flextable() %>%
-  colformat_double(digits = 2) %>%
-  save_as_docx(path = here::here("results", "tbl-simulation-recapture_detail.docx"))
+  colformat_double(digits = 2)
+
+save_as_docx(tbl_sbc_2, path = here::here("results", "tbl-simulation-recapture_detail.docx"))

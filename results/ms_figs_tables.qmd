@@ -17,7 +17,7 @@ rerun_SBC <- F
 if (rerun) source(here::here("results", "results_setup.R"))
 ```
 
-# Main figures
+# Main text
 
 ```{r}
 #| label: fig-england-accuracy
@@ -41,7 +41,7 @@ source(here::here("results", "fig-posterior-draws.R"))
 fig_posterior_Gini
 ```
 
-# Supplementary figures
+# Supplementary material
 
 ```{r}
 #| label: fig-lppd-heatmaps
@@ -53,6 +53,13 @@ fig_heatmaps
 #| label: fig-lppd-lopo
 source(here::here("results", "fig-lppd-lopo.R"))
 fig_lopo_combined
+```
+
+```{r}
+#| label: tbl-simulation-recapture
+source(here::here("results", "tbl-simulation-recapture.R"))
+tbl_sbc_1
+tbl_sbc_2
 ```
 
 ```{r}
