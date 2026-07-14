@@ -13,7 +13,7 @@ gap_colours <- c("Close (1 year or <10% of range)"      = "#1b7837",
 
 # --- Ages test data and figures ---
 
-age_pairs_1plus <- readRDS(here::here("results", "ages_test_alldata.rds"))
+age_pairs_1plus <- readRDS(here::here("results", "age_test_pairs.rds"))
 
 # Recode gap_group to unified labels
 age_recode <- c("1 year apart"   = "Close (1 year or <10% of range)",
