@@ -45,3 +45,4 @@ _targets/
 
 *.sh
 config.yml
+plots/Thumbs.db
