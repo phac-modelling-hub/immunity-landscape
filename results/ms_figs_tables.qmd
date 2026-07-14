@@ -17,34 +17,37 @@ rerun_SBC <- F
 if (rerun) source(here::here("results", "results_setup.R"))
 ```
 
-## Main figures
-
-```{r}
-#| label: fig-data-plot
-source(here::here("results", "fig-data-plot.R"))
-fig_data_plot
-```
+# Main figures
 
 ```{r}
 #| label: fig-england-accuracy
 #| eval: false
-#| need to run the targets pipeline first to get the results... this will take ~1 hr on a basic laptop as it involves 40 hyperparameter selection processes!
-#| targets::tar_make(accuracy)
+
+# need to run the targets pipeline first to get these results... this will take ~1 hr on a basic laptop as it involves 40 hyperparameter selection processes!
+# targets::tar_make(accuracy)
 source(here::here("results", "fig-england-accuracy.R"))
 fig_england_accuracy
+```
+
+```{r}
+#| label: fig-combined-tests
+source(here::here("results", "fig-combined-tests.R"))
+fig_combined_tests
 ```
 
 ```{r}
 #| label: fig-posterior-draws
 source(here::here("results", "fig-posterior-draws.R"))
 fig_posterior_Gini
-fig_posterior_LI
-fig_posterior_VH
-fig_posterior_combined
-fig_posterior_Gini_unobs
 ```
 
-## Supplementary figures
+# Supplementary figures
+
+```{r}
+#| label: fig-lppd-heatmaps
+source(here::here("results", "fig-lppd-heatmaps.R"))
+fig_heatmaps
+```
 
 ```{r}
 #| label: fig-lppd-lopo
@@ -55,38 +58,13 @@ fig_lopo_combined
 ```{r}
 #| label: fig-provinces-test
 source(here::here("results", "fig-provinces-test.R"))
-fig_pt_test1
 fig_pt_test2
 fig_pt_test3
 ```
 
 ```{r}
-#| label: fig-lppd-heatmaps
-source(here::here("results", "fig-lppd-heatmaps.R"))
-fig_heatmaps
-```
-
-```{r}
-#| label: fig-ages-test
-source(here::here("results", "fig-ages-test.R"))
-fig_ages_test_all
-fig_ages_test_PTs
-```
-
-```{r}
-#| label: fig-england
-#| eval: FALSE
-source(here::here("results", "fig-england.R"))  # Irena to add England figs here
-fig_england_posterior_Gini
-fig_england_posterior_LI
-fig_england_heatmap_Gini
-fig_england_heatmap_LI
-```
-
-## Tables
-
-```{r}
-#| label: tbl-simulation-recapture
-source(here::here("results", "tbl-simulation-recapture.R"))
-tbl_sbc
+#| label: posterior-draws-supp
+fig_posterior_LI
+fig_posterior_VH
+fig_posterior_combined
 ```
