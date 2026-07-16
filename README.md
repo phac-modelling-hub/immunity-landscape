@@ -29,7 +29,7 @@ renv::restore()
 
 # Reproducing the analysis
 
-Run the Quarto documents in numerical order (`1_collate-data.qmd` through `4_figs_tables.qmd`) to fully reproduce the analysis. Be sure to toggle the "re-run" flags in the `4_figs_tables.qmd` document to `TRUE` for a complete reproduction.
+Run the Quarto documents in numerical order (`1_collate-data.qmd` through `4_figs_tables.qmd`) to fully reproduce the analysis. Be sure to toggle the "re-run" flags in the `4_figs_tables.qmd` document to `TRUE` for a complete reproduction. However, note that in doing so, the analysis may take a few hours to run completely on a laptop with standard specifications (processing power and RAM) as of mid-2026.
 
 # License
 
