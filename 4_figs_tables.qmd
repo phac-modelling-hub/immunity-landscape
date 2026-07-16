@@ -2,7 +2,7 @@
 title: "Manuscript figures and tables"
 ---
 
-This doc is used to source figures and tables for the [manuscript](https://docs.google.com/document/d/1CMSp4e_r6As2yim0dHeWNWYWK2msEPtZZl-3ekjgz0I/edit?tab=t.0). File names follow a convention of starting with `fig-` or `tbl-`, then the cross-reference label used in the manuscript draft.
+This doc is used to collate source code for the manuscript figures and tables.
 
 ```{r}
 #| label: setup
@@ -11,9 +11,11 @@ source(here::here("results", "setup.R"))
 
 ```{r}
 #| label: rerun
-rerun <- FALSE
-rerun_select_GP <- F
-rerun_SBC <- F
+
+# toggles to re-run slow steps
+rerun <- FALSE # all
+rerun_select_GP <- F # GP selection process
+rerun_SBC <- F # simulation-based calibration
 if (rerun) source(here::here("results", "results_setup.R"))
 ```
 

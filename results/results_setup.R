@@ -1,5 +1,5 @@
 # Generates all model results needed for manuscript figures and tables.
-# Source setup.R first, then run this file (or set rerun=TRUE in ms_figs_tables.qmd).
+# Source setup.R first, then run this file (or set rerun=TRUE in 4_figs_tables.qmd).
 # Each output is saved to its own file in results/, *overwriting existing outputs*.
 
 # ── Model framework definitions ────────────────────────────────────────────────
