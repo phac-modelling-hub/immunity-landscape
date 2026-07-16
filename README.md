@@ -1,6 +1,6 @@
 # Immunity landscape
 
-Code and data repository accompanying the manuscript "How do you make inferences with incomplete epidemiological data? Estimating measles vaccine coverage in Canada" by Liza Hadley, Rachael M. Milwid, Valerie Hongoh, Rania Wasfi, Stephen M. Kissler, Irena Papst.
+Code and data repository accompanying the manuscript "Making inferences with incomplete epidemiological data: a proof-of-concept estimating measles vaccine coverage across Canada" by Liza Hadley, Rachael M. Milwid, Valerie Hongoh, Rania Wasfi, Stephen M. Kissler, Irena Papst.
 
 # Main files
 
