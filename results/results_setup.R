@@ -381,4 +381,8 @@ if (rerun_SBC == T) {
     saveRDS(here::here("results", "SBC_results_Gini.rds"))
 }
 
+# ── 8. England accuracy analysis ────────
+cat("Running England accuracy analysis...\n")
+targets::tar_make(accuracy)
+
 cat("results_setup.R complete.\n")

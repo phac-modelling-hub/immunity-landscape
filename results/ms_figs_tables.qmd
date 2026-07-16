@@ -21,10 +21,7 @@ if (rerun) source(here::here("results", "results_setup.R"))
 
 ```{r}
 #| label: fig-england-accuracy
-#| eval: false
 
-# need to run the targets pipeline first to get these results... this will take ~1 hr on a basic laptop as it involves 40 hyperparameter selection processes!
-# targets::tar_make(accuracy)
 source(here::here("results", "fig-england-accuracy.R"))
 fig_england_accuracy
 ```
@@ -58,7 +55,7 @@ fig_combined_tests
 ```{r}
 #| label: fig-posterior-draws
 source(here::here("results", "fig-posterior-draws.R"))
-fig_posterior_Gini
+fig_posterior_Gini_unobs
 ```
 
 # Supplementary material
