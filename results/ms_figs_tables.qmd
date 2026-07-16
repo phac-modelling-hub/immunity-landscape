@@ -30,6 +30,26 @@ fig_england_accuracy
 ```
 
 ```{r}
+#| label: tbl-significance-tests
+make_row <- function(name, path) {
+  p <- readRDS(here::here("results", path))$p |> unname()
+  tibble::tibble(
+    indicator = name,
+    p_value_close = p[1],
+    p_value_near = p[2],
+    p_value_moderate = p[3]
+  )
+}
+
+dplyr::bind_rows(
+  make_row("Age", "age_test_bootstrap.rds"),
+  make_row("Gini", "pt_bootstrap_Gini.rds"),
+  make_row("Low Income", "pt_bootstrap_LI.rds"),
+  make_row("Vaccine Hesitancy", "pt_bootstrap_VH.rds")
+)
+```
+
+```{r}
 #| label: fig-combined-tests
 source(here::here("results", "fig-combined-tests.R"))
 fig_combined_tests
