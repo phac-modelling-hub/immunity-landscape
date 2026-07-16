@@ -3,7 +3,7 @@ invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))  # loa
 
 test_that("refactor of compute_lppd produces same values as before", {
   # choose inputs for compute_lppd()
-  vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned.csv"), show_col_types = FALSE) %>% dplyr::filter(!(pt %in% c("SK","YT","NB")))
+  vax_clean <- readr::read_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned.csv"), show_col_types = FALSE) %>% dplyr::filter(!(pt %in% c("SK","YT","NB")))
   prov_values <- "Gini"
   l1 <- 2.5
   l2 <- 10

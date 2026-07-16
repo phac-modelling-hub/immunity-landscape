@@ -55,7 +55,7 @@ run_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_val
   #' compute and plot posterior
   post2D <- compute_posterior2D(xvals=xvals, yvals=yvals, xobs=xobs, yobs=yobs, zobs=zobs,
                                 k=k, l1=l1, ndrws=ndrws, prov_levels=prov_levels, b=b, meas_error=meas_error)
-  vax_clean <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned.csv"), show_col_types = FALSE)
+  vax_clean <- readr::read_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned.csv"), show_col_types = FALSE)
   if (show_plots) post2D %>% plot_posterior2D(., xobs=xobs, yobs=yobs, zobs=zobs, k_param1=l1, k_param2=l2, k_param3=b,
                                               vax_dataset=vax_clean, prov_levels=prov_levels) %>% print()
   return(post2D)

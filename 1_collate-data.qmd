@@ -131,7 +131,7 @@ We used the latest version, which is from 2023.
 ```{r}
 #| label: vax_aNICS
 
-vax_aNICS <- (read_excel(here::here("data", "measles_raw", "vax_canada_adults_2023.xlsx")) 
+vax_aNICS <- (read_excel(here::here("data", "coverage", "raw", "measles_raw", "vax_canada_adults_2023.xlsx")) 
  |> filter(Vaccine == "Measles")
  |> mutate(across(everything(), as.character))
  |> select(-Vaccine)
@@ -405,7 +405,7 @@ This analysis was conducted using the second data source above:
 
 ```{r}
 #| label: vax_ON
-vax_ON <- (here::here("data", "measles_raw", "vax_ontario.csv")
+vax_ON <- (here::here("data", "coverage", "raw", "measles_raw", "vax_ontario.csv")
   |> read_csv(show_col_types = FALSE)
   |> filter(Antigen == "Measles") 
   |> arrange(Public_health_unit, Age)
@@ -449,7 +449,7 @@ This analysis was conducted using the third data source above:
 ```{r}
 #| label: vax_ON_dose
 
-vax_ON_dose <- (here::here("data", "measles_raw", "vax_ontario_dose.csv")
+vax_ON_dose <- (here::here("data", "coverage", "raw", "measles_raw", "vax_ontario_dose.csv")
   |> read_csv(show_col_types = FALSE)
   |> filter(Antigen == "Measles")
   |> transmute(
@@ -565,7 +565,7 @@ parse_sheet <- function(sheet_name){
 }
 
 # get data
-file_MB <- here::here("data", "measles_raw", "vax_manitoba_child_coverage_2023.xlsx")
+file_MB <- here::here("data", "coverage", "raw", "measles_raw", "vax_manitoba_child_coverage_2023.xlsx")
 sheets_MB <- readxl::excel_sheets(file_MB)
 
 locations <- ( # the same for all sheets
@@ -576,7 +576,7 @@ locations <- ( # the same for all sheets
 )
 
 schedule <- readxl::read_excel(
-  here::here("data", "measles_raw", "MB_immunization_schedules_2023.xlsx"),
+  here::here("data", "coverage", "raw", "measles_raw", "MB_immunization_schedules_2023.xlsx"),
   sheet = "childhood_doses",
   skip = 1
 ) |> transmute(age = as.character(Age), n_doses = as.character(Measles)) |> filter(age != 1)
@@ -618,8 +618,8 @@ LH: From what I can see, the Alberta 1-dose estimates represent 1+. (For example
 ```{r}
 #| label: vax_AB
 
-AB_zones <- read_xlsx(here::here("data", "measles_raw", "AB_zones.xlsx")) # lookup table for the zones
-vax_AB <- read.csv(here::here("data", "measles_raw", "vax_alberta.csv"))  %>%
+AB_zones <- read_xlsx(here::here("data", "coverage", "raw", "measles_raw", "AB_zones.xlsx")) # lookup table for the zones
+vax_AB <- read.csv(here::here("data", "coverage", "raw", "measles_raw", "vax_alberta.csv"))  %>%
   select(-Standard.Error, Standard.Score) %>%
   mutate(year_birth = Birth.Cohort,
          n_doses = word(Immunization.Type, 3)) %>%
@@ -694,7 +694,7 @@ Methods for the 7-year old data are
 
 ```{r}
 #| label: file_BC
-file_BC <- here::here("data", "measles_raw", "vax_british-columbia.xlsx")
+file_BC <- here::here("data", "coverage", "raw", "measles_raw", "vax_british-columbia.xlsx")
 ```
 
 These data are pretty granular on the geographic level; alongside the
@@ -826,7 +826,7 @@ For cNICS:
 ```{r}
 #| label: vax_cNICS
 
-vax_cNICS <- suppressWarnings(readr::read_csv(here::here("data", "1310087001-eng.csv"), skip = 13, col_names = c("location", "age", "year_report", "value"), na = c("", "NA", ".."), show_col_types = FALSE)) |>
+vax_cNICS <- suppressWarnings(readr::read_csv(here::here("data", "coverage", "raw", "1310087001-eng.csv"), skip = 13, col_names = c("location", "age", "year_report", "value"), na = c("", "NA", ".."), show_col_types = FALSE)) |>
   tidyr::fill(location, age, .direction = "down") |>
   dplyr::mutate(
     age = str_extract(age, "\\d+(?=-year-old)"),
@@ -873,5 +873,5 @@ vax <- lapply(df_names, get) |> bind_rows() # all estimates
 vax |>
   # enforce variable ordering as in data dictionary
   select(all_of(data_dict$variable)) |>
-  readr::write_csv(here::here("data", "measles_vax-coverage-data.csv"))
+  readr::write_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data.csv"))
 ```

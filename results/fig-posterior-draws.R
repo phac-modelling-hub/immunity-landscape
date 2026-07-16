@@ -68,7 +68,7 @@ ggsave(here::here("results", "fig-posterior-draws.pdf"),
        fig_posterior_combined, width = fig_w * 2, height = fig_h * 1.5)
 
 # ── Gini with unobserved overlay (2+ dose data) ────────────────────────────────
-unobs_Gini <- readr::read_csv(here::here("data", "measles_vax-coverage-data-cleaned_2plus.csv")) %>%
+unobs_Gini <- readr::read_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned_2plus.csv")) %>%
   select(age_current, location, value)
 
 fig_posterior_Gini_unobs <- make_posterior_plot(post_Gini, obs_Gini, show_unobs = TRUE, unobs_df = unobs_Gini) +

@@ -55,9 +55,9 @@ We've collected a large dataset of vaccine coverage data (see `1_collate-data.qm
 #| label: read_data
 
 # read in data and filter to province-level
-PT_lookup <- readr::read_csv(here::here("data", "pt_lookup.csv"), show_col_types = FALSE)
-popsize <- read_csv(here::here("data", "popsize.csv"), show_col_types = FALSE)
-vax_raw <- readr::read_csv(here::here("data", "measles_vax-coverage-data.csv"), show_col_types = FALSE) |> filter(location %in% unique(PT_lookup$nm_en))
+PT_lookup <- readr::read_csv(here::here("data", "pt-relation", "pt_lookup.csv"), show_col_types = FALSE)
+popsize <- read_csv(here::here("data", "pt-relation", "popsize.csv"), show_col_types = FALSE)
+vax_raw <- readr::read_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data.csv"), show_col_types = FALSE) |> filter(location %in% unique(PT_lookup$nm_en))
 
 current_year <- as.integer(format(Sys.Date(), "%Y")) # for ageing estimates
 ```
@@ -192,9 +192,9 @@ We can now export `vax_clean` for use in `3_gp-model.qmd`:
 
 # model input data (1+ doses)
 vax_input <- vax_clean |> dplyr::filter(n_doses != "2+") 
-readr::write_csv(vax_input, here::here("data", "measles_vax-coverage-data-cleaned.csv"))
+readr::write_csv(vax_input, here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned.csv"))
 # 2+ doses for plot overlay
-vax_clean |> dplyr::filter(n_doses == "2+") %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-cleaned_2plus.csv"))
+vax_clean |> dplyr::filter(n_doses == "2+") %>% readr::write_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned_2plus.csv"))
 # model input data without adults
-vax_input |> filter(source != "aNICS") %>% readr::write_csv(here::here("data", "measles_vax-coverage-data-cleaned_noadults.csv"))
+vax_input |> filter(source != "aNICS") %>% readr::write_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned_noadults.csv"))
 ```

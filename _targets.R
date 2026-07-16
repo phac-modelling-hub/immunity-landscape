@@ -24,8 +24,8 @@ list(
   tar_target(prov_relation, "UK-Gini"), # province relation metric to use
 
   # data
-  tar_target(file_canada, here::here("data", "measles_vax-coverage-data-cleaned.csv"), format = "file"),
-  tar_target(file_england, here::here("data", "ukhsa-chart-download-mmr1-regions.csv"), format = "file"),
+  tar_target(file_canada, here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned.csv"), format = "file"),
+  tar_target(file_england, here::here("data", "coverage", "raw", "ukhsa-chart-download-mmr1-regions.csv"), format = "file"),
   tar_target(data_all, prep_vax_data(file_canada, file_england)),
 
   # perform experiment over repeated splits of test/train
