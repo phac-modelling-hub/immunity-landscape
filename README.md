@@ -6,7 +6,9 @@ Code and data repository accompanying the manuscript "Making inferences with inc
 
 ## Main files
 
-Vaccine coverage data is collated in `1_collate-data.qmd`. This document includes notes and citations on all data sources used, and outputs a full, standardized vaccine coverage dataset (`data/coverage/generated/measles_vax-coverage-data.csv`). These data are then cleaned for use in Gaussian Process models in `2_clean-data.qmd`. Gaussian Process models are created in `3_gp-model.qmd`. Finally, manuscript figures and tables are generated in `4_figs_tables.qmd`.
+Vaccine coverage data is collated in `1_collate-data.qmd`. This document includes notes and citations on all data sources used, and outputs a full, standardized vaccine coverage dataset (`data/coverage/generated/measles_vax-coverage-data.csv`). These data are then cleaned for use in Gaussian Process models in `2_clean-data.qmd`. Finally, manuscript figures and tables are generated in `3_figs_tables.qmd`.
+
+`code-demo.qmd` is a stand-alone demonstration of the Gaussian Process model-selection code.
 
 ## Overall repository structure
 
@@ -29,7 +31,7 @@ renv::restore()
 
 # Reproducing the analysis
 
-Run the Quarto documents in numerical order (`1_collate-data.qmd` through `4_figs_tables.qmd`) to fully reproduce the analysis. Be sure to toggle the "re-run" flags in the `4_figs_tables.qmd` document to `TRUE` for a complete reproduction. However, note that in doing so, the analysis may take a few hours to run completely on a laptop with standard specifications (processing power and RAM) as of mid-2026.
+Run the Quarto documents in numerical order (`1_collate-data.qmd` through `3_figs_tables.qmd`) to fully reproduce the analysis. Be sure to toggle the "re-run" flags in the `3_figs_tables.qmd` document to `TRUE` for a complete reproduction. However, note that in doing so, the analysis may take a few hours to run completely on a laptop with standard specifications (processing power and RAM) as of mid-2026.
 
 # License
 

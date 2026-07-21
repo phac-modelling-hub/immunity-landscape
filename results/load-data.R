@@ -1,0 +1,33 @@
+# load-data.R
+# Load packages, R functions, and the cleaned coverage datasets used across the
+# analysis. This code was extracted from the `initial_setup` chunk of
+# code-demo.qmd so it can be sourced directly by both code-demo.qmd and the
+# manuscript figure/table scripts (via results/setup.R) without scraping the .qmd.
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(stringr)
+library(stringi)
+library(scales)
+library(purrr)
+library(tibble)
+library(mnormt) # for multivariate normal
+library(LaplacesDemon) # for logistic transform
+library(flextable) # for exporting tables in .docx
+
+invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))  # load functions
+
+#' read cleaned data
+vax_clean <- readr::read_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned.csv"), show_col_types = FALSE)
+vax_schedule <- readr::read_csv(here::here("data", "coverage", "raw", "measles_raw", "vax_schedule.csv"), show_col_types = FALSE)
+popsize <- readr::read_csv(here::here("data", "pt-relation", "popsize.csv"), show_col_types = FALSE)
+current_year <- as.integer(format(Sys.Date(), "%Y")) # for ageing estimates
+age_pre1970 <- current_year - 1969 # min age of those born strictly before 1970
+vax_cNICS <- readr::read_csv(here::here("data", "coverage", "raw", "measles_CNICS.csv"), show_col_types = FALSE) %>%
+  mutate(age_current = current_year - year_birth)
+
+#' cleaned data for use with low-income and vaccine hesitancy province relation indicators
+vax_cleanLI <- vax_clean   # "low_income_families" now has data for all PTs
+vax_cleanVH <- vax_clean %>% mutate(location = if_else(location %in% c("Newfoundland and Labrador", "Prince Edward Island", "Nova Scotia", "New Brunswick"), "Atlantic region", location)) %>% mutate(location = if_else(location %in% c("Yukon", "Northwest Territories", "Nunavut"), "Northern region", location)) %>%  mutate(pt = if_else(location %in% c("Atlantic region"), "AR", pt)) %>% mutate(pt = if_else(location %in% c("Northern region"), "NR", pt)) %>% group_by(across(-value)) %>% summarise(value = mean(value), .groups = "drop")  # "vaccine_hesitancy" groups Atlantic PTs and Northen PTs

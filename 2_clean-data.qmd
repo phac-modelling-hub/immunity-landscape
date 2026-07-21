@@ -185,7 +185,7 @@ vax_clean |>
   xlim(1, 21)
 ```
 
-We can now export `vax_clean` for use in `3_gp-model.qmd`:
+We can now export `vax_clean` for use in the Gaussian Process models:
 
 ```{r}
 #| label: export_vax_clean

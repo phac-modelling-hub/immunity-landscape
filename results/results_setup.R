@@ -1,5 +1,5 @@
 # Generates all model results needed for manuscript figures and tables.
-# Source setup.R first, then run this file (or set rerun=TRUE in 4_figs_tables.qmd).
+# Source setup.R first, then run this file (or set rerun=TRUE in 3_figs_tables.qmd).
 # Each output is saved to its own file in results/, *overwriting existing outputs*.
 
 # ── Model framework definitions ────────────────────────────────────────────────
@@ -36,22 +36,19 @@ model_configs <- list(
 )
 
 # ── 1. Model selection (overwrites existing GPcombinations CSVs) ───────────────
-rerun_select_GP <- F
+# Grid and select_GP() invocation live in results/model-selection.R, shared with
+# code-demo.qmd so the two entry points cannot drift.
+source(here::here("results", "model-selection.R"))
 if (rerun_select_GP == T) {
   cat("Running model selection...\n")
   for (nm in names(model_configs)) {
     cfg <- model_configs[[nm]]
     cat(" ", nm, "\n")
-    select_GP(
+    run_model_selection(
       cfg$vax_dataset,
       prov_values = cfg$prov_values,
-      k_list      = list(ksqexp = ksqexp, kexp = kexp),
-      l1          = c(1, 1.25, 1.5, 1.75, 2, 2.25, 2.5),
-      l2          = c(0.1, 0.2, 0.5, 1, 1.5, 2, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0, 10, 25, 50, 75, 100, 150, 200, 250, 500),
-      b           = c(0.5, 1, 1.5),
-      meas_error  = c(0.5, 0.1, 0.05, 0.01, 0)
-    ) %>%
-      readr::write_csv(here::here("results", cfg$model_selection_csv))
+      csv_name    = cfg$model_selection_csv
+    )
   }
 }
 

@@ -16,14 +16,14 @@ data/
 
 Original vaccine coverage inputs, collected from external sources and never
 modified by repo code. Read primarily by `1_collate-data.qmd` and
-`3_gp-model.qmd`.
+`code-demo.qmd`.
 
 | File / folder | Description |
 |---|---|
 | `measles_raw/` | Province/territory source files (AB, BC, MB, ON, QC adult xlsx/csv) plus immunization schedules and `vax_schedule.csv`. |
 | `CNICS-ANICS_raw/` | Raw cNICS/aNICS extracts. |
 | `1310087001-eng.csv` | StatCan cNICS by-PT coverage estimates. |
-| `measles_CNICS.csv` | cNICS coverage series used in `3_gp-model.qmd`. |
+| `measles_CNICS.csv` | cNICS coverage series used in `code-demo.qmd`. |
 | `ukhsa-chart-download-mmr1-nations.csv` | UKHSA MMR1 coverage, four UK nations. |
 | `ukhsa-chart-download-mmr1-regions.csv` | UKHSA MMR1 coverage, English regions. |
 
@@ -43,7 +43,7 @@ Coverage datasets written by the data pipeline.
 Province/territory population, lookup, and socioeconomic indicator files. All
 are **raw** external sources (no generated files); read mainly by
 `R/extract_province_relation.R`, `R/pt_lookup.R`, `2_clean-data.qmd`, and
-`3_gp-model.qmd`.
+`code-demo.qmd`.
 
 | File | Description |
 |---|---|

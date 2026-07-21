@@ -6,22 +6,10 @@ library(here)
 library(ggrepel)
 library(ggplot2)
 
-# ── Helper: extract and run a named chunk from a .qmd file ────────────────────
-source_qmd_chunk <- function(qmd_file, chunk_label) {
-  lines       <- readLines(qmd_file)
-  label_line  <- grep(paste0("#\\| label: ", chunk_label), lines)
-  if (length(label_line) == 0) stop("Chunk '", chunk_label, "' not found in ", qmd_file)
-  open_fence  <- max(grep("^```\\{r", lines[1:label_line]))
-  close_fence <- label_line - 1 + min(grep("^```$", lines[label_line:length(lines)]))
-  code_lines  <- lines[(open_fence + 1):(close_fence - 1)]
-  code_lines  <- code_lines[!grepl("^#\\|", code_lines)]  # strip chunk options
-  tmp <- tempfile(fileext = ".R")
-  writeLines(code_lines, tmp)
-  source(tmp, local = FALSE)  # local=FALSE runs in global env
-}
-
-# ── Run gp-model.qmd initial_setup chunk ──────────────────────────────────────
-source_qmd_chunk(here::here("3_gp-model.qmd"), "initial_setup")
+# ── Load packages, functions, and cleaned coverage datasets ───────────────────
+# Previously scraped from the initial_setup chunk of code-demo.qmd; now shared
+# via results/load-data.R, which code-demo.qmd also sources.
+source(here::here("results", "load-data.R"))
 
 # ── Figure save dimensions ─────────────────────────────────────────────────────
 fig_w <- 7.29   # inches
