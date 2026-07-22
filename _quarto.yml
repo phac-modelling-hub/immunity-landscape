@@ -1,6 +1,5 @@
 project:
   title: "immunity-landscape"
-  output-dir: rendered/draft
   
 toc: true
 

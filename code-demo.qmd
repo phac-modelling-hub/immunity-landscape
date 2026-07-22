@@ -1,15 +1,25 @@
 ---
-title: "Full Gaussian Process model for estimating vaccine coverage"
+title: "Code demo: Gaussian Process model for estimating vaccine coverage"
 author:
   - name: Liza Hadley
     email: lh667@cam.ac.uk
+  - name: Irena Papst
+    email: irena.papst@phac-aspc.gc.ca
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-overflow: wrap
+    theme: cosmo
 editor: visual
-echo: true
+execute:
+  echo: true
+  warning: false
+  message: false
 ---
 
-# Set Up
-
-Load functions and packages. Read the standardized cleaned data from the 'take 2' preliminary modelling approach (aiming to collapse different dose estimates to 1+). The data set `vax_clean` contains province-level estimates. We aim to work with current age (effectively collapsing year_birth and age dimensions into one).
+# Set up
 
 ```{r}
 #| label: setup
@@ -17,78 +27,89 @@ Load functions and packages. Read the standardized cleaned data from the 'take 2
 # Load packages, R functions, and cleaned coverage datasets
 source(here::here("results", "load-data.R"))
 source(here::here("results", "model-selection.R")) # common grid for model selection + helper function
+
+theme_set(theme_bw())
 ```
 
 ## A note on scales
 
-Model fitting is done using Gaussian distributions, whose domain is the entire real line. However, the vaccine coverage data is restricted to $[0,1]$ (though in practice, they're not on the boundaries of this interval). Thus, we transform the vaccine coverage data using a logit function to map it from $(0,1)$ to $(-\infty, \infty)$, perform the model fitting on the real line, and then transform the predictions back from $(-\infty, \infty)$ to $(0,1)$.
+Model fitting uses Gaussian distributions, whose domain is the entire real line. The vaccine coverage data, however, is restricted to $[0,1]$ (though in practice it never sits exactly on the boundaries). We therefore transform the coverage data with a logit function to map it from $(0,1)$ to $(-\infty, \infty)$, fit the model on the real line, and then transform the predictions back from $(-\infty, \infty)$ to $(0,1)$.
 
-## A note on assumptions
+# One-dimensional case (current age)
 
-A Gaussian Process model assumes relation of the independent variable(s), i.e. that ages which are 'related / close-by' (defined however we wish with lengthscale parameter l) will have similar vaccination coverage. Equally, we assume that 'related' provinces will also have similar coverage. Some tests of this assumption are in the 2D model extensions section.
+A Gaussian Process model assumes that the independent variable(s) are related. In the one-dimensional case, where current age is the only covariate, we are assuming that ages which are 'close-by' (defined via the shape of the covariance function and the lengthscale parameter `l`) will have similar vaccination coverage. 
 
-# 1D case (current age)
-
-The 1D model can be run for any single province, e.g. Alberta.
+The one-dimensional model can be run for any single province/territory (PT) in isolation, _e.g._ Alberta.
 
 ```{r}
-vax_prov <- vax_clean %>% filter(pt=="AB") #%>% filter(n_doses!="2+")
+vax_prov <- vax_clean %>% filter(pt=="AB")
 ```
 
-## Define covariance function / covariance matrix
+## Define covariance function and matrix
 
-Use the squared exponential covariance function, `k`, to begin with and assume lengthscale `l=2`. Our dataset has 40 inputs/ independent variables (current age), so our covariance matrix is a 40x40 matrix defining the 'relationships' between each pair of current ages.
+We begin with the squared exponential covariance function, `k`, and assume a lengthscale of `l = 2`. Our dataset has 40 inputs (current ages), so the covariance matrix, $K$, is a 40x40 matrix defining the relationship between each pair of current ages.
 
 ```{r}
 #| label: covariance
 
-# ksqexp <- function(r,l,b=1) {  # this is also defined in ksqexp.R
-#   b*exp(-r^2 / (2*l^2))
-# }
-
-first_agecurrent <- 5  # first age for the GP model
-last_agecurrent <- 32  #age_pre1970-1  # last age for the GP model
+# ages over which to predict
+first_agecurrent <- 5
+last_agecurrent <- 32
 xvals <- first_agecurrent:last_agecurrent  # a vector of current ages (these x_i's are equally spaced)  
 npts <- length(xvals)
-l <- 2
-#' evaluate cov function pairwise for current ages x1_i and x2_i (i=1,..,n)
-covmat <- expand_grid(x1=xvals,x2=xvals) %>% mutate(k=ksqexp(abs(x1-x2),l)) %>% 
-  pull(k) %>% matrix(nrow=npts)  # could also use function generate_ksqexp_covmat() here
+l <- 2 # lengthscale; in units of age, roughly specifies the size of the neighbourhood for ages, within which vaccine coverages are most strongly related
+# evaluate cov function pairwise for current ages using the R/ helper
+covmat <- generate_ksqexp_covmat(xvals, xvals, fn=ksqexp, l=l)
 ```
 
-## Define prior distribution (N(0,cov)) and draw a sample
+## Define prior distribution and draw a sample
 
-Define a prior \~ Normal(0,cov). This prior describes the relationship between vaccination coverage and current age. It is uniquely defined with mean 0 and variance equal to our covariance matrix. Take 50 draws from the prior and plot. x_i is the vector of inputs (current ages). Vertical axis is vaccination coverage.
+Define a prior \~ Normal$(0, K)$. This prior describes the relationship between vaccination coverage and current age. It is uniquely defined by mean 0 (we centre the data using the sample mean) and variance K. We take 50 draws (curves) from the prior and plot them:
 
 ```{r}
 #| label: prior
+#| fig-height: 3
 
 prior <- tibble()
 for(i in 1:50) {
   prior <- bind_rows(prior, tibble(draw=i, x_i=xvals, prior=rmnorm(1, rep(0,npts), covmat+1e-6*diag(npts))))  # each rmnorm is a random draw from the (multivariate) prior
 }
-prior %>% group_by(draw) %>% ggplot(aes(x=x_i,y=prior,group=factor(draw))) + scale_x_continuous(breaks=xvals, name="current age x_i") + geom_point(alpha=0.3) + geom_line(alpha=0.2)
+prior %>% 
+  group_by(draw) %>% 
+  ggplot(aes(x=x_i,y=prior,group=factor(draw))) + 
+  scale_x_continuous(name="Current age") + 
+  geom_point(alpha=0.3) + 
+  geom_line(alpha=0.2) + 
+  labs(
+    title = "Prior draws",
+    y = "Vaccine coverage (logit scale)"
+  )
 ```
 
 ## Introduce observed data
 
-For this mini dataset `vax_prov`, we have a dataset of n data points. First expose the model to \~8 data points (to see how well it can predict the remainder). We will use the logistic transform of y (`logit(yobs)`) which maps from \[0,1\] to \[-inf,inf\].
+The mini dataset `vax_prov` has `r nrow(vax_prov)` data points. We expose the model to a subset (8) of them, then see how well it predicts the rest. We use the logistic transform of `y` (`logit(yobs)`), which maps from \[0, 1\] to \[-inf, inf\].
 
 ```{r}
 #| label: observe_data
 
-#' observe coverage data for age 4, 9, 13, 19, 20, 21, 25, 30
-xobs <- vax_prov %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(age_current)   # can optionally add an error term here
-yobs <- vax_prov %>% filter(age_current %in% c(4,9,13,19,20,21,25,30)) %>% pull(value)
-# xobs <- vax_prov %>% pull(age_current)   # can optionally add an error term here
-# yobs <- vax_prov %>% pull(value)
+# observe coverage data for age 4, 9, 13, 19, 20, 21, 25, 30
+age_obs <- c(4,9,13,19,20,21,25,30)
+xobs <- vax_prov %>% filter(age_current %in% age_obs) %>% pull(age_current)   # can optionally add an error term here
+yobs <- vax_prov %>% filter(age_current %in% age_obs) %>% pull(value)
 
-tibble(xobs, yobs, logit(yobs))
+tibble(xobs, yobs, yobs_logit = logit(yobs)) %>%
+  knitr::kable(digits = 3, caption = "Observed coverage data (1D)") %>%
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    latex_options = c("striped", "hold_position"),
+    full_width = FALSE
+  )
 ```
 
 ## Compute posterior distribution
 
-The posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationships' between unobserved current ages `xvals` and observed current ages `xobs`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`.
+The posterior is uniquely defined by its mean and covariance matrix. We first calculate four block matrices within the full covariance matrix, `kab`, where `a` and `b` are all combinations of `o` (observed, `xobs`) and `u` (unobserved, `xvals`). For example, `kou` is the covariance of observed points `xobs` and unobserved points `xvals`. Then the posterior covariance matrix is given by `kuu - kuo %*% solve(koo) %*% kou`.
 
 ```{r}
 #| label: posterior
@@ -98,17 +119,18 @@ kou <- generate_ksqexp_covmat(xobs,xvals,fn=ksqexp,l=l)  # 'relationship' pairwi
 koo <- generate_ksqexp_covmat(xobs,xobs,fn=ksqexp,l=l) + 1e-6*diag(length(xobs))  # protect against non-invertibleness
 kuu <- generate_ksqexp_covmat(xvals,xvals,fn=ksqexp,l=l)
 
-#' calcuate posterior mean and posterior cov matrix
+# calcuate posterior mean and posterior cov matrix
 post_mean <- kuo%*%solve(koo)%*%(logit(yobs))  # conditional mean
 post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
 ```
 
 ## Plot posterior against the data
 
-Take 50 draws from the posterior and plot against the observed logit-transformed data. The posterior function can be used to provide estimates of our missing coverage data if inverse-transformed back to a \[0,1\] interval (second plot).
+We take 50 draws from the posterior and plot them against the observed (logit-transformed) data (red points):
 
 ```{r}
 #| label: plot_posterior
+#| fig-height: 3
 
 post <- tibble()
 for(i in 1:50) {  # take 50 posterior draws
@@ -116,107 +138,149 @@ for(i in 1:50) {  # take 50 posterior draws
 }
 post <- post %>% mutate(post_constrained=invlogit(post))  # add column to transform back to [0,1] interval
 
-post %>% ggplot() + geom_point(aes(x=x_i,y=post,group=factor(draw)), alpha=0.3) + scale_x_continuous(breaks=xvals,name="current age x_i") + geom_line(aes(x=x_i,y=post,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xobs, y=logit(yobs)), aes(x=x,y=y), col="red")
-
-post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(breaks=xvals,name="current age x_i") + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
+post %>% 
+  ggplot() + 
+  geom_point(aes(x=x_i,y=post,group=factor(draw)), alpha=0.3) + 
+  scale_x_continuous(name="Current age") + 
+  geom_line(aes(x=x_i,y=post,group=factor(draw)), alpha=0.2) + 
+  geom_point(data=tibble(x=xobs, y=logit(yobs)), aes(x=x,y=y), col="red", size = 2) + 
+  labs(
+    title = "Posterior draws",
+    y = "Vaccine coverage (logit scale)")
 ```
 
-We can add in the remaining true data (which the model has not seen) to evaluate its performance. The true coverage values are marked as red (seen) and green (not seen) points.
+Inverse-transforming the posterior back to the \[0, 1\] interval gives estimates of missing coverage data in its natural units:
+
+```{r}
+#| label: plot_posterior_constrained
+#| fig-height: 3
+
+post %>% 
+  ggplot() + 
+  geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + 
+  scale_x_continuous(name="Current age") + 
+  scale_y_continuous(
+    limits=c(0,1), 
+    labels = scales::label_percent(), 
+    name = "Vaccine coverage") + 
+  geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + 
+  geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red", size = 2) +
+  labs(title = "Posterior draws")
+```
+
+To evaluate model performance, we add in the remaining data that the model has not seen (blue points).
 
 ```{r}
 #| label: compare_to_data
+#| fig-height: 3
 
-post %>% ggplot() + geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + scale_x_continuous(name="current age x_i", breaks=xvals) + scale_y_continuous(limits=c(0,1)) + geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + geom_point(data=tibble(x=(vax_prov %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% pull(age_current)), y=(vax_prov %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% pull(value))), aes(x=x,y=y), col="green") + geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red")
-
-#ggsave(paste0("plots/ABpost_l",l,"_ksqexp",".pdf"), height=4.51, width=7.29)
+post %>% 
+  ggplot() + 
+  geom_point(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.3) + 
+  scale_x_continuous(name="Current age") + 
+  scale_y_continuous(
+    limits=c(0,1), 
+    labels = scales::label_percent(), 
+    name = "Vaccine coverage") + 
+  geom_line(aes(x=x_i,y=post_constrained,group=factor(draw)), alpha=0.2) + 
+  geom_point(
+    data=filter(vax_prov, age_current>=first_agecurrent, age_current<=last_agecurrent), 
+    mapping=aes(x=age_current,y=value), 
+    col="#208ceaff", size = 2) + 
+  geom_point(data=tibble(x=xobs, y=yobs), aes(x=x,y=y), col="red", size = 2) + 
+  labs(title = "Posterior draws")
 ```
 
-## Extensions
+# Two-dimensional case (current age and PT)
 
-To improve this model, the next step would be to experiment with choice of covariance function `k` and lengthscale `l`, and to add in province as a second dimension. It is also worth considering how to treat dose data - currently the model struggles with data points for 2 dose. It may be worth fitting two fairly separate GPs (1+ and 2 dose), or using the 2 dose estimates as minimums for the prior in some way.
-
-# 2D case (current age and province)
-
-The 2D model adds province as a second dimension. In this model, x_i is current age, y_i is province, and vertical axis (z_i) is always estimated vaccine coverage. Note: more information is needed to inform relationship between provinces.
+The two-dimensional model adds PT as a second dimension with which to relate vaccine coverage. Here $x_i$ is current age, $y_i$ is a metric representing PT, and the vertical axis ($z_i$) is vaccine coverage. For this demo, we use the Gini index by PT for the $y_i$ values (as reported by [Statistics Canada](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810009601)).
 
 ## Covariance and prior
 
-We use the squared exponential covariance function to begin with, with current age lengthscale, `l1`, and *relative* lengthscale of current age to province, `l2`. If the squared exponential is too strong an assumption, we can also increase its variance (i.e. the model uncertainty) with parameter `b`. Relation of provinces currently uses 2024 GDP from StatCan (https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610040201) -- this should be updated when a better method is found. Define the prior \~ Normal(0,cov) as before and draw a sample.
-
-Note that we currently assume a mean of 0. We could specify a non-zero mean here in the prior, or equivalently, we could centre the observed data to mean 0, run the Gaussian Process as normal and then rescale the data back at the end. We will do the latter as it simplifies calculation.
+We use the squared exponential covariance function, with a current-age lengthscale `l1` and a *relative* lengthscale of current age to PT, `l2` (see paper methods for more details). If the squared exponential is too strong an assumption, we can increase its variance (_i.e._ the model uncertainty) via the parameter `b`.  As before, we define the prior \~ Normal$(0, K)$ and draw a sample.
 
 ```{r}
 #| label: prior_2D
-#run_GP(vax_clean, prov_values = "Gini", k=ksqexp, l1=2.5, l2=10, b=0.5, meas_error=0.1)
-#' setup
-#' now both x and y are inputs, with output z
-first_agecurrent <- 5  # first age for the GP model
-last_agecurrent <- 21  #age_pre1970-1  # last age for the GP model
-xvals <- first_agecurrent:last_agecurrent  # a vector of current ages (these x_i's are equally spaced) 
 
-province_relation <- province_relation_data <- readr::read_csv(here::here("data", "pt-relation", "9810009601_databaseLoadingData_StatCanGini.csv"), show_col_types = F) %>%
-        filter(`Inequality measures (5)` == "Gini index on adjusted household after-tax income") %>% rename(location = GEO, value = VALUE, year = `Year (2)`) %>%
-        mutate(value = 100*value) %>% select(location, year, value) %>% group_by(location) %>% summarise(value = mean(value)) %>% arrange(value) # province Gini data from StatCan
-yvals <- log(province_relation %>% pull(value))  # a vector of provinces -- currently log(GDP)
-names(yvals) <- province_relation %>% pull(location)
+# ages over which to predict
+first_agecurrent <- 5
+last_agecurrent <- 21
+xvals <- first_agecurrent:last_agecurrent  # a vector of current ages (these x_i's are equally spaced)  
+
+province_relation <- readr::read_csv(
+  here::here("data", "pt-relation", "9810009601_databaseLoadingData_StatCanGini.csv"), 
+  show_col_types = F) %>%
+  filter(`Inequality measures (5)` == "Gini index on adjusted household after-tax income") %>% 
+  rename(location = GEO, value = VALUE, year = `Year (2)`) %>%
+  mutate(value = 100*value) %>% 
+  select(location, year, value) %>% 
+  group_by(location) %>% 
+  summarise(value = mean(value)) %>% 
+  arrange(value) # PT Gini data from StatCan
+yvals <- province_relation$value
+names(yvals) <- province_relation$location
 
 npts <- length(xvals)*length(yvals)
 l1 <- 2.5  # x lengthscale
-l2 <- 10  # relative lengthscale of x values to y values
+l2 <- 10  # relative lengthscale of x values to y values, discussed in paper methods
 yvals <- yvals*l2  # scale y values to the x lengthscale
 
-#' covariance matrix in 2D
+# covariance matrix in 2D
 b <- 0.5 # optional function scale for ksqexp determining output variance
-covmat <- expand_grid(x1=xvals, y1=yvals, x2=xvals, y2=yvals) %>% mutate(k=ksqexp(sqrt((x1-x2)^2 + (y1-y2)^2), l1, b=b)) %>%
-  pull(k) %>% matrix(nrow=npts)
-
-#' define prior and take 50 draws
 xygrid <- expand_grid(x=xvals, y=yvals)
-prior2D <- tibble() 
-for(i in 1:50){  # 50 realisations from a 2D gaussian process, with both x, y as independent variables
-  prior2D <- bind_rows(prior2D, tibble(draw=i, x_i=xygrid$x, y_i=xygrid$y, prior2D=rmnorm(1, rep(0,npts), covmat + 1e-6*diag(npts))))
-}
+covmat <- generate_2Dksqexp_covmat(xygrid, xygrid, fn=ksqexp, l=l1, b=b)
 
-#' plot prior sample
-prov_levels <- (province_relation %>% pull(location))  # useful shortcut for defining province factors
-prior2D <- prior2D %>% mutate(y_label = names(yvals)[match(y_i, yvals)]) %>% 
-  mutate(y_label = factor(y_label, levels=prov_levels))
-prior2D %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + scale_x_continuous(breaks=xvals, name="current age x_i") +
-  geom_line(alpha=0.3) + facet_wrap(~ y_label)
+# define prior and take 50 draws using a helper function in R/ (returns draw, x_i, y_i, y_label, value)
+prov_levels <- (province_relation %>% pull(location))  # useful shortcut for defining PT factors
+prior2D <- draw_from_rmnorm(
+  n=50, mean=rep(0,npts), varcov=covmat + 1e-6*diag(npts),
+  xvals=xvals, yvals=yvals, prov_levels=prov_levels) %>%
+  rename(prior2D = value)
 
-# prior2D %>% ggplot(aes(x=x_i, y=invlogit(prior2D + mean(logit(zobs))), group=factor(draw))) +  # transformed centred plot for talks
-#   scale_x_continuous(name="current age x_i", limits=c(1,32), breaks=xvals) + ylab("prior") + ylim(c(0,1)) +
-#   geom_line(alpha=0.3) + facet_wrap(~ y_label) + theme(axis.text.x = element_text(size = 6))
+# plot prior sample
+prior2D %>% 
+  ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + 
+  scale_x_continuous(name="Current age") +
+  geom_line(alpha=0.3) + 
+  facet_wrap(~ y_label) + 
+  labs(
+    title = "Prior draws",
+    y = "Vaccine coverage (logit scale)")
 ```
 
 ## Observed data
 
-Expose the model to the 1 dose data points. Exclude 2-dose data. We will use the logistic transform of z (`logit(zobs)`) which maps from \[0,1\] to \[-inf,inf\]. Our GP uses a prior mean of 0 so we centre the data around 0 after transforming.
-
-Extension: A possible model extension is to add 2-dose data as minimums at this point. We are currently considering how to do this...
+We expose the model to a subset of coverages of at least one dose:
 
 ```{r}
 #| label: data_2D
 
-#' observe coverage data in all provinces where data exists (excluding 2-dose)
-xobs <- vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(age_current)
-yobs <- yvals[vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(location)]
-zobs <- vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% filter(n_doses!="2+") %>% pull(value)
+# observe coverage data in all PTs where data exists (excluding 2-dose)
+df_subset <- vax_clean %>% 
+  filter(
+    between(age_current, first_agecurrent, last_agecurrent),
+    n_doses=="1+"
+  )
+xobs <- df_subset %>% pull(age_current)
+yobs <- yvals[df_subset %>% pull(location)]
+zobs <- df_subset %>% pull(value)
 
-#' optional extension: add 2+-dose data as minimums?
-# vax_obs <- vax_clean %>% filter(age_current<=last_agecurrent & n_doses=="2+")  # unclear how to incorporate as a minimum
-
-#' apply logistic transform and then centre the data around mean 0
+# apply logistic transform and then centre the data around mean 0
 logit_zobs_centred <- logit(zobs) - mean(logit(zobs))
 
-tibble(xobs, yobs, zobs, logit_zobs_centred)
+tibble(xobs, yobs, zobs, logit_zobs_centred) |>
+  head(10) |>
+  knitr::kable(digits = 3, caption = "Observed coverage data (2D)") %>%
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    latex_options = c("striped", "hold_position"),
+    full_width = FALSE
+  )
 ```
 
 ## Posterior
 
-As in the 1D case, the posterior is uniquely defined by its posterior mean and posterior covariance matrix. First, calculate individual covariance matrices to determine the pairwise 'relationships' between unobserved independent variables `{xvals, yvals}` and observed independent variables `(xobs, yobs)`. Then calculate the posterior covariance matrix as `kuu - kuo%*%solve(koo)%*%kou`. In the 1D case, our unobserved was `xvals`, now it is the concatenated vector grid `{xvals, yvals}` of size 320x320 (32 ages in each of 10 provinces).
-
-Plot a sample of posterior curves against the observed data (red points).
+As in the one-dimensional case, the posterior is uniquely defined by its mean and covariance matrix. Again, we calculate the four block matrices giving the pairwise relationships between the unobserved independent variables `{xvals, yvals}` and the observed independent variables `(xobs, yobs)`, then compute the posterior covariance matrix as `kuu - kuo %*% solve(koo) %*% kou`. In the one-dimensional case the unobserved input was `xvals`; now it is the concatenated grid `{xvals, yvals}` of size `r length(xvals)*10`x`r length(xvals)*10` (`r length(xvals)` ages in each of 10 PTs).
 
 ```{r}
 #| label: posterior_2D
@@ -229,638 +293,118 @@ kou <- generate_2Dksqexp_covmat(xyobs,xygrid,fn=ksqexp,l=l1,b=b)  # 'relationshi
 koo <- generate_2Dksqexp_covmat(xyobs,xyobs,fn=ksqexp,l=l1,b=b) + 1e-6*diag(nrow(xyobs))  # protect against non-invertibleness
 kuu <- generate_2Dksqexp_covmat(xygrid,xygrid,fn=ksqexp,l=l1,b=b)
 
-#' calculate posterior mean and posterior cov matrix
+# calculate posterior mean and posterior cov matrix
 post_mean <- kuo%*%solve(koo)%*%(logit_zobs_centred)  # conditional mean
 post_covmat <- kuu - (kuo%*%solve(koo)%*%kou)  # conditional variance
-
-#' optional: examine koo
-max(koo)
-mean(koo)
-median(koo)
-min(koo)
 ```
+
+We plot a sample of posterior curves against the observed data (red points), first with vaccine coverage on the logit scale, and then in natural units:
 
 ```{r}
 #| label: plot_posterior_2D
 
-#' draw from the posterior distribution and record in dataframe post2D
-post2D <- tibble()
-for(i in 1:50) {  # take 50 posterior draws
-  post2D <- bind_rows(post2D, tibble(draw=i, x_i=xygrid$x, y_i=xygrid$y, post2D=rmnorm(1, post_mean, post_covmat + 1e-6*diag(nrow(post_covmat)))))  # each rmnorm is a random draw from the (multivariate) posterior
-}
-post2D <- post2D %>% mutate(post2D_constrained=invlogit(post2D + mean(logit(zobs)))) %>%  # add column to return mean and transform back to [0,1]
-  mutate(y_label = names(yvals)[match(y_i, yvals)]) %>%  # add column to return province names
-  mutate(y_label = factor(y_label, levels=(province_relation %>% pull(location)))) %>%  # order provinces
-  select(draw, x_i, y_i, y_label, post2D, post2D_constrained)  # reorder columns
+# draw from the posterior distribution using the R/ helper
+post2D <- draw_from_rmnorm(
+  n=50, mean=post_mean, varcov=post_covmat + 1e-6*diag(nrow(post_covmat)),
+  xvals=xvals, yvals=yvals, prov_levels=(province_relation %>% pull(location))) %>%
+  rename(post2D = value) %>%
+  mutate(post2D_constrained=invlogit(post2D + mean(logit(zobs))))  # add column to return mean and transform back to [0,1]
 
-#' plot posterior sample 
+# plot posterior sample 
 yobs_factors <- factor(names(yobs), levels(post2D$y_label))  # convert yobs to factors for use in facet_wrap
 post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D, group=factor(draw)), alpha=0.1) +
   geom_line(aes(x=x_i, y=post2D, group=factor(draw)), alpha=0.2) +
-  geom_point(data=tibble(x=xobs, y=logit_zobs_centred, y_label=yobs_factors), aes(x=x, y=y), col="red") +
-  scale_x_continuous(breaks=xvals, name="current age x_i") +
-  facet_wrap(~ y_label)
+  geom_point(data=tibble(x=xobs, y=logit_zobs_centred, y_label=yobs_factors), aes(x=x, y=y), col="red", size = 2) +
+  scale_x_continuous(name="Current age") +
+  facet_wrap(~ y_label) + 
+  labs(
+    title = "Posterior draws",
+    y = "Vaccine coverage (logit scale)")
 
 post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) +
   geom_line(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.2) +
-  geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red") +
-  scale_x_continuous(breaks=xvals, name="current age x_i") + scale_y_continuous(limits=c(0,1)) +
-  facet_wrap(~ y_label)
-
-
-#' to plot only the data, as facets
-post2D %>% ggplot() +
-  geom_point(data=tibble(x=xobs, y=zobs*100, y_label=yobs_factors), aes(x=x, y=y), col="red") +
-  scale_x_continuous(limits=c(first_agecurrent, last_agecurrent), breaks=seq(first_agecurrent, last_agecurrent, by=5), name="current age") +
-  scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
+  geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red", size = 2) +
+  scale_x_continuous(name="Current age") +   scale_y_continuous(
+    limits=c(0,1), 
+    labels = scales::label_percent(), 
+    name = "Vaccine coverage") + 
   facet_wrap(~ y_label) +
-  theme(axis.text=element_text(size=12), axis.title=element_text(size=20), plot.title = element_text(size=25), strip.text.x = element_text(size=9))
-ggsave(paste0("plots/1+dose_data_plot",".jpeg"), height=4.51, width=7.29)
-
-# #' to plot only the data, as separate image files
-# province_levels <- levels(yobs_factors)
-# walk(province_levels, function(prov) {
-#   # subset observations for this province
-#   idx <- which(yobs_factors == prov)
-#   df_obs <- tibble(x = xobs[idx], y = zobs[idx]*100, y_label = prov)
-#   p <- ggplot() +
-#     geom_point(data=df_obs, aes(x=x, y=y), col="red") +
-#     scale_x_continuous(limits=c(first_agecurrent, last_agecurrent), breaks=seq(first_agecurrent, last_agecurrent, by=5), name="current age") +
-#     scale_y_continuous(limits=c(0,100), name="vaccine coverage (%)") +
-#     ggtitle(paste("Province:", prov))
-#   ggsave(filename = paste0("plots/1+dose_data_plot_", prov, ".jpeg"), plot=p, height=4.51, width=7.29)
-# })
+  labs(title = "Posterior draws")
 ```
-
-As before, we can compare performance by adding back in data points that the model has not seen in green (including for example 2-dose data):
-
-```{r}
-#| label: compare2D
-
-post2D %>% ggplot() + geom_point(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.1) + 
-  geom_line(aes(x=x_i, y=post2D_constrained, group=factor(draw)), alpha=0.2) + 
-  geom_point(data=tibble(x=(vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% pull(age_current)),  # adding in full data from vax_clean
-                         y=(vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% pull(value)),
-                         y_label=factor((vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent) %>% pull(location)), levels=prov_levels)),
-                         aes(x=x,y=y), col="green") + 
-  geom_point(data=tibble(x=xobs, y=zobs, y_label=yobs_factors), aes(x=x, y=y), col="red") +
-  scale_x_continuous(breaks=xvals, name="current age x_i") + scale_y_continuous(limits=c(0,1)) +
-  facet_wrap(~ y_label)
-
-#ggsave(paste0("plots/post2D_l1",l1,"_l2",l2,"_ksqexp","_alldata",".pdf"), height=4.51, width=7.29)
-```
-
-Optional: We can also drop any posterior draws that do not satisfy the 2-dose data points as a minimum. Due to the underlying mathematics, this is (*we think*) mathematically equivalent to constraining the prior and proportionally reweighting the remaining valid draws. This turns out to be too strong a constraint so the code snippet is skipped.
-
-```{r}
-#| label: set_minimums2D
-#| eval: false
-
-# extract 2+-dose data from vax_clean, matching column names with post2D
-data_2dose <- tibble(x_i=(vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent, n_doses=="2+") %>% pull(age_current)),  # adding in full data from vax_clean
-                     y_label=factor((vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent, n_doses=="2+") %>% pull(location)), levels=prov_levels),
-                     value_2dose=(vax_clean %>% filter(age_current>=first_agecurrent, age_current<=last_agecurrent, n_doses=="2+") %>% pull(value)))
-# filter out posterior draws that do not meet the criterion, using all()
-post2D_new <- post2D %>% ungroup() %>% left_join(data_2dose, by=c("x_i","y_label")) %>%
-  mutate(value_2dose=ifelse(is.na(value_2dose), 0, value_2dose)) %>%  ##UP TO HERE
-  mutate(row_valid=(post2D_constrained >= value_2dose)) %>%
-  group_by(draw) %>% filter(all(row_valid))
-```
-
-# 2D case model extensions
 
 ## Model functions
 
-We now wish to improve our basic model by adding information to the prior and experimenting with choice of covariance function and related parameters. First, define helper functions to enable easy running of the 2D model (saved in "R/"):
+The full two-dimensional Gaussian Process model can be run using `run_GP()`, including plots of the priors and posteriors. Several PT-relation datasets can be supplied via the `prov_values` argument, including:
 
--   `compute_prior2D()`
--   `plot_prior2D()`
--   `compute_posterior2D()`
--   `plot_posterior2D()`.
+- `"Gini"` — Gini index on adjusted household after-tax income from StatCan (mean of 2015 and 2020 values)
+- `"GDP"` — log(GDP) data from StatCan
+- `"low_income_families"` — 2021 rate of children in low-income families (Market Basket Measure) from the Health Inequalities Data Tool
+- `"vaccine_hesitancy"` — 2017 prevalence of parents' vaccine hesitancy (refuse all + hesitant) from cNICS
 
-The full 2D Gaussian Process model can then be run with `run_GP(vax_dataset)`. All functions work with multiple province relation datasets.
+We also include region relation metrics for the UK:
 
-```{r}
-#| label: auto2D
-
-run_GP(vax_clean, prov_values = "Gini", meas_error=0.05)
-```
+- `"UK-GDP"` — log(2023 UK regional GDP) from ONS
+- `"UK-low_income_families"` — FYE 2023 rate of children in low-income families (DWP Official Statistics)
+- `"UK-Gini"` — UK Gini index on total wealth (ONS, April 2016–March 2018)
 
 ## Measurement error
 
-Our GP model currently treats the observed data as exact estimates - posterior draws are forced to cross through all observed data points. We hence add measurement error. For this, the posterior mean and covariance matrix are modified when a parameter `meas_error` is specified in `run_GP()`:
+By default, our GP model treats the observed data as exact, so posterior draws are forced to pass through every observed data point. We relax this by adding measurement error; the posterior mean and covariance matrix are modified when a `meas_error` value is specified in `run_GP()`:
 
 ```{r}
 #| label: meas_error
 
-run_GP(vax_clean,l1=1.5,l2=3,b=0.75)  # exact
-run_GP(vax_clean,l1=1.5,l2=3,b=0.75,meas_error=0.1,ndrws=50)  # with measurement error
+run_GP(vax_clean,prov_values="Gini",l1=1.5,l2=3,b=0.75)  # exact
+run_GP(vax_clean,prov_values="Gini",l1=1.5,l2=3,b=0.75,meas_error=0.1,ndrws=50)  # with measurement error
 ```
-
-See the [GitHub Issue #3](https://github.com/phac-modelling-hub/immunity-landscape/issues/3) for a discussion of methodology.
 
 ## Model selection and validation
 
-We aim to find the optimal choice of model (hyperparameter values `k`, `l1`, `l2`, `b`, and measurement error `meas_error`), and validate with take-one-out cross-validation. An example algorithm is as follows:
+We select the "optimal" model (via choices for hyperparameters `k`, `l1`, `l2`, `b`, `meas_error`) through leave-one-out cross-validation. For a given covariance function `k` and lengthscale parameters `l1`, `l2`, `b`:
 
--   For a given covariance function k and lengthscale parameters l1, l2, b:
+  1.  Leave one data point out.
 
-    1.  Pull out one data point.
+  2.  Run the GP model and compute an error metric based on the true vaccine coverage for the missing point.
+  
+Repeat this procedure for every point in the dataset and sum all errors, then select the set of \{`k`, `l1`, `l2`, `b`\} with the smallest total error.
 
-    2.  Run GP model and compute e.g. sum squared error between posterior mean and the missing data point.
+For the error metric, a simple option would be the mean squared error of the prediction compared to the posterior mean at each left-out age. A option that leverages the full richness of GP models is the *posterior predictive density* (PPD), since this encodes both the predicted mean and variance for predictions around each point. In our work, we equivalently maximize the log PPD (LPPD). 
 
-    3.  Repeat for every data point (e.g. 137 model runs for the 1+ provincial data). Sum errors.
-
--   Select the optimal k/ l1/ l2/ b combination.
-
-One option is to work with the posterior mean at each missing age as described. A better option is to work with a richer goodness-of-fit metric such as the (log) *posterior predictive density* at each missing age instead. This makes use of the full richness of our Gaussian Process model. We hence choose the latter metric.
-
-`estimate_lppd()` estimates the posterior predictive density from a sample, in a similar way to the algorithm described above - NOW OBSELETE. `compute_lppd()` calculates the full log posterior predictive density analytically. See the [GitHub Issue #4](https://github.com/phac-modelling-hub/immunity-landscape/issues/4) for a discussion of methodology. `select_GP()` then does a search of hyperparameter space and returns the lppd for each hyperparameter set. The 'optimal' model (with max lppd) is also printed to the console.
+`compute_lppd()` calculates the full log posterior predictive density analytically. `select_GP()` then does a grid search of hyperparameter space and returns the lppd for each hyperparameter set. The "optimal" model (with max LPPD) is also printed to the console.
 
 ```{r}
-#| label: model_selection_GDP_witherror
+#| label: model_selection
 
-#example3 <- compute_lppd(vax_clean, prov_values="GDP", k=ksqexp, l1=1.5, l2=3, b=1, meas_error=0.1)
-#example4 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1), meas_error=0.1)
+# compute_lppd() returns the analytic lppd for a single hyperparameter set
+compute_lppd(vax_clean, prov_values="Gini", k=ksqexp, l1=1.5, l2=3, b=1, meas_error=0.1)
 
-#' exhaustive search of reasonable hyperparameter space (provincial dataset, GDP) with error
-GPcombinations_GDP2 <- select_GP(vax_clean, prov_values="GDP", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
-GPcombinations_GDP2 %>% readr::write_csv(here::here("results", "GPcombinations_GDP_witherror.csv"))
+# select_GP() searches a grid and prints the 'optimal' model (max lppd)
+select_GP(vax_clean, prov_values="Gini", k_list=list(ksqexp=ksqexp), l1=c(1.5,2), l2=c(3,10), b=c(1), meas_error=0.1)
 
-#' example lppd fit
+# example lppd fit
 run_GP(vax_clean,l1=2.5,l2=250,b=0.5,meas_error=0.1,ndrws=50)
 ```
 
-We can also explore if there are local maximums in the model selection, rather than only considering the model with largest lppd.
+We can also consider how strong of an optimum this "optimal" hyperparameter set is by plotting heatmaps of the LPPD. 
 
 ```{r}
 #| label: model_selection_heatmaps
 
-my_tibble_LI2 <- read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv")) %>% filter(b == 1)
-my_tibble_VH2 <- read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% filter(b == 1)
-my_tibble_GI <- read_csv(here::here("results", "GPcombinations_Gini_witherror.csv")) %>% filter(b == 1)
+# read the Gini model-selection grid (pre-computed since this computation takes a bit of time)
+gp_grid <- read_csv(here::here("results", "GPcombinations_Gini_witherror.csv"))
 
-#' plot l2 against l1, colouring by lppd, for several meas_error values (all modelling frameworks)
-list(read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))      %>% mutate(model = "LI"),
-     read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% mutate(model = "VH"),
-     read_csv(here::here("results", "GPcombinations_Gini_witherror.csv"))           %>% mutate(model = "Gini")) %>%
-  bind_rows() %>%
+# plot l2 against l1, colouring by lppd, for several meas_error values
+gp_grid %>%
   filter(b == 1, meas_error != 0.01, !l2 %in% c(1.5, 2.5, 3.5)) %>%
   mutate(l1 = factor(l1), l2 = factor(l2),
          lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
   ggplot(aes(x = l2, y = l1, fill = lppd_capped)) +
   geom_tile() +
-  scale_fill_gradient(low = "white", high = "darkgreen", na.value = "white", name = "lppd > -100") +
-  facet_grid(rows = vars(model, k_name), cols = vars(meas_error), scales = "free_x",
+  scale_fill_gradient(low = "white", high = "darkgreen", na.value = "white", name = "LPPD (> -100)") +
+  facet_grid(rows = vars(k_name), cols = vars(meas_error), scales = "free_x",
              labeller = labeller(meas_error = function(x) paste0("\u03c8 = ", x))) +
-  labs(title = "lppd heatmaps across all models, varying measurement error",
+  labs(title = stringr::str_wrap("Log Posterior Predictive Density (LPPD) as a function of covariance function parameters", width = 60),
+  subtitle = "PT relation: Gini index",
        x = "l2", y = "l1") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-ggsave(paste0("plots/lppd_heatmaps_combined",".jpeg"), height=4.51, width=7.29)
-```
-
-## Relation of provinces
-
-Relation of provinces is encoded in `prov_values` and can be extracted from the function `extract_province_relation()`. This function has a number of socioecomonic datasets preloaded in a standardised format for use in the GP model. Examples include "GDP" and "low_income_families". \*Note that for "low_income_families" there is currently no data for NU, NT, and YT.
-
-```{r}
-#| label: province_relation_lowincome
-
-prov_valuesLI <- extract_province_relation("low_income_families", vax_dataset=vax_cleanLI)  # vac_cleanLI is defined in set_up at beginning of file
-
-example <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp), l1=c(1.5,1.6), l2=c(3), b=c(1))
-
-#' exhaustive search with error of reasonable hyperparameter space (provincial dataset, children in low-income families province relation metric)
-GPcombinations_LI2 <- select_GP(vax_cleanLI, prov_values="low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
-GPcombinations_LI2 %>% readr::write_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))
-
-# #' plots of final model (using best parameter values)
-# run_GP(vax_clean, prov_values="Gini", l1=2.5, l2=10, b=0.5, meas_error=0, k=kexp)
-# ggsave(paste0("plots/bestGPmodel_Gini",".jpeg"), height=4.51, width=7.29)
-# run_GP(vax_cleanLI, prov_values="low_income_families", l1=2.5, l2=25, b=0.5, meas_error=0.0, k=kexp)
-# ggsave(paste0("plots/bestGPmodel_lowincome",".jpeg"), height=4.51, width=7.29)
-# run_GP(vax_cleanVH, prov_values="vaccine_hesitancy", l1=2.5, l2=3, b=0.5, meas_error=0, k=kexp)
-# ggsave(paste0("plots/bestGPmodel_vaccinehesitancy",".jpeg"), height=4.51, width=7.29)
-```
-
-A new dataset on vaccine hesitancy requires some manipulation to use (condensing coverage data for Atlantic provinces and Northern provinces):
-
-```{r}
-#| label: province_relation_hesitancy
-
-#' use vax_cleanVH which combines smaller provinces into regions (from set_up code snippet at beginning of file)
-head(vax_cleanVH)
-
-#' run with vax_cleanVH - examples
-run_GP(vax_cleanVH, prov_values="vaccine_hesitancy", l1=2.5, l2=4, b=0.5, meas_error=0.1)
-run_GP(vax_cleanVH, prov_values="vaccine_hesitancy", l1=2.5, l2=0.5, b=0.5, meas_error=0)
-
-#' exhaustive search with error of reasonable hyperparameter space (provincial dataset, vaccine hesitancy province relation metric)
-GPcombinations_VH2 <- select_GP(vax_cleanVH, prov_values="vaccine_hesitancy", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
-GPcombinations_VH2 %>% readr::write_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv"))
-```
-
-We also wish to add a new indicator: Gini index. This runs on all provinces.
-
-```{r}
-#| label: province_relation_gini
-
-#' example model
-run_GP(vax_clean, prov_values="Gini", l1=2.5, l2=10, b=0.5, meas_error=0.1)
-
-#' exhaustive search of reasonable hyperparameter space with error
-GPcombinations_GI <- select_GP(vax_clean, prov_values="Gini", k_list=list(ksqexp=ksqexp, kexp=kexp), l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
-GPcombinations_GI %>% readr::write_csv(here::here("results", "GPcombinations_Gini_witherror.csv"))
-```
-
-## Assumptions tests
-
-A Gaussian Process model assumes relation of the independent variable(s), i.e. that 'related' ages (defined however we wish with lengthscale parameter l1) will have similar vaccination coverage and that 'related' provinces will also have similar coverage.
-
-To visualise relation of provinces, we can plot `province_relation_data` on an axis. One could compare to for example the mean cNICS coverage estimate for each province. A range of plots are shown.
-
-```{r}
-#| label: assumption_test_provinces
-
-#' load province relation values as tibbles
-prov_valuesGDP <- enframe(extract_province_relation("GDP", vax_dataset=vax_clean), name="location", value="prov_valuesGDP")  # GDP
-prov_valuesLI <- enframe(extract_province_relation("low_income_families", vax_dataset=vax_cleanLI), name="location", value="prov_valuesLI")  # low_income
-prov_valuesVH <- enframe(extract_province_relation("vaccine_hesitancy", vax_dataset=vax_cleanVH), name="location", value="prov_valuesVH")  # vaccine_hesitancy
-prov_valuesGI <- enframe(extract_province_relation("Gini", vax_dataset=vax_clean), name="location", value="prov_valuesGI")  # Gini
-ARval <- prov_valuesVH %>% filter(location=="Atlantic region") %>% pull(prov_valuesVH)
-NRval <- prov_valuesVH %>% filter(location=="Northern region") %>% pull(prov_valuesVH)
-prov_valuesVH <- prov_valuesVH %>% rbind(c("Newfoundland and Labrador", ARval)) %>% rbind(c("Prince Edward Island", ARval)) %>%  # this is very crude code!
-  rbind(c("Nova Scotia", ARval)) %>% rbind(c("Nunavut", NRval)) %>% rbind(c("Northwest Territories", NRval)) %>% mutate(prov_valuesVH=as.numeric(prov_valuesVH))
-
-#' load cNICS as tibbles
-cNICS_2021 <- vax_cNICS %>% filter(year_report==2021) %>% select(location, "cNICS_2021"=value) %>% filter(location!="Nunavut") %>%
-  mutate(cNICS_2021=cNICS_2021*100)  # removing low NU point
-cNICS_2017 <- vax_cNICS %>% filter(year_report==2017) %>% select(location, "cNICS_2017"=value) %>% mutate(cNICS_2017=cNICS_2017*100)
-
-#' combine into one
-provinces_test <- prov_valuesGDP %>% left_join(prov_valuesLI, by="location") %>% left_join(prov_valuesVH, by="location") %>% left_join(prov_valuesGI, by="location") %>%
-  left_join(cNICS_2021, by="location") %>% left_join(cNICS_2017, by="location") %>% 
-  mutate(cNICS_mean=(cNICS_2021 + cNICS_2017)/2)
-
-#' plot
-library(ggrepel)
-ggplot(provinces_test, aes(x = prov_valuesGDP, y = cNICS_2021)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  ylim(85,100) + labs(title="Comparing province relation datasets to coverage", x="log(GDP)", y = "vaccine coverage, cNICS 2021 (%)")
-ggplot(provinces_test, aes(x = prov_valuesLI, y = cNICS_2021)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  xlim(85,100) + ylim(85,100) + labs(title="Comparing province relation datasets to coverage", x="% of children not in low-income families", y = "vaccine coverage, cNICS 2021 (%)")
-ggplot(provinces_test, aes(x = prov_valuesVH, y = cNICS_2021)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  xlim(70,100) + ylim(85,100) + labs(title="Comparing province relation datasets to coverage", x="% of parents who are not vaccine hesitant", y = "vaccine coverage, cNICS 2021 (%)")
-ggplot(provinces_test, aes(x = prov_valuesGI, y = cNICS_2021)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  ylim(85,100) + labs(title="Comparing province relation datasets to coverage", x="Gini index", y = "vaccine coverage, cNICS 2021 (%)")
-
-#' instead consider provincial data mean over cNICS
-vax_means_noaNICS <- readr::read_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned_noadults.csv"), show_col_types = FALSE) %>% 
-  filter(n_doses %in% c("1", "1+")) %>% group_by(location) %>% summarise(average = mean(value)) %>% select(location, "vax_means_noaNICS"=average)
-provinces_test <- provinces_test %>% left_join(vax_means_noaNICS, by="location") %>% mutate(vax_means_noaNICS=vax_means_noaNICS*100)
-ggplot(provinces_test, aes(x = prov_valuesGDP, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  ylim(79,100) + labs(title="Comparing province relation datasets to coverage", x="log(GDP)", y = "vaccine coverage, provincial data mean (%)")
-ggplot(provinces_test, aes(x = prov_valuesLI, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  xlim(79,100) + ylim(79,100) + labs(title="Comparing province relation datasets to coverage", x="% of children not in low-income families", y = "vaccine coverage, provincial data mean (%)")
-ggplot(provinces_test, aes(x = prov_valuesVH, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  xlim(70,100) + ylim(70,100) + labs(title="Comparing province relation datasets to coverage", x="% of parents who are not vaccine hesitant", y = "vaccine coverage, provincial data mean (%)")
-ggplot(provinces_test, aes(x = prov_valuesGI, y = vax_means_noaNICS)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4) +
-  ylim(79,100) + labs(title="Comparing province relation datasets to coverage", x="Gini index", y = "vaccine coverage, provincial data mean (%)")
-
-#' for fun, plot provincial data against cNICS
-#"C:/Users/lh667/AppData/Local/Packages/MicrosoftWindows.Client.Core_cw5n1h2txyewy/TempState/ScreenClip/{FC770BFB-663B-4B30-A70C-5B5DC4D78C9F}.png"ggplot(provinces_test, aes(x = vax_means_noaNICS, y = cNICS_mean)) + geom_point(color = "blue", size = 3) + geom_text(aes(label = location), size = 4)
-```
-
-To test relation of ages, we can compute pairwise differences in absolute coverage for all data points and observe if pairs of adjacent ages have a lower difference on average:
-
-```{r}
-#| label: assumption_test_ages
-
-first_agecurrent <- 5
-last_agecurrent <- 21
-
-#' 1+ dose provincial data, no aNICS
-#' read in provincial data with aNICS removed
-vax_dataset1 <- readr::read_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned_noadults.csv"), show_col_types = FALSE) %>%
-  filter(n_doses %in% c("1", "1+")) %>% filter(age_current >= first_agecurrent, age_current <= last_agecurrent)
-
-#' define a function to compute all pairwise differences
-compute_pairwise_diffs <- function(df) {
-  df <- df %>% arrange(age_current)
-  
-  expand_grid(age1 = df$age_current, age2 = df$age_current) %>% filter(age1 < age2) %>%
-    left_join(df %>% select(age1 = age_current, cov1 = value), by = "age1") %>%
-    left_join(df %>% select(age2 = age_current, cov2 = value), by = "age2") %>%
-    mutate(diff = abs(cov1 - cov2), adjacent = (age2 - age1 == 1),
-           age_gap = age2 - age1, gap_group = case_when(age_gap == 1 ~ "1 year apart",
-                                                        age_gap == 2 ~ "2 years apart",
-                                                        age_gap == 3 ~ "3 years apart",
-                                                        age_gap > 3 ~ ">3 years apart"))
-}
-
-#' compute pairwise for e.g. Alberta
-alberta_pairs <- vax_dataset1 %>% filter(location=="Alberta") %>% compute_pairwise_diffs()
-
-#' plot histogram for e.g. Alberta
-ggplot(alberta_pairs, aes(x = diff*100, fill = gap_group)) + geom_histogram() +
-  labs(title = "Pairwise Coverage Differences — Alberta (1+ dose)",
-    x = "Absolute Difference in Coverage (%)",
-    y = "Count",
-    fill = "Adjacent ages")
-
-#' compute pairwise and plot histogram for remaining provinces
-province_pairs <- vax_dataset1 %>% group_by(location) %>% group_modify(~ compute_pairwise_diffs(.x))
-ggplot(province_pairs, aes(x = diff*100, fill = gap_group)) + geom_histogram() +  # use fill=adjacent for only adjacent ages OR fill=gap_group otherwise
-  facet_wrap(~ location) + labs(title = "Pairwise Coverage Differences — By Province (1+ dose)",
-                                x = "Absolute Difference in Coverage (%)", y = "Count", fill = "Age gap")
-ggsave(paste0("plots/testing_age_assumption1",".pdf"), height=4.51, width=7.29)  # example code to save plot
-
-#' 2 dose provincial data
-#' repeat steps as above
-vax_dataset2 <- readr::read_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned_noadults.csv"), show_col_types = FALSE) %>%
-  filter(n_doses %in% c("2", "2+"))
-province_pairs2 <- vax_dataset2 %>% group_by(location) %>% group_modify(~ compute_pairwise_diffs(.x))
-ggplot(province_pairs2, aes(x = diff*100, fill = gap_group)) + geom_histogram() + 
-  facet_wrap(~ location) + labs(title = "Pairwise Coverage Differences — By Province (2+ dose)",
-                                x = "Absolute Difference in Coverage (%)", y = "Count", fill = "Age gap")
-ggsave(paste0("plots/testing_age_assumption2",".pdf"), height=4.51, width=7.29)  # example code to save plot
-
-#' Aggregated provincial data
-vax_dataset3 <- vax_dataset1 %>% mutate(id = row_number()) %>% select(-location)  # remove location label
-country_pairs <- expand_grid(id1 = vax_dataset3$id, id2 = vax_dataset3$id) %>%
-  filter(id1 < id2) %>%
-  left_join(vax_dataset3 %>% select(id1 = id, age1 = age_current, cov1 = value), by = "id1") %>%
-  left_join(vax_dataset3 %>% select(id2 = id, age2 = age_current, cov2 = value), by = "id2") %>%
-  mutate(diff = abs(cov1 - cov2), adjacent = (abs(age2 - age1) == 1),
-         age_gap = age2 - age1, gap_group = case_when(age_gap == 1 ~ "1 year apart",
-                                                      age_gap == 2 ~ "2 years apart",
-                                                      age_gap == 3 ~ "3 years apart",
-                                                      age_gap > 3 ~ ">3 years apart",
-                                                      age_gap == 0 ~ "0 years apart"))
-ggplot(country_pairs, aes(x = diff*100, fill = gap_group)) + geom_histogram() + 
-  labs(title = "Pairwise Coverage Differences: All provincial data",
-  x = "Absolute Difference in Coverage (%)", y = "Count", fill = "Age gap") +
-  theme(axis.text=element_text(size=18), axis.title=element_text(size=20), plot.title = element_text(size=25))
-ggsave(paste0("plots/testing_age_assumption3",".jpeg"), height=4.51, width=7.29)  # example code to save plot
-
-
-vax_dataset4 <- vax_dataset2 %>% mutate(id = row_number()) %>% select(-location)
-country_pairs2 <- expand_grid(id1 = vax_dataset4$id, id2 = vax_dataset4$id) %>%
-  filter(id1 < id2) %>%
-  left_join(vax_dataset4 %>% select(id1 = id, age1 = age_current, cov1 = value), by = "id1") %>%
-  left_join(vax_dataset4 %>% select(id2 = id, age2 = age_current, cov2 = value), by = "id2") %>%
-  mutate(diff = abs(cov1 - cov2), adjacent = (abs(age2 - age1) == 1),
-          age_gap = age2 - age1, gap_group = case_when(age_gap == 1 ~ "1 year apart",
-                                                       age_gap == 2 ~ "2 years apart",
-                                                       age_gap == 3 ~ "3 years apart",
-                                                       age_gap > 3 ~ ">3 years apart",
-                                                       age_gap == 0 ~ "0 years apart"))
-ggplot(country_pairs2, aes(x = diff*100, fill = gap_group)) + geom_histogram() +
-  labs(title = "Pairwise Coverage Differences — All provincial data (2 dose)")
-```
-
-We see a good relationship between coverage at adjacent ages, both in the 1+ and 2+ dose data.
-
-## UK comparison
-
-We can plot UK vaccine coverage data, and run through the model, as a comparison. Data are for 2013-2025, at least one measles dose, aged 5 years. `vax_uk` gives vaccine coverage data for the four nations of the UK (England, Wales, Scotland, Northern Ireland). `vax_england` gives the 10 regions of England (e.g. London, South West, South East etc.). All vaccine coverage data is taken from the UKHSA dashboard: https://ukhsa-dashboard.data.gov.uk/cover/childhood-vaccinations.
-
-```{r}
-#| label: uk
-
-#' UK data
-vax_UK <- read_csv(here::here("data", "coverage", "raw", "ukhsa-chart-download-mmr1-nations.csv")) %>%  # data for MMR1 coverage aged 5y from UKHSA (England, Wales, Scotland, NI)
-  mutate(age = 5, n_doses="1+") %>% mutate(value=metric_value/100, location=geography, year_report=year) %>%
-  mutate(age_current = current_year - year_report + age) %>% select(location, year_report, age, n_doses, value, age_current)
-vax_england <- read_csv(here::here("data", "coverage", "raw", "ukhsa-chart-download-mmr1-regions.csv")) %>%  # data for MMR1 coverage aged 5y from UKHSA (regions of England)
-  mutate(age = 5, n_doses="1+") %>% mutate(value=metric_value/100, location=geography, year_report=year) %>%
-  mutate(age_current = current_year - year_report + age) %>% select(location, year_report, age, n_doses, value, age_current)
-
-vax_UK %>% ggplot() + geom_point(aes(x=age_current, y=value), col="red") +
-  scale_x_continuous(name="current age x_i", limits=c(5,21)) + scale_y_continuous(limits=c(0,1)) +
-  facet_wrap(~ location)
-vax_england %>% ggplot() + geom_point(aes(x=age_current, y=value), col="red") +
-  scale_x_continuous(name="current age x_i", limits=c(5,21)) + scale_y_continuous(limits=c(0,1)) +
-  facet_wrap(~ location)
-
-#' UK model
-run_GP(vax_UK, prov_values = "UK-low_income_families")
-run_GP(vax_england, prov_values = "UK-low_income_families")
-run_GP(vax_england, prov_values = "UK-Gini")
-
-#' UK hyperparams
-GPcombinations_englandLI <- select_GP(vax_england, prov_values="UK-low_income_families", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
-GPcombinations_englandLI %>% readr::write_csv(here::here("results", "GPcombinations_englandLI_witherror.csv"))
-
-GPcombinations_englandGini <- select_GP(vax_england, prov_values="UK-Gini", k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5), l2=c(0.1,0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25.0,50,75,100,150,200,250,500), b=c(0.5,1,1.5), meas_error=c(0.5,0.1,0.05,0.01,0))
-GPcombinations_englandGini %>% readr::write_csv(here::here("results", "GPcombinations_englandGini_witherror.csv"))
-
-#' UK lppd heatmaps
-my_tibble_d <- read_csv(here::here("results", "GPcombinations_englandLI_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
-my_tibble_e <- read_csv(here::here("results", "GPcombinations_englandGini_witherror.csv")) %>% filter(k_name == "ksqexp" & b == 1)
-
-my_tibble_d %>%
-  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
-  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
-  geom_tile() +
-  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
-  facet_wrap(~ meas_error) +
-    #ylim(0,101) +
-  labs(title = "lppd heatmaps for England Low-Income model, varying measurement error", x = "l1", y = "l2")
-ggsave(paste0("plots/lppdheatmap_englandLI",".jpeg"), height=4.51, width=7.29)
-
-my_tibble_e %>%
-  mutate(l1 = factor(l1), l2 = factor(l2)) %>%
-  mutate(lppd_capped = if_else(lppd_exact < -100, NA_real_, lppd_exact)) %>%
-  ggplot(aes(x = l1, y = l2, fill = lppd_capped)) +
-  geom_tile() +
-  scale_fill_gradient(low="white", high="red", na.value="white", name = "lppd > -100") +
-  facet_wrap(~ meas_error) +
-    #ylim(0,101) +
-  labs(title = "lppd heatmaps for England Gini model, varying measurement error", x = "l1", y = "l2")
-ggsave(paste0("plots/lppdheatmap_englandGini",".jpeg"), height=4.51, width=7.29)
-
-#' Best model outputs
-run_GP(vax_england, prov_values = "UK-Gini", k=ksqexp, l1=2.25, l2=8, b=0.5, meas_error=0.05)
-run_GP(vax_england, prov_values = "UK-low_income_families", k=ksqexp, l1=2.25, l2=3.5, b=0.5, meas_error=0.05)
-```
-
-## Leave-one-province-out (LOPO-CV)
-
-The function `compute_lppd_lopo` computes lppd for one set of model params from leave-one-province-out cross-validation (same as LOO-CV but leaving out the data points for one whole province at a time). Model selection (`select_GP()`) also computes this for each set of model params and stores the results as a column named `lppd_LOPO`.
-
-```{r}
-#| label: lopo
-
-#' example with diagnostics plot
-example <- compute_lppd_lopo(vax_cleanVH, prov_values="vaccine_hesitancy", k=kexp, l1=2.5, l2=3, b=0.5, meas_error=0)
-example
-```
-
-We then had further discussions into possible LOPO investigations and settled on the fourth more-interpretive analysis: Really we are interested in how each province compares to being left out of the age+province model, compared to just an age model. Do provinces matter?
-
-For this, we wish to compare lppd for one province in the best age+province model case (best l2) to just the age model (e.g. l2=500). The function `compute_lppd_lopo` already outputs the lppd for each province so we utilise this.
-
-```{r}
-#| label: lopo_investigation4
-
-# Consider each model framework in turn
-# model configurations
-l2_lim <- list(Gini = c(0.1, 50), LI = c(0.2, 250), VH = c(0.1,  8))
-model_configs <- list(Gini = list(csv="GPcombinations_Gini_witherror.csv", prov_values="Gini", l2_lim=l2_lim$Gini, title_lab="Gini",
-                                  vax_dataset=vax_clean, meas_error=0.05),
-                      LI = list(csv="GPcombinations_lowincome_witherror.csv", prov_values="low_income_families", l2_lim=l2_lim$LI, title_lab="LI",
-                                vax_dataset=vax_cleanLI, meas_error=0.05),
-                      VH = list(csv="GPcombinations_vaccinehesitancy_witherror.csv", prov_values="vaccine_hesitancy", l2_lim=l2_lim$VH, 
-                                title_lab="VH", vax_dataset=vax_cleanVH, meas_error=0.05))
-
-lopo_comparisons <- list()
-prop_summaries   <- list()
-p_diffs          <- list()
-
-# For each model framework:
-for (model_name in names(model_configs)) {
-  cfg <- model_configs[[model_name]]
-  
-  # extract parameter values for best model (fixed meas_error)
-  best_model <- read_csv(here::here("results", cfg$csv)) %>% filter(l2 <= cfg$l2_lim[2], l2 >= cfg$l2_lim[1]) %>% filter(meas_error == cfg$meas_error) %>% slice_max(lppd_exact, n=1)
-  k         <- get(best_model$k_name)
-  l1        <- best_model$l1
-  l2        <- best_model$l2
-  b         <- best_model$b
-  meas_error <- best_model$meas_error
-  
-  # compute lppd lopo by province for best model and age-only model
-  best_model_lopo <- compute_lppd_lopo(cfg$vax_dataset, prov_values=cfg$prov_values, k=k, l1=l1, l2=l2, b=b, meas_error=meas_error)
-  age_model_lopo <- compute_lppd_lopo(cfg$vax_dataset, prov_values=cfg$prov_values, k=k, l1=l1, l2=500, b=b, meas_error=meas_error)
-  
-  # compare for each province
-  lopo_comparisons[[model_name]] <- tibble(province = names(best_model_lopo$mean_lppd_by_province), best_model = best_model_lopo$mean_lppd_by_province,
-    age_model  = age_model_lopo$mean_lppd_by_province, diff = best_model_lopo$mean_lppd_by_province - age_model_lopo$mean_lppd_by_province) %>%
-    left_join(cfg$vax_dataset %>% distinct(location, pt), by = c("province" = "location"))  # append 2-letter pt abbreviation for plotting
-  
-  # proportion positive vs negative
-  prop_summaries[[model_name]] <- lopo_comparisons[[model_name]] %>% summarise(prop_best_wins = mean(diff > 0), prop_age_wins = mean(diff < 0))
-  print(model_name); print(prop_summaries[[model_name]])
-  
-  # plot difference (best model − age model) by province
-  p_diffs[[model_name]] <- ggplot(lopo_comparisons[[model_name]], aes(x = pt, y = diff, fill = diff > 0)) + geom_col() +
-    geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.5) +
-    scale_fill_manual(values = c("TRUE" = "#2166ac", "FALSE" = "#d73027"), labels = c("TRUE" = "Full model preferred", "FALSE" = "Age model preferred"),
-                      name = NULL) +
-    labs(x = "Province", y = "Difference in mean LPPD per province", title = paste0("Relative LOOP performance (", cfg$title_lab, " model)")) +
-    ylim(-0.75,0.75) + theme_minimal()
-}
-
-p_diffs$Gini
-p_diffs$LI
-p_diffs$VH
-```
-
-## Simulation-based calibration (SBC)
-
-For each iteration i, the below code generates a synthetic data set with known hyperparameters and then runs the model selection process to see how well the true hyperparameters can be recovered. The data generation process (Step 1) is as follows: choose values for k, l1, l2, b, and meas_error; compute a GP for this parameter combination and calculate the priors; save one random prior draw and treat this as the synthetic data. This code runs for the Gini model and l2 values up to 50 are considered.
-
-```{r}
-#| label: sbc
-
-SBC_results_list <- vector("list", 50)
-k_select <- function(j) {  # quick function to randomly choose ksqexp or kexp
-  if (j==1) {
-    list(fn=ksqexp, name="ksqexp")
-  } else if (j==0) {
-    list(fn=kexp, name="kexp")
-  }
-}
-
-extract_results <- function(modelselection, sample_name) {
-    true_model <- modelselection %>% select(-model_no, -lppd_LOPO) %>%
-      filter(k_name==params$k_name & l1==params$l1 & l2==params$l2 & b==params$b & meas_error==params$meas_error) %>%
-      rename_with(~ paste0("true_", .x))
-    estimated_model <- modelselection %>% filter(lppd_exact == max(lppd_exact)) %>% select(-model_no, -lppd_LOPO) %>%
-      rename_with(~ paste0("predicted_", .x))
-    
-    true_model %>%
-      mutate(i=i, sample=sample_name, .before=1) %>%
-      bind_cols(estimated_model) %>%
-      mutate(min_lppd=min(modelselection$lppd_exact),
-             max_lppd=max(modelselection$lppd_exact))
-  }
-
-for (i in 1:50) {
-  #' Step 1: Create synthetic data by randomly drawing one posterior from a GP with known hyperparams
-  #' define hyperparams for this iteration
-  k_object <- k_select(sample(0:1, 1))
-  k <- k_object$fn
-  l1 <- sample(c(1,1.25,1.5,1.75,2,2.25,2.5), 1)  #runif(1, 1, 2.5)
-  l2 <- sample(c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25,50), 1)  #runif(1, 0.2, 50)
-  b <- sample(c(0.5,1,1.5), 1)  #runif(1, 0.5, 1.5)
-  meas_error <- 0  #sample(c(0.5,0.1,0.05,0.01,0), 1)  #runif(1, 0, 0.5)
-  params <- list(k=k, k_name=k_object$name, l1=l1, l2=l2, b=b, meas_error=meas_error)  # save param values
-  #' set up xvals and yvals (mirroring run_GP internals)
-  first_agecurrent <- 5
-  last_agecurrent <- 21
-  xvals <- first_agecurrent:last_agecurrent
-  prov_values <- extract_province_relation("Gini", vax_dataset=vax_clean)
-  prov_levels <- names(prov_values)
-  yvals <- prov_values * l2
-  #' draw from the GP prior and take one random draw as synthetic data
-  prior <- compute_prior2D(xvals=xvals, yvals=yvals, k=k, l1=l1, ndrws=50, prov_levels=prov_levels, b=b)
-  a <- sample(1:50, 1)
-  synthetic_data <- prior %>% filter(draw == a) %>%
-    mutate(age_current = x_i,
-           location    = as.character(y_label),
-           value       = invlogit(prior2D),  # transform from logit scale to [0,1]
-           n_doses     = "1+") %>%
-    select(age_current, location, value, n_doses)
-  # remove x% missing data (two options)
-  # option 1: complete synthetic data
-  synthetic_data_sample1 <- synthetic_data
-  # option 2: only the same (age,province) pairs of vax_clean
-  data_points <- vax_clean %>% filter(age_current >= 5, age_current <= 21, n_doses != "2+") %>% distinct(age_current, location)
-  synthetic_data_sample2 <- synthetic_data %>% semi_join(data_points, by = c("age_current", "location"))
-
-  #' Step 2: Run model selection process with the synthetic data (zero meas_error)
-  synthetic_modelselection_sample1 <- select_GP(synthetic_data_sample1, prov_values="Gini",
-                                           k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5),
-                                           l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25,50), b=c(0.5,1,1.5), meas_error=c(0))
-  synthetic_modelselection_sample1 %>% 
-    readr::write_csv(here::here("results", paste0("Synthetic_modelselection_Gini_samplefull_",i,".csv")))
-  synthetic_modelselection_sample2 <- select_GP(synthetic_data_sample2, prov_values="Gini",
-                                           k_list=list(ksqexp=ksqexp, kexp=kexp),  l1=c(1,1.25,1.5,1.75,2,2.25,2.5),
-                                           l2=c(0.2,0.5,1,1.5,2,2.5,3.0,3.5,4.0,6.0,8.0,10,25,50), b=c(0.5,1,1.5), meas_error=c(0))
-  synthetic_modelselection_sample2 %>% 
-    readr::write_csv(here::here("results", paste0("Synthetic_modelselection_Gini_samplepartial_",i,".csv")))
-  
-  #' Step 3: Identify how well the true model performs and store results
-  SBC_results_list[[i]] <- bind_rows(extract_results(synthetic_modelselection_sample1, "full"),
-                                     extract_results(synthetic_modelselection_sample2, "partial"))
-}
-SBC_results <- bind_rows(SBC_results_list)
-
-# Finally append some summary metrics
-SBC_results <- SBC_results %>% mutate(normalized_score = (true_lppd_exact - min_lppd) / (max_lppd - min_lppd),  # 0=worst, 1=best/exact
-    exact_recovery   = (true_k_name==predicted_k_name & true_l1==predicted_l1 & true_l2==predicted_l2 & true_b==predicted_b),
-    k_correct  = true_k_name == predicted_k_name,
-    l1_correct = true_l1 == predicted_l1,
-    l2_correct = true_l2 == predicted_l2,
-    b_correct  = true_b  == predicted_b)
-SBC_results %>% saveRDS(here::here("results", "SBC_results_Gini.rds"))
-```
-
-```{r}
-#| label: sbc_visualise
-
-SBC_results <- readRDS(here::here("results", "SBC_results_Gini.rds"))
-# summary tables
-SBC_results %>% filter(sample=="partial") %>%
-  select(i, true_k_name, true_l1, true_l2, true_b, predicted_k_name, predicted_l1, predicted_l2, predicted_b, normalized_score, exact_recovery) %>%
-  arrange(i) %>% #knitr::kable(digits=3)
-  flextable() %>%
-  colformat_double(digits=2) %>%
-  save_as_docx(path=here::here("results", "SBC_table_partial.docx"))
-
-# stats to report - per-parameter recovery rate
-SBC_results %>% group_by(sample) %>%
-  summarise(k=mean(k_correct), l1=mean(l1_correct), l2=mean(l2_correct), b=mean(b_correct), normalized_score=mean(normalized_score), exact=mean(exact_recovery))
 ```

@@ -1,16 +1,17 @@
-#' Run the full 2D Gaussian Process model
-#' 
-#' First input `vax_dataset` must be specified. All other inputs are optional. Function will return a matrix of posterior draws.
-#' Note: x and y are independent variables, with dependent variable z. x is assumed to represent
-#' current age, y province, and z vaccine coverage.
+#' Run Gaussian Process regression
 #' @param vax_dataset data set of observed vaccine coverage data in our standardised format (tibble)
 #' @param first_agecurrent first age for which to return posterior draws, i.e., smallest x-variable entry (numeric)
 #' @param last_agecurrent last age for which to return posterior draws, i.e., largest x-variable entry (numeric)
 #' @param prov_values any named ordered vector giving numerical y-axis values associated to each province, unscaled
-#' OR a character from the following list:
-#'          - "GDP"
-#'          - "low_income_families"
-#'          - "vaccine_hesitancy".
+#' OR a character from the following list (see extract_province_relation() for details):
+#'          - "Gini" (default), for Gini index on adjusted household after-tax income from StatCan (mean of 2015 and 2020 values);
+#'          - "GDP", for log(GDP) data from StatCan;
+#'          - "low_income_families", for 2021 rate of children in low-income families (Market Basket Measure) from Health Inequalities Data Tool;
+#'          - "vaccine_hesitancy", for 2017 prevalence of parents' vaccine hesitancy (refuse all + hesitant) from cNICS;
+#'          - "UK-GDP", for log(2023 UK regional GDP) from ONS;
+#'          - "UK-low_income_families", for FYE 2023 rate of children in low-income families (DWP Official Statistics);
+#'          - "UK-Gini", for UK Gini index on total wealth (ONS, April 2016-March 2018).assumed to represent
+#' current age, y province, and z vaccine coverage.
 #' @param k covariance function chosen from the following list: (function)
 #'          - ksqexp,
 #'          - kexp.
@@ -20,18 +21,13 @@
 #' @param meas_error if specified, measurement error is included (numeric)
 #' @param ndrws specify number of draws to be taken from the prior and posterior distributions
 #' @param show_plots if false, plots are hidden
-run_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_values=NA, k=ksqexp, l1=NA, l2=NA, b=1,
+run_GP <- function(vax_dataset, first_agecurrent=5, last_agecurrent=21, prov_values="Gini", k=ksqexp, l1=NA, l2=NA, b=1,
                    meas_error=NA, ndrws=50, show_plots=T) {
   #' define possible x values
   xvals <- first_agecurrent:last_agecurrent  # a vector of current ages
   
   #' define possible y values / province values
-  if (all(is.na(prov_values))) {
-    prov_values <- extract_province_relation("GDP", vax_dataset=vax_dataset) 
-    print("yes")
-  } else {
-    prov_values <- extract_province_relation(prov_values, vax_dataset=vax_dataset)
-  }
+  prov_values <- extract_province_relation(prov_values, vax_dataset=vax_dataset)
   yvals <- prov_values
   prov_levels <- names(prov_values)
   

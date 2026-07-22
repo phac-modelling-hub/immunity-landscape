@@ -5,10 +5,13 @@
 #' Note that "low_income_families" does not have data for NT, NU, YT.
 #' 
 #' @param data Choice of: (character/ named numeric vector)
+#'              - "Gini" (default), for Gini index on adjusted household after-tax income from StatCan (mean of 2015 and 2020 values);
 #'              - "GDP", for log(GDP) data from StatCan;
 #'              - "low_income_families" , for 2021 rate of children in low-income families (Market Basket Measure) from Health Inequalities Data Tool;
 #'              - "vaccine_hesitancy", for 2017 prevalence of parents' vaccine hesitancy (refuse all + hesitant) from cNICS;
-#'              - "Gini", for 2020 Gini index on adjusted household after-tax income from StatCan;
+#'              - "UK-GDP", for log(2023 UK regional GDP) from ONS;
+#'              - "UK-low_income_families", for FYE 2023 rate of children in low-income families (DWP Official Statistics);
+#'              - "UK-Gini", for UK Gini index on total wealth (ONS, April 2016-March 2018);
 #'              - any named ordered numeric vector giving y-axis values associated to each province,
 #'               unscaled, in which case the function will return this vector unchanged.
 #' @param vax_dataset Used only to filter out provinces with no public coverage data (tibble)              

@@ -12,7 +12,11 @@
 #' @param kparam2 value of second k parameter (numeric)
 plot_prior2D <- function(df, k_param1=NA, k_param2=NA) {
   df %>% ggplot(aes(x=x_i, y=prior2D, group=factor(draw))) + 
-    scale_x_continuous(breaks=unique(df$x_i), name="current age x_i") +
+    scale_x_continuous(name="Current age") +
     geom_line(alpha=0.3) + facet_wrap(~ y_label) + 
-    ggtitle(paste0("k_param1=", k_param1, ", k_param2=", k_param2))
+    labs(
+      title = "Prior draws",
+      subtitle = paste0("Covariance function parameters: l1=", k_param1, ", l2=", k_param2),
+      y = "Vaccine coverage (logit scale)"
+    )
 }

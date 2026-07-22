@@ -8,7 +8,7 @@ Code and data repository accompanying the manuscript "Making inferences with inc
 
 Vaccine coverage data is collated in `1_collate-data.qmd`. This document includes notes and citations on all data sources used, and outputs a full, standardized vaccine coverage dataset (`data/coverage/generated/measles_vax-coverage-data.csv`). These data are then cleaned for use in Gaussian Process models in `2_clean-data.qmd`. Finally, manuscript figures and tables are generated in `3_figs_tables.qmd`.
 
-`code-demo.qmd` is a stand-alone demonstration of the Gaussian Process model-selection code.
+`code-demo.qmd` is a stand-alone pedagogical document of the Gaussian Process model code.
 
 ## Overall repository structure
 
