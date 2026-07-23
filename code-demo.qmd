@@ -37,9 +37,9 @@ Model fitting uses Gaussian distributions, whose domain is the entire real line.
 
 # One-dimensional case (current age)
 
-A Gaussian Process model assumes that the independent variable(s) are related. In the one-dimensional case, where current age is the only covariate, we are assuming that ages which are 'close-by' (defined via the shape of the covariance function and the lengthscale parameter `l`) will have similar vaccination coverage. 
+A Gaussian Process model assumes that the independent variable(s) are related. In the one-dimensional case, where current age is the only covariate, we are assuming that ages which are 'close-by' (defined via the shape of the covariance function and the lengthscale parameter `l`) will have similar vaccination coverage.
 
-The one-dimensional model can be run for any single province/territory (PT) in isolation, _e.g._ Alberta.
+The one-dimensional model can be run for any single province/territory (PT) in isolation, *e.g.* Alberta.
 
 ```{r}
 vax_prov <- vax_clean %>% filter(pt=="AB")
@@ -47,14 +47,14 @@ vax_prov <- vax_clean %>% filter(pt=="AB")
 
 ## Define covariance function and matrix
 
-We begin with the squared exponential covariance function, `k`, and assume a lengthscale of `l = 2`. Our dataset has 40 inputs (current ages), so the covariance matrix, $K$, is a 40x40 matrix defining the relationship between each pair of current ages.
+We begin with the squared exponential covariance function, `k`, and assume a lengthscale of `l = 2`. Our dataset has 16 inputs (current ages), so the covariance matrix, $K$, is a 40x40 matrix defining the relationship between each pair of current ages.
 
 ```{r}
 #| label: covariance
 
 # ages over which to predict
 first_agecurrent <- 5
-last_agecurrent <- 32
+last_agecurrent <- 21
 xvals <- first_agecurrent:last_agecurrent  # a vector of current ages (these x_i's are equally spaced)  
 npts <- length(xvals)
 l <- 2 # lengthscale; in units of age, roughly specifies the size of the neighbourhood for ages, within which vaccine coverages are most strongly related
@@ -197,7 +197,7 @@ The two-dimensional model adds PT as a second dimension with which to relate vac
 
 ## Covariance and prior
 
-We use the squared exponential covariance function, with a current-age lengthscale `l1` and a *relative* lengthscale of current age to PT, `l2` (see paper methods for more details). If the squared exponential is too strong an assumption, we can increase its variance (_i.e._ the model uncertainty) via the parameter `b`.  As before, we define the prior \~ Normal$(0, K)$ and draw a sample.
+We use the squared exponential covariance function, with a current-age lengthscale `l1` and a *relative* lengthscale of current age to PT, `l2` (see paper methods for more details). If the squared exponential is too strong an assumption, we can increase its variance (*i.e.* the model uncertainty) via the parameter `b`. As before, we define the prior \~ Normal$(0, K)$ and draw a sample.
 
 ```{r}
 #| label: prior_2D
@@ -280,7 +280,7 @@ tibble(xobs, yobs, zobs, logit_zobs_centred) |>
 
 ## Posterior
 
-As in the one-dimensional case, the posterior is uniquely defined by its mean and covariance matrix. Again, we calculate the four block matrices giving the pairwise relationships between the unobserved independent variables `{xvals, yvals}` and the observed independent variables `(xobs, yobs)`, then compute the posterior covariance matrix as `kuu - kuo %*% solve(koo) %*% kou`. In the one-dimensional case the unobserved input was `xvals`; now it is the concatenated grid `{xvals, yvals}` of size `r length(xvals)*10`x`r length(xvals)*10` (`r length(xvals)` ages in each of 10 PTs).
+As in the one-dimensional case, the posterior is uniquely defined by its mean and covariance matrix. Again, we calculate the four block matrices giving the pairwise relationships between the unobserved independent variables `{xvals, yvals}` and the observed independent variables `(xobs, yobs)`, then compute the posterior covariance matrix as `kuu - kuo %*% solve(koo) %*% kou`. In the one-dimensional case the unobserved input was `xvals`; now it is the concatenated grid `{xvals, yvals}` of size `r length(xvals)*13`x`r length(xvals)*13` (`r length(xvals)` ages in each of 13 PTs).
 
 ```{r}
 #| label: posterior_2D
@@ -362,13 +362,13 @@ run_GP(vax_clean,prov_values="Gini",l1=1.5,l2=3,b=0.75,meas_error=0.1,ndrws=50) 
 
 We select the "optimal" model (via choices for hyperparameters `k`, `l1`, `l2`, `b`, `meas_error`) through leave-one-out cross-validation. For a given covariance function `k` and lengthscale parameters `l1`, `l2`, `b`:
 
-  1.  Leave one data point out.
+1.  Leave one data point out.
 
-  2.  Run the GP model and compute an error metric based on the true vaccine coverage for the missing point.
-  
-Repeat this procedure for every point in the dataset and sum all errors, then select the set of \{`k`, `l1`, `l2`, `b`\} with the smallest total error.
+2.  Run the GP model and compute an error metric based on the true vaccine coverage for the missing point.
 
-For the error metric, a simple option would be the mean squared error of the prediction compared to the posterior mean at each left-out age. A option that leverages the full richness of GP models is the *posterior predictive density* (PPD), since this encodes both the predicted mean and variance for predictions around each point. In our work, we equivalently maximize the log PPD (LPPD). 
+Repeat this procedure for every point in the dataset and sum all errors, then select the set of {`k`, `l1`, `l2`, `b`} with the smallest total error.
+
+For the error metric, a simple option would be the mean squared error of the prediction compared to the posterior mean at each left-out age. A option that leverages the full richness of GP models is the *posterior predictive density* (PPD), since this encodes both the predicted mean and variance for predictions around each point. In our work, we equivalently maximize the log PPD (LPPD).
 
 `compute_lppd()` calculates the full log posterior predictive density analytically. `select_GP()` then does a grid search of hyperparameter space and returns the lppd for each hyperparameter set. The "optimal" model (with max LPPD) is also printed to the console.
 
@@ -385,7 +385,7 @@ select_GP(vax_clean, prov_values="Gini", k_list=list(ksqexp=ksqexp), l1=c(1.5,2)
 run_GP(vax_clean,l1=2.5,l2=250,b=0.5,meas_error=0.1,ndrws=50)
 ```
 
-We can also consider how strong of an optimum this "optimal" hyperparameter set is by plotting heatmaps of the LPPD. 
+We can also consider how strong of an optimum this "optimal" hyperparameter set is by plotting heatmaps of the LPPD.
 
 ```{r}
 #| label: model_selection_heatmaps
