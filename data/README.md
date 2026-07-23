@@ -34,15 +34,15 @@ Coverage datasets written by the data pipeline.
 | File | Produced by | Description |
 |---|---|---|
 | `measles_vax-coverage-data.csv` | `1_collate-data.qmd` | Collated standardized coverage across all sources. |
-| `measles_vax-coverage-data-cleaned.csv` | `2_clean-data.qmd` | Cleaned coverage dataset (model input). |
-| `measles_vax-coverage-data-cleaned_noadults.csv` | `2_clean-data.qmd` | Cleaned dataset with aNICS (adult) estimates removed. |
-| `measles_vax-coverage-data-cleaned_2plus.csv` | `2_clean-data.qmd` | 2+ dose subset for plot overlays. |
+| `measles_vax-coverage-data-cleaned.csv` | `2_prepare-data.qmd` | Cleaned coverage dataset (model input). |
+| `measles_vax-coverage-data-cleaned_noadults.csv` | `2_prepare-data.qmd` | Cleaned dataset with aNICS (adult) estimates removed. |
+| `measles_vax-coverage-data-cleaned_2plus.csv` | `2_prepare-data.qmd` | 2+ dose subset for plot overlays. |
 
 ## `pt-relation/`
 
 Province/territory population, lookup, and socioeconomic indicator files. All
 are **raw** external sources (no generated files); read mainly by
-`R/extract_province_relation.R`, `R/pt_lookup.R`, `2_clean-data.qmd`, and
+`R/extract_province_relation.R`, `R/pt_lookup.R`, `2_prepare-data.qmd`, and
 `code-demo.qmd`.
 
 | File | Description |

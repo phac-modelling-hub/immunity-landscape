@@ -24,22 +24,11 @@ editor:
 #| label: setup
 #| output: false
 
-# packages
-library(readr)
-library(readxl)
+# Load required stuff
+source(here::here("0_load-packages-funs.R"))
 
-library(dplyr)
-library(stringr)
-library(tidyr)
-library(scales)
-
-library(ggplot2)
-# common plot theme
-theme_set(theme_bw())
+# Update plot theme
 th <- theme(legend.position = "bottom")
-
-# Source functions
-invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
 ```
 
 Our ultimate goal is to compile a data set of measles vaccine coverage
@@ -860,7 +849,6 @@ plot_coverage(vax_cNICS)
 We aggregate and export the standardized data across sources:
 ```{r}
 #| label: collect_export_vax
-#| eval: true
 
 df_names <- c(
   paste0("vax_", 
