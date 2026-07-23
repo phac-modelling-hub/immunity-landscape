@@ -1,23 +1,4 @@
-# load-data.R
-# Load packages, R functions, and the cleaned coverage datasets used across the
-# analysis. This code was extracted from the `initial_setup` chunk of
-# code-demo.qmd so it can be sourced directly by both code-demo.qmd and the
-# manuscript figure/table scripts (via results/setup.R) without scraping the .qmd.
-
-library(readr)
-library(dplyr)
-library(ggplot2)
-library(tidyr)
-library(stringr)
-library(stringi)
-library(scales)
-library(purrr)
-library(tibble)
-library(mnormt) # for multivariate normal
-library(LaplacesDemon) # for logistic transform
-library(flextable) # for exporting tables in .docx
-
-invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))  # load functions
+# Load various datasets used throughout our anaylsis
 
 #' read cleaned data
 vax_clean <- readr::read_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data-cleaned.csv"), show_col_types = FALSE)

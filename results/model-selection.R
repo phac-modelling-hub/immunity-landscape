@@ -1,7 +1,7 @@
 #' Run GP model selection over `ms_grid` for one province-relation framework.
 #'
 #' By default the result is returned without writing to disk. Pass a `csv_name`
-#' to also write the combinations to results/<csv_name>; results_setup.R is the
+#' to also write the combinations to results/<csv_name>; 3_compute-results.R is the
 #' sole producer of the GPcombinations_*_witherror.csv artifacts consumed by the
 #' figure/table scripts, so code-demo.qmd calls this without `csv_name` (purely
 #' exploratory).

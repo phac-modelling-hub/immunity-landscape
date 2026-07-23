@@ -7,44 +7,8 @@ title: "Clean collated vaccine coverage data for input into GP models"
 #| echo: false
 #| message: false
 
-library(dplyr)
-library(tidyr)
-library(ggplot2); theme_set(theme_bw())
-library(zoo)
-library(stringr)
-library(readr)
-library(forcats)
-
-# Source functions
-invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
-
-# Define functions
-
-#' Add full sequence of age groups, adding new limits
-#' 
-#' @param df a data frame where ages are stored in the `age_current` column
-#' @param new_ages new ages to add before completing the sequence
-#' @return a data frame
-expand_age <- function(df, new_ages){
-  df |>
-  # attach new ages
-  group_modify(\(x, ...) add_row(x, age_current = new_ages)) |>
-  # fill in all missing ages from expanded range
-  complete(age_current = full_seq(age_current, period = 1))
-}
-
-#' Parse age groups into one observation per single-year age
-#'
-#' @param df data frame
-#' @param col column to transform, as a symbol
-parse_age_groups <- function(df, col, last_age = 21){
-  df |>
-    rowwise() |> 
-    mutate(
-      {{col}} := list(pull_first({{col}}):pull_last({{col}}, last_age))
-    ) |>
-    unnest_longer({{col}})
-}
+# Load required stuff
+source(here::here("0_load-packages-funs.R"))
 ```
 
 We've collected a large dataset of vaccine coverage data (see `1_collate-data.qmd`). Here we carry out data cleaning tasks to prepare it for input into GP models. These steps are also outlined in the methods of our ms.

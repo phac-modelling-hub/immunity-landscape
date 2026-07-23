@@ -6,7 +6,34 @@ This doc is used to collate source code for the manuscript figures and tables.
 
 ```{r}
 #| label: setup
-source(here::here("results", "setup.R"))
+
+# Load required stuff
+# -----
+source(here::here("0_load-packages-funs.R"))
+source(here::here("results", "load-data.R"))
+
+# Plot appearance
+# -----
+
+fig_w <- 7.29   # inches
+fig_h <- 4.51   # inches
+theme_ms <- theme_bw(base_size = 11) +
+  theme(
+    strip.text.x       = element_text(size = 8),
+    axis.title       = element_text(size = 12),
+    axis.text        = element_text(size = 10),
+    legend.title     = element_text(size = 8),
+    legend.text      = element_text(size = 8),
+    plot.title       = element_text(size = 16),
+    panel.grid.minor = element_blank()
+  )
+theme_set(theme_ms)
+
+# Palettes
+scale_colour_ms <- function(...) scale_colour_viridis_d(option = "G", direction = -1, end = 0.9, ...)
+scale_fill_ms   <- function(...) scale_fill_viridis_d(option = "G",   direction = -1, end = 0.9, ...)
+colours_lopo <- c("TRUE" = "#2166ac", "FALSE" = "#d73027")
+shapes_doses <- c(18, 16, 17, 15, 13)  # diamond, circle, triangle, square, x-circle
 ```
 
 ```{r}
@@ -16,7 +43,7 @@ source(here::here("results", "setup.R"))
 rerun <- FALSE # all
 rerun_select_GP <- F # GP selection process
 rerun_SBC <- F # simulation-based calibration
-if (rerun) source(here::here("results", "results_setup.R"))
+if (rerun) source(here::here("3_compute-results.R"))
 ```
 
 # Main text

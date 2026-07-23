@@ -1,6 +1,9 @@
 # Generates all model results needed for manuscript figures and tables.
-# Source setup.R first, then run this file (or set rerun=TRUE in 3_figs_tables.qmd).
 # Each output is saved to its own file in results/, *overwriting existing outputs*.
+
+# Load required stuff
+source(here::here("0_load-packages-funs.R"))
+source(here::here("results", "load-data.R"))
 
 # ── Model framework definitions ────────────────────────────────────────────────
 # l2_lim: plausible range for l2 used to filter the model selection grid before
@@ -382,4 +385,4 @@ if (rerun_SBC == T) {
 cat("Running England accuracy analysis...\n")
 targets::tar_make(accuracy)
 
-cat("results_setup.R complete.\n")
+cat("3_compute-results.R complete.\n")
