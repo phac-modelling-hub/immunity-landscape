@@ -36,16 +36,6 @@ colours_lopo <- c("TRUE" = "#2166ac", "FALSE" = "#d73027")
 shapes_doses <- c(18, 16, 17, 15, 13)  # diamond, circle, triangle, square, x-circle
 ```
 
-```{r}
-#| label: rerun
-
-# toggles to re-run slow steps
-rerun <- FALSE # all
-rerun_select_GP <- F # GP selection process
-rerun_SBC <- F # simulation-based calibration
-if (rerun) source(here::here("3_compute-results.R"))
-```
-
 # Main text
 
 ```{r}

@@ -5,6 +5,10 @@
 source(here::here("0_load-packages-funs.R"))
 source(here::here("results", "load-data.R"))
 
+# Toggles for slow steps
+rerun_select_GP <- FALSE
+rerun_SBC <- FALSE
+
 # ── Model framework definitions ────────────────────────────────────────────────
 # l2_lim: plausible range for l2 used to filter the model selection grid before
 #         identifying the best model. meas_error is chosen separately from the
@@ -284,7 +288,6 @@ saveRDS(boot_pt_VH, here::here("results", "pt_bootstrap_VH.rds"))
 # In separate workflow -- see repo README.
 
 # ── 7. SBC for Gini (overwrites SBC_results_Gini.rds; synthetic CSVs not saved) ────────
-rerun_SBC <- F
 if (rerun_SBC == T) {
   cat("Running SBC...\n")
   
