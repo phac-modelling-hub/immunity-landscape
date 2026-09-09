@@ -13,7 +13,7 @@ rerun_SBC <- FALSE
 # l2_lim: plausible range for l2 used to filter the model selection grid before
 #         identifying the best model. meas_error is chosen separately from the
 #         CSV selection (edit here to change the value used for posteriors/LOPO).
-l2_lim <- list(Gini = c(0.1, 50), LI = c(0.2, 250), VH = c(0.1, 8))
+l2_lim <- list(Gini = c(0.1, 50), LI = c(0.2, 250), VH = c(0.1, 8), CU = c(0.1, 50))  # CU limits TBD
 
 model_configs <- list(
   Gini = list(
@@ -39,6 +39,14 @@ model_configs <- list(
     l2_lim      = l2_lim$VH,
     model_selection_csv         = "GPcombinations_vaccinehesitancy_witherror.csv",
     title_lab   = "Vaccine hesitancy"
+  ),
+  CU = list(
+    prov_values = "CU",
+    vax_dataset = vax_clean,
+    meas_error  = 0.05,
+    l2_lim      = l2_lim$CU,
+    model_selection_csv         = "GPcombinations_CU_witherror.csv",
+    title_lab   = "COVID unvaccinated"
   )
 )
 
@@ -213,9 +221,15 @@ pt_pairs2 %>%
 pt_pairs3 <-vax_cleanVH %>%
   group_by(age_current) %>%
   group_modify(~ compute_pairwise_PT_diffs(.x, "vaccine_hesitancy")) %>%
-  mutate(model = "VH") 
+  mutate(model = "VH")
 pt_pairs3 %>%
   saveRDS(here::here("results", "provinces_test_VH.rds"))
+pt_pairs4 <- vax_clean %>%
+  group_by(age_current) %>%
+  group_modify(~ compute_pairwise_PT_diffs(.x, "CU")) %>%
+  mutate(model = "CU")
+pt_pairs4 %>%
+  saveRDS(here::here("results", "provinces_test_CU.rds"))
 
 # PT bootstrap test
 run_pt_bootstrap <- function(vax_df, province_pairs_df, prov_values_name, n_boot = 1000, seed = 42) {
@@ -282,6 +296,10 @@ saveRDS(boot_pt_LI, here::here("results", "pt_bootstrap_LI.rds"))
 province_pairs_VH <- readRDS(here::here("results", "provinces_test_VH.rds"))
 boot_pt_VH <- run_pt_bootstrap(vax_cleanVH, province_pairs_VH, "vaccine_hesitancy")
 saveRDS(boot_pt_VH, here::here("results", "pt_bootstrap_VH.rds"))
+
+province_pairs_CU <- readRDS(here::here("results", "provinces_test_CU.rds"))
+boot_pt_CU <- run_pt_bootstrap(vax_clean, province_pairs_CU, "CU")
+saveRDS(boot_pt_CU, here::here("results", "pt_bootstrap_CU.rds"))
 
 
 # ── N. England model selection + posteriors ────────────────────────────────────

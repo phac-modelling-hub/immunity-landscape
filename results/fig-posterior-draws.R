@@ -5,19 +5,24 @@
 post_Gini <- readRDS(here::here("results", "posterior_Gini.rds"))
 post_LI   <- readRDS(here::here("results", "posterior_LI.rds"))
 post_VH   <- readRDS(here::here("results", "posterior_VH.rds"))
+post_CU   <- readRDS(here::here("results", "posterior_CU.rds"))
 
 obs_Gini <- vax_clean
 obs_LI   <- vax_cleanLI
 obs_VH   <- vax_cleanVH
+obs_CU   <- vax_clean
 
 fig_posterior_Gini <- make_posterior_plot(post_Gini, obs_Gini)
 fig_posterior_LI   <- make_posterior_plot(post_LI,   obs_LI)
 fig_posterior_VH   <- make_posterior_plot(post_VH,   obs_VH)
+fig_posterior_CU   <- make_posterior_plot(post_CU,   obs_CU)
 
 ggsave(here::here("results", "fig-posterior-draws_LI.pdf"),
        fig_posterior_LI, width = fig_w, height = fig_h)
 ggsave(here::here("results", "fig-posterior-draws_VH.pdf"),
        fig_posterior_VH, width = fig_w, height = fig_h)
+ggsave(here::here("results", "fig-posterior-draws_CU.pdf"),
+       fig_posterior_CU, width = fig_w, height = fig_h)
 
 # Combine into one plot with facet_grid
 # Province ordering: Gini order first, then any VH-unique region names appended
@@ -25,23 +30,27 @@ gini_order     <- levels(post_Gini$y_label)
 vh_unique      <- setdiff(levels(post_VH$y_label), gini_order)
 prov_order_all <- c(gini_order, vh_unique)
 
+model_levels <- c("Gini", "Low-income", "Vaccine hesitancy", "COVID unvaccinated")
+
 post_all <- bind_rows(
-  post_Gini %>% mutate(model = "Gini",              province = as.character(y_label)),
-  post_LI   %>% mutate(model = "Low-income",        province = as.character(y_label)),
-  post_VH   %>% mutate(model = "Vaccine hesitancy", province = as.character(y_label))
+  post_Gini %>% mutate(model = "Gini",               province = as.character(y_label)),
+  post_LI   %>% mutate(model = "Low-income",         province = as.character(y_label)),
+  post_VH   %>% mutate(model = "Vaccine hesitancy",  province = as.character(y_label)),
+  post_CU   %>% mutate(model = "COVID unvaccinated",  province = as.character(y_label))
 ) %>%
   mutate(
-    model    = factor(model, levels = c("Gini", "Low-income", "Vaccine hesitancy")),
+    model    = factor(model, levels = model_levels),
     province = factor(province, levels = prov_order_all)
   )
 
 obs_all <- bind_rows(
-  obs_Gini %>% mutate(model = "Gini",              province = location),
-  obs_LI   %>% mutate(model = "Low-income",        province = location),
-  obs_VH   %>% mutate(model = "Vaccine hesitancy", province = location)
+  obs_Gini %>% mutate(model = "Gini",               province = location),
+  obs_LI   %>% mutate(model = "Low-income",         province = location),
+  obs_VH   %>% mutate(model = "Vaccine hesitancy",  province = location),
+  obs_CU   %>% mutate(model = "COVID unvaccinated",  province = location)
 ) %>%
   mutate(
-    model    = factor(model, levels = c("Gini", "Low-income", "Vaccine hesitancy")),
+    model    = factor(model, levels = model_levels),
     province = factor(province, levels = prov_order_all)
   )
 

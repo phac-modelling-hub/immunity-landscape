@@ -2,7 +2,8 @@
 # Supp Figure lppd-heatmaps: LPPD heatmaps over (l2, l1) for Canada models
 fig_heatmaps <- list(read_csv(here::here("results", "GPcombinations_lowincome_witherror.csv"))      %>% mutate(model = "LI"),
                     read_csv(here::here("results", "GPcombinations_vaccinehesitancy_witherror.csv")) %>% mutate(model = "VH"),
-                    read_csv(here::here("results", "GPcombinations_Gini_witherror.csv"))           %>% mutate(model = "Gini")) %>%
+                    read_csv(here::here("results", "GPcombinations_Gini_witherror.csv"))           %>% mutate(model = "Gini"),
+                    read_csv(here::here("results", "GPcombinations_CU_witherror.csv"))             %>% mutate(model = "CU")) %>%
   bind_rows() %>%
   filter(b == 1, !l2 %in% c(1.5, 2.5, 3.5)) %>%
   mutate(l1 = factor(l1), l2 = factor(l2),

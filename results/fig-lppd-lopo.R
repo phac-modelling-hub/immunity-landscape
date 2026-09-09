@@ -5,9 +5,10 @@
 lopo_all <- bind_rows(
   readRDS(here::here("results", "lopo_Gini.rds")) %>% mutate(model = "Gini"),
   readRDS(here::here("results", "lopo_LI.rds"))   %>% mutate(model = "Low-income"),
-  readRDS(here::here("results", "lopo_VH.rds"))   %>% mutate(model = "Vaccine hesitancy")
+  readRDS(here::here("results", "lopo_VH.rds"))   %>% mutate(model = "Vaccine hesitancy"),
+  readRDS(here::here("results", "lopo_CU.rds"))   %>% mutate(model = "COVID unvaccinated")
 ) %>%
-  mutate(model = factor(model, levels = c("Gini", "Low-income", "Vaccine hesitancy")))
+  mutate(model = factor(model, levels = c("Gini", "Low-income", "Vaccine hesitancy", "COVID unvaccinated")))
 
 fig_lopo_combined <- ggplot(lopo_all, aes(x = pt, y = diff, fill = diff > 0)) +
   geom_col() +
