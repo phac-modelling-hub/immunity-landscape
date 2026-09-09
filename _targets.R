@@ -51,5 +51,47 @@ list(
       error_tolerance = error_tolerance
     ),
     pattern = map(fit_hp)
+),
+  tar_target(
+    accuracy_supp,
+    compute_accuracy(
+      fit_hp_supp,
+      error_tolerance = error_tolerance
+    ),
+    pattern = map(fit_hp_supp)
+  ),
+
+  # supp analysis
+  # ---------------
+  tar_target(file_covid, here::here("data", "coverage", "raw", "vaccination-coverage-byAgeAndSex-overTimeDownload.csv"), format = "file"),
+
+  tar_target(ptrelation_covid, 
+    {
+      # process most recently reported COVID vaccine coverage data for 5-11 year olds for use as  PT-relation indicator
+      readr::read_csv(file_covid, na = c("", "NA", "na"), col_types = cols_only(
+        prename = "c",
+        sex = "c",
+        week_end = "D",
+        age = "c",
+        proptotal_atleast1dose = "c"
+      )) |>
+      dplyr::filter(prename != "Canada", sex == "All sexes", age == "05–11") |>
+      dplyr::transmute(
+        nm_en = prename, 
+        date = week_end,
+        age,
+        value = proptotal_atleast1dose) |>
+      # get most recent non-NA estimates by PT
+      tidyr::drop_na() |>
+      dplyr::group_by(nm_en) |>
+      dplyr::filter(date == max(date)) |>
+      # prep final values
+      dplyr::transmute(
+        nm_en,
+        value = as.numeric(value)
+      ) |> 
+      # export  
+      readr::write_csv(file = here::here("data", "pt-relation", "COVID-coverage_5-11.csv"))
+    }
   )
 )
