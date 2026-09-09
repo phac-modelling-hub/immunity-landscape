@@ -26,7 +26,8 @@ age_pairs_1plus$gap_group <- factor(age_recode[age_pairs_1plus$gap_group], level
 fig_ages_test_all <- ggplot(age_pairs_1plus, aes(x = diff * 100, fill = gap_group)) +
   geom_histogram(binwidth = 2, boundary = 0, position = position_stack(reverse = TRUE)) +
   scale_fill_manual(values = gap_colours, name = stringr::str_wrap("Gap between pairs", width = 12)) +
-  facet_wrap(~ location, labeller = labeller(location = \(x) stringr::str_wrap(x, width = 22)), ncol = 3) +
+  facet_wrap(~ location, labeller = labeller(location = \(x) stringr::str_wrap(x, width = 22)), ncol = 3, scales = "free_y") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = \(x) c(0, max(x[2], 5))) +
   labs(
     title = "A: Among pairs of ages by PT",
     x = "Absolute difference in vaccine coverage (%)", y = "Number of age pairs") +
@@ -49,7 +50,8 @@ province_pairs_Gini$gap_group <- factor(prov_recode[province_pairs_Gini$gap_grou
 fig_pt_test1 <- ggplot(province_pairs_Gini, aes(x = diff * 100, fill = gap_group)) +
   geom_histogram(binwidth = 2, boundary = 0, position = position_stack(reverse = TRUE)) +
   scale_fill_manual(values = gap_colours, name = stringr::str_wrap("Gap between pairs", width = 12)) +
-  facet_wrap(~ age_current, labeller = labeller(age_current = \(x) paste("Age", x)), ncol = 3) +
+  facet_wrap(~ age_current, labeller = labeller(age_current = \(x) paste("Age", x)), ncol = 3, scales = "free_y") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = \(x) c(0, max(x[2], 5))) +
   labs(
     title = "B: Among pairs of PTs by age",
     x = "Absolute difference in vaccine coverage (%)", y = "Number of PT pairs") +
