@@ -9,6 +9,7 @@
 #'              - "GDP", for log(GDP) data from StatCan;
 #'              - "low_income_families" , for 2021 rate of children in low-income families (Market Basket Measure) from Health Inequalities Data Tool;
 #'              - "vaccine_hesitancy", for 2017 prevalence of parents' vaccine hesitancy (refuse all + hesitant) from cNICS;
+#'              - "CU", for COVID-19 paediatric unvaccinated (ages 5-11, 2023, 100 - uptake);
 #'              - "UK-GDP", for log(2023 UK regional GDP) from ONS;
 #'              - "UK-low_income_families", for FYE 2023 rate of children in low-income families (DWP Official Statistics);
 #'              - "UK-Gini", for UK Gini index on total wealth (ONS, April 2016-March 2018);
@@ -36,6 +37,12 @@ extract_province_relation <- function(data="GDP", vax_dataset) {
       province_relation_data <- readr::read_csv(here::here("data", "pt-relation", "9810009601_databaseLoadingData_StatCanGini.csv"), show_col_types = F) %>%
         dplyr::filter(`Inequality measures (5)` == "Gini index on adjusted household after-tax income") %>% dplyr::rename(location = GEO, value = VALUE, year = `Year (2)`) %>%
         dplyr::mutate(value = 100*value) %>% dplyr::select(location, year, value) %>% dplyr::group_by(location) %>% dplyr::summarise(value = mean(value)) %>% dplyr::arrange(value)
+
+    } else if (data=="CU") {  # COVID-19 paediatric vaccine uptake (ages 5-11), inverted so higher = lower uptake = more hesitant
+      province_relation_data <- readr::read_csv(here::here("data", "pt-relation", "COVID-coverage_5-11.csv"), show_col_types = F) %>%
+        dplyr::rename(location = nm_en) %>%
+        dplyr::mutate(value = 100 - value) %>%
+        dplyr::arrange(value)
 
     } else if (data=="UK-GDP") {  # UK GDP 2023 data from ONS (log) https://www.ons.gov.uk/datasets/regional-gdp-by-year/editions/time-series/versions/6
       province_relation_data <- readr::read_csv(here::here("data", "pt-relation", "uk-ONSdownload-regionalgdp.csv"), show_col_types = F, skip=1) %>% # skip title row
