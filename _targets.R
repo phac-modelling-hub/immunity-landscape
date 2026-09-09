@@ -68,7 +68,7 @@ list(
   tar_target(ptrelation_covid, 
     {
       # process most recently reported COVID vaccine coverage data for 5-11 year olds for use as  PT-relation indicator
-      readr::read_csv(file_covid, na = c("", "NA", "na"), col_types = cols_only(
+      readr::read_csv(file_covid, na = c("", "NA", "na"), col_types = readr::cols_only(
         prename = "c",
         sex = "c",
         week_end = "D",
@@ -81,15 +81,9 @@ list(
         date = week_end,
         age,
         value = proptotal_atleast1dose) |>
-      # get most recent non-NA estimates by PT
-      tidyr::drop_na() |>
-      dplyr::group_by(nm_en) |>
-      dplyr::filter(date == max(date)) |>
-      # prep final values
-      dplyr::transmute(
-        nm_en,
-        value = as.numeric(value)
-      ) |> 
+      # get values from date where most provinces have saturated, before effects of cohort ageing come in (bringing in unvaccinated 4 years olds who have aged up into 5-11, lowering VC)
+      dplyr::filter(date == "2022-04-24") |>
+      dplyr::select(nm_en, value) |>
       # export  
       readr::write_csv(file = here::here("data", "pt-relation", "COVID-coverage_5-11.csv"))
     }
