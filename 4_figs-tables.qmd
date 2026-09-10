@@ -103,11 +103,13 @@ tbl_sbc_2
 source(here::here("results", "fig-provinces-test.R"))
 fig_pt_test2
 fig_pt_test3
+fig_pt_test4
 ```
 
 ```{r}
 #| label: posterior-draws-supp
 fig_posterior_LI
 fig_posterior_VH
+fig_posterior_CU
 fig_posterior_combined
 ```

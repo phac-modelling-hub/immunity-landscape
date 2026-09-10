@@ -8,6 +8,7 @@ source(here::here("results", "load-data.R"))
 # Toggles for slow steps
 rerun_select_GP <- FALSE
 rerun_SBC <- FALSE
+rerun_England_accuracy <- FALSE
 
 # ── Model framework definitions ────────────────────────────────────────────────
 # l2_lim: plausible range for l2 used to filter the model selection grid before
@@ -408,7 +409,9 @@ if (rerun_SBC == T) {
 }
 
 # ── 8. England accuracy analysis ────────
-cat("Running England accuracy analysis...\n")
-targets::tar_make(accuracy)
+if (rerun_England_accuracy == T) {
+  cat("Running England accuracy analysis...\n")
+  targets::tar_make(accuracy)
+}
 
 cat("3_compute-results.R complete.\n")
