@@ -81,7 +81,6 @@ unobs_Gini <- readr::read_csv(here::here("data", "coverage", "generated", "measl
   select(age_current, location, value)
 
 fig_posterior_Gini_unobs <- make_posterior_plot(post_Gini, obs_Gini, show_unobs = TRUE, unobs_df = unobs_Gini) +
-  labs(title = "Posterior draws from model fit") +
   theme(legend.position = "inside",
     legend.position.inside = c(0.98, -0.05),   # bottom-right
     legend.justification = c(1, 0)

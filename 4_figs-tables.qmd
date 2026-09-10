@@ -57,12 +57,15 @@ make_row <- function(name, path) {
   )
 }
 
-dplyr::bind_rows(
+tbl_significance <- dplyr::bind_rows(
   make_row("Age", "age_test_bootstrap.rds"),
   make_row("Gini", "pt_bootstrap_Gini.rds"),
   make_row("Low Income", "pt_bootstrap_LI.rds"),
-  make_row("Vaccine Hesitancy", "pt_bootstrap_VH.rds")
+  make_row("Vaccine Hesitancy", "pt_bootstrap_VH.rds"),
+  make_row("COVID Unvaccinated", "pt_bootstrap_CU.rds")
 )
+readr::write_csv(tbl_significance, here::here("results", "tbl-significance-tests.csv"))
+tbl_significance
 ```
 
 ```{r}
