@@ -8,12 +8,13 @@ source(here::here("results", "load-data.R"))
 # Toggles for slow steps
 rerun_select_GP <- FALSE
 rerun_SBC <- FALSE
+rerun_England_accuracy <- FALSE
 
 # ── Model framework definitions ────────────────────────────────────────────────
 # l2_lim: plausible range for l2 used to filter the model selection grid before
 #         identifying the best model. meas_error is chosen separately from the
 #         CSV selection (edit here to change the value used for posteriors/LOPO).
-l2_lim <- list(Gini = c(0.1, 50), LI = c(0.2, 250), VH = c(0.1, 8), CU = c(0.1, 50))  # CU limits TBD
+l2_lim <- list(Gini = c(0.1, 50), LI = c(0.2, 250), VH = c(0.1, 8), CU = c(0.02, 5))
 
 model_configs <- list(
   Gini = list(
@@ -54,15 +55,20 @@ model_configs <- list(
 # Grid and select_GP() invocation live in results/model-selection.R, shared with
 # code-demo.qmd so the two entry points cannot drift.
 source(here::here("results", "model-selection.R"))
+ms_grid_CU <- ms_grid
+ms_grid_CU$l2 <- sort(unique(c(ms_grid$l2, 0.02, 5)))
+
 if (rerun_select_GP == T) {
   cat("Running model selection...\n")
   for (nm in names(model_configs)) {
-    cfg <- model_configs[[nm]]
+    cfg  <- model_configs[[nm]]
+    grid <- if (nm == "CU") ms_grid_CU else ms_grid
     cat(" ", nm, "\n")
     run_model_selection(
       cfg$vax_dataset,
       prov_values = cfg$prov_values,
-      csv_name    = cfg$model_selection_csv
+      csv_name    = cfg$model_selection_csv,
+      grid        = grid
     )
   }
 }
@@ -403,7 +409,9 @@ if (rerun_SBC == T) {
 }
 
 # ── 8. England accuracy analysis ────────
-cat("Running England accuracy analysis...\n")
-targets::tar_make(accuracy)
+if (rerun_England_accuracy == T) {
+  cat("Running England accuracy analysis...\n")
+  targets::tar_make(accuracy)
+}
 
 cat("3_compute-results.R complete.\n")

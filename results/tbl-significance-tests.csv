@@ -1,0 +1,6 @@
+indicator,p_value_close,p_value_near,p_value_moderate
+Age,0,0,0
+Gini,0.203,0.001,0
+Low Income,0.419,0.51,0.485
+Vaccine Hesitancy,0.375,0.383,0.041
+COVID Unvaccinated,0.011,0.003,0.081
