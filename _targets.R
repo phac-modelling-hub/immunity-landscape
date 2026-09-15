@@ -7,9 +7,22 @@
 library(targets)
 library(crew)
 
+# Respect the SLURM cpu allocation inside the container; fall back to
+# detectCores() when run interactively/outside SLURM. Using detectCores()
+# under SLURM/Apptainer reports the whole node and oversubscribes the cgroup,
+# causing "Resource temporarily unavailable" (EAGAIN) fork/thread failures.
+n_workers <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", unset = NA))
+if (is.na(n_workers)) {
+  n_workers <- max(1L, parallel::detectCores() - 1L)
+}
+# leave one core for the main targets/crew process
+n_workers <- max(1L, n_workers - 1L)
+
 targets::tar_option_set(
   packages = c("dplyr", "ggplot2", "readr", "purrr", "tibble"),
-  controller = crew_controller_local(workers = parallel::detectCores()-1)
+  controller = crew_controller_local(
+    workers = n_workers
+  )
 )
 
 # source all functions in R/
@@ -18,6 +31,9 @@ invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
 # --- pipeline ---
 
 list(
+  # main analysis
+  # ----------------
+
   # pipeline settings
   tar_target(n_reps, 40), # number of experimental reps
   tar_target(error_tolerance, 0.05), # tolerable error in the model's vaccine coverage (%) prediction, as a proportion (two-sided)
@@ -36,13 +52,30 @@ list(
     split_train_test(data_all, sample_size, id_rep),
     pattern = map(id_rep)
   ),
+  tar_target(
+    data_split_supp,
+    split_train_test(data_all, sample_size, id_rep, sample_by_location = FALSE),
+    pattern = map(id_rep)
+  ),
   tar_target( # slow step
     fit_hp,
     fit_hyperparams(
       data_split,
       prov_relation = prov_relation
     ),
-    pattern = map(data_split)
+    pattern = map(data_split),
+    retrieval = "worker",
+    storage = "worker"
+  ),
+  tar_target( # slow step
+    fit_hp_supp,
+    fit_hyperparams(
+      data_split_supp,
+      prov_relation = prov_relation
+    ),
+    pattern = map(data_split_supp),
+    retrieval = "worker",
+    storage = "worker"
   ),
   tar_target(
     accuracy,
@@ -51,7 +84,7 @@ list(
       error_tolerance = error_tolerance
     ),
     pattern = map(fit_hp)
-),
+  ),
   tar_target(
     accuracy_supp,
     compute_accuracy(

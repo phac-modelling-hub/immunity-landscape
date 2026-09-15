@@ -47,3 +47,4 @@ _targets/
 config.yml
 plots/Thumbs.db
 rendered/
+logs/*
