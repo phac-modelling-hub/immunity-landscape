@@ -1,0 +1,140 @@
+---
+title: "Investigating potential bias between survey and PT-reported data"
+format: html
+---
+
+Here we briefly investigate whether there may be evidence of bias in the vaccine coverage estimates stemming from survey data (cNICS, aNICS) compared to the PT-reported data.
+
+```{r}
+#| label: setup
+
+library(dplyr)
+library(ggplot2); theme_set(theme_bw())
+
+this_theme <- theme_bw(base_size = 11) +
+  theme(
+    strip.text.x     = element_text(size = 8),
+    axis.title       = element_text(size = 12),
+    axis.text        = element_text(size = 10),
+    legend.title     = element_text(size = 8),
+    legend.text      = element_text(size = 8),
+    plot.title       = element_text(size = 16),
+    panel.grid.minor = element_blank()
+  )
+theme_set(this_theme)
+
+invisible(lapply(list.files(here::here("R"), full.names = TRUE), source))
+```
+
+The following data processing was copied over from `2_prepare-data.qmd` (everything up to de-duplication):
+
+```{r}
+#| label: read_data
+
+# read in data and filter to province-level
+PT_lookup <- readr::read_csv(here::here("data", "pt-relation", "pt_lookup.csv"), show_col_types = FALSE)
+vax_raw <- readr::read_csv(here::here("data", "coverage", "generated", "measles_vax-coverage-data.csv"), show_col_types = FALSE) |> filter(location %in% unique(PT_lookup$nm_en))
+
+current_year <- as.integer(format(Sys.Date(), "%Y")) # for ageing estimates
+
+# Remove low Nunavut point
+vax_raw <- vax_raw |> filter(!(pt == "NU" & year_report == 2021))
+
+## Parse ages and doses
+vax_parsed <- vax_raw |>
+  # parse aNICS "18+" as 18
+  mutate(age = if_else(source == "aNICS", "18", age)) |>
+  # parse age groups into single-year ages
+  mutate(age = if_else(is.na(age), as.character(year_report-year_birth), age)) |> # fill in age at report where not present
+  parse_age_groups(age) |>
+  # round non-integer ages (QC)
+  mutate(age = round(age))
+
+## Age the estimates to current year
+vax_aged <- vax_parsed |> 
+  mutate(age_current = age + (current_year - year_report))
+
+## Collapse exactly 1 and exactly 2 dose types to 1+
+
+# For data with exactly 1 dose and exactly 2 dose, Ontario's is the only data in which the sum of the coverage estimates across dose types (0, 1, 2) is 1, *i.e.* the estimates are consistent and therefore valid. (See `measles_prelim-vax-coverage-modelling.qmd` take 2 approach for full details).
+
+# Thus, for ON we will sum 1 and 2 dose coverage as reported to get a true 1+ estimate.
+
+# NB: Note that the Ontario data came from two sources, one with 0, 1, and 2 doses, and another with estimates for 2 doses only. For consistency, we only use the multiple doses data.
+
+vax_ON <- vax_aged %>%
+  filter(
+    pt == "ON",
+    source == "PT",
+    n_doses %in% c("1","2+") # keep 1 and 2+ doses (compatible estimates)
+  ) %>%
+  # sum the uptake for each year to give estimates for 1+
+  group_by(pt, location, year_report, year_birth, age, age_current, source) %>%
+  summarise(value = sum(value), .groups = "drop") %>%
+  mutate(n_doses = "1+")  # (*)
+
+# replace only the ON PT data with the version above
+vax_new <- vax_aged %>%
+  filter(!(pt == "ON" & source == "PT")) %>%
+  bind_rows(vax_ON)
+
+# And then relabel all estimates of 1/1+ to "1+" (because after dealing with Ontario, all 1 and 1+ data does truly represent "at least one dose" now). Also relabel all 2/2+ to "2+" as these data all now represent "two or more doses".
+
+vax_corrected_labs <- vax_new %>% 
+  mutate(n_doses = if_else(n_doses == "1", "1+", n_doses)) %>% 
+  mutate(n_doses = if_else(n_doses == "2", "2+", n_doses))
+```
+
+Find pts and ages where coverage for "1+" doses exists in both PT-reported and survey (cNICS or aNICS) data: 
+
+```{r}
+#| label: vax_matched
+vax_matched <- vax_corrected_labs |>
+    filter(n_doses == "1+", age_current <= 21) |>
+    # get rid of older duplicates for AB
+    filter(
+        !(pt == "AB" & source == "PT" & age_current >= 20 & age == 13)
+    ) |>
+    # compress cNICS and aNICS sources to "survey"
+    mutate(source = if_else(source %in% c("cNICS", "aNICS"), "survey", source)) |>
+    # find matched measures
+    select(pt, age_current, source, value) |>
+    tidyr::pivot_wider(id_cols = c(pt, age_current), names_from = source, values_from = value, names_prefix = "value_") |>
+    tidyr::drop_na()
+```
+
+Calculate differences and estimate mean bias with a confidence interval:
+
+```{r}
+bias <- vax_matched |> 
+    mutate(diff = value_survey - value_PT, mean = (value_survey + value_PT)/2)
+
+bias_mean <- mean(bias$diff)
+bias_se <- sd(bias$diff) / sqrt(nrow(bias))
+bias_mean_ci <- bias_mean + c(-1, 1) * qt(0.975, df = nrow(bias) - 1) * bias_se
+
+glue::glue("Mean bias (survey - PT, coverage as a percentage): {round(bias_mean*100, 1)}%\n95% CI: ({round(bias_mean_ci[1]*100, 1)}%, {round(bias_mean_ci[2]*100, 1)}%)")
+```
+
+Make Bland-Altman plot:
+
+```{r}
+ggplot(bias, aes(x = mean, y = diff, colour = diff)) +
+    geom_point(size = 4) +
+    geom_hline(yintercept = bias_mean, linetype = "dashed") +
+    geom_hline(yintercept = bias_mean_ci, linetype = "dotted") +
+    annotate("text", x = max(bias$mean), y = bias_mean,
+             label = "Mean", hjust = 1, vjust = -0.5, size = 3) +
+    annotate("text", x = max(bias$mean), y = bias_mean_ci[1],
+             label = "95% CI", hjust = 1, vjust = 1.5, size = 3) +
+    annotate("text", x = max(bias$mean), y = bias_mean_ci[2],
+             label = "95% CI", hjust = 1, vjust = -0.5, size = 3) + 
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) + 
+    scale_colour_gradient2(mid = "grey70") +
+    labs(
+        x = "Mean coverage (%) between survey and PT sources", 
+        y = "Absolute difference in coverage (%) \n(survey - PT)",
+        colour = stringr::str_wrap("Absolute difference in coverage (%), survey - PT", width = 15),
+        title = stringr::str_wrap("Bland-Altman plot of coverage estimates demonstrates low evidence of bias in survey responses", width = 55)
+    ) 
+```
