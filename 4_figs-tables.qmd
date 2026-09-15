@@ -83,6 +83,13 @@ fig_posterior_Gini_unobs
 # Supplementary material
 
 ```{r}
+#| label: fig-england-accuracy-supp
+
+source(here::here("results", "fig-england-accuracy_supp.R"))
+fig_england_accuracy_supp
+```
+
+```{r}
 #| label: fig-lppd-heatmaps
 source(here::here("results", "fig-lppd-heatmaps.R"))
 fig_heatmaps

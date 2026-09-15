@@ -111,6 +111,7 @@ get_sample_sizes <- function(vax) {
 #'   region.
 #' @param id_rep Integer identifier for this repetition, used as the random
 #'   seed via [set.seed()] for reproducibility.
+#' @param sample_by_location Logical. Should the sampling be done by location?
 #'
 #' @return A named list with three elements:
 #'   \describe{
@@ -121,26 +122,32 @@ get_sample_sizes <- function(vax) {
 #'     \item{id_rep}{The repetition identifier, passed through for
 #'       downstream tracking.}
 #'   }
-split_train_test <- function(vax, sample_size, id_rep) {
+split_train_test <- function(vax, sample_size, id_rep, sample_by_location = TRUE) {
   set.seed(id_rep) # reproducible results
 
-  vax_england <- filter(vax, country == "England")
+  vax_england <- dplyr::filter(vax, country == "England")
 
-  sample_by_location <- tibble(
-    location = unique(vax_england$location),
-    n = sample(sample_size$n, size = length(unique(vax_england$location)), replace = FALSE)
-  )
-
-  vax_england_subset <- vax_england |>
-    right_join(sample_by_location, by = "location")
-
-  vax_train <- vax_england_subset |>
-    group_split(location) |>
-    purrr::map(\(df) slice_sample(df, n = unique(df$n)) |> select(-n)) |>
-    purrr::list_rbind()
+  if(sample_by_location){
+    # filter down to the same number of regions across countries
+    sample <- tibble::tibble(
+      location = unique(vax_england$location),
+      n = sample(sample_size$n, size = length(unique(vax_england$location)), replace = FALSE)
+    )
+  
+    vax_england <- vax_england |>
+      right_join(sample, by = "location")
+      
+    vax_train <- vax_england |>
+        group_split(location) |>
+        purrr::map(\(df) slice_sample(df, n = unique(df$n)) |> select(-n)) |>
+        purrr::list_rbind()
+  } else {
+    n <- sum(sample_size$n)
+    vax_train <- vax_england |> dplyr::slice_sample(n=n, replace=FALSE)
+  }
 
   vax_test <- anti_join(
-    vax_england_subset, vax_train,
+    vax_england, vax_train,
     by = join_by(
       country, location, year_report, year_birth, age,
       n_doses, value, age_current
