@@ -21,5 +21,5 @@ parse_age_groups <- function(df, col, last_age = 21){
     mutate(
       {{col}} := list(pull_first({{col}}):pull_last({{col}}, last_age))
     ) |>
-    unnest_longer({{col}})
+    tidyr::unnest_longer({{col}})
 }

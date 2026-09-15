@@ -13,7 +13,7 @@ df <- purrr::map(branch_names, function(nm) {
 # Panel A: distribution of accuracy across reps
 panel_A <- ggplot(df, aes(x = score)) +
   geom_histogram(bins = 20) +
-  geom_vline(xintercept = mean(df$score), color = "dodgerblue") +
+  geom_vline(xintercept = mean(df$score), color = "dodgerblue", alpha = 0.7) +
   annotate(
     geom = "label",
     x = mean(df$score),
@@ -23,7 +23,8 @@ panel_A <- ggplot(df, aes(x = score)) +
       10
     ),
     color = "dodgerblue",
-    size = 3
+    size = 3,
+    alpha = 0.7
   ) +
   scale_x_continuous(labels = scales::percent_format()) +
   labs(
@@ -42,11 +43,11 @@ panel_A <- ggplot(df, aes(x = score)) +
 # - title
 
 # pull data and hyperparameters for specific subsample
-train <- data_split[[which(str_detect(names(data_split), "train"))]]
-prov_values <- fit_hp[[which(str_detect(names(fit_hp), "prov_relation"))]]
-hyperparams <- fit_hp[[which(str_detect(names(fit_hp), "(?<!score_)hyperparams"))]]
-test <- data_split[[which(str_detect(names(data_split), "test"))]]
-scores <- accuracy_branch[[which(str_detect(names(accuracy_branch), "score_accuracy"))]]
+train <- data_split[[which(stringr::str_detect(names(data_split), "train"))]]
+prov_values <- fit_hp[[which(stringr::str_detect(names(fit_hp), "prov_relation"))]]
+hyperparams <- fit_hp[[which(stringr::str_detect(names(fit_hp), "(?<!score_)hyperparams"))]]
+test <- data_split[[which(stringr::str_detect(names(data_split), "test"))]]
+scores <- accuracy_branch[[which(stringr::str_detect(names(accuracy_branch), "score_accuracy"))]]
 
 # get posterior draws
 post2D <- run_GP(
