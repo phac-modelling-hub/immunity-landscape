@@ -82,7 +82,7 @@ unobs_Gini <- readr::read_csv(here::here("data", "coverage", "generated", "measl
 
 fig_posterior_Gini_unobs <- make_posterior_plot(post_Gini, obs_Gini, show_unobs = TRUE, unobs_df = unobs_Gini) +
   theme(legend.position = "inside",
-    legend.position.inside = c(0.98, -0.05),   # bottom-right
+    legend.position.inside = c(0.98, 0),   # bottom-right
     legend.justification = c(1, 0)
 )
 fig_posterior_Gini_unobs

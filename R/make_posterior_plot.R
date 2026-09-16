@@ -15,7 +15,7 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
                        breaks = seq(min(post2D$x_i), max(post2D$x_i), by = 5)) +
     scale_y_continuous(name = "Vaccine coverage", labels = scales::label_percent()
     ) +
-    facet_wrap(~ y_label)
+    facet_wrap(~ y_label, ncol = 3)
 
   if (show_unobs && !is.null(unobs_df)) {
     unobs_df <- unobs_df %>%
@@ -37,8 +37,20 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
                  size = 2, shape = 16) +
       scale_colour_manual(values = c("Comparison (2+ doses)" = "#00ca5eff", "1+ dose (cNICS)" = "#208ceaff"), name = NULL)
   }
-  
-  p <- p + theme(legend.position = "none")
+
+  p <- p +
+    guides(
+      shape  = guide_legend(order = 1, override.aes = list(size = 3)),
+      colour = guide_legend(order = 2, override.aes = list(size = 3))
+    ) +
+    theme(
+      legend.position = "none",
+      legend.text = element_text(size = 10),
+      legend.title = element_text(size = 10),
+      legend.spacing.y = unit(0, "pt"),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.spacing = unit(2, "pt")
+    )
   p
 }
 
