@@ -15,7 +15,7 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
                        breaks = seq(min(post2D$x_i), max(post2D$x_i), by = 5)) +
     scale_y_continuous(name = "Vaccine coverage", labels = scales::label_percent()
     ) +
-    facet_wrap(~ y_label)
+    facet_wrap(~ y_label, ncol = 3)
 
   if (show_unobs && !is.null(unobs_df)) {
     unobs_df <- unobs_df %>%
@@ -37,22 +37,36 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
                  size = 2, shape = 16) +
       scale_colour_manual(values = c("Comparison (2+ doses)" = "#00ca5eff", "1+ dose (cNICS)" = "#208ceaff"), name = NULL)
   }
-  
-  p <- p + theme(legend.position = "none")
+
+  p <- p +
+    guides(
+      shape  = guide_legend(order = 1, override.aes = list(size = 3)),
+      colour = guide_legend(order = 2, override.aes = list(size = 3))
+    ) +
+    theme(
+      legend.position = "none",
+      legend.text = element_text(size = 10),
+      legend.title = element_text(size = 10),
+      legend.spacing.y = unit(0, "pt"),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.spacing = unit(2, "pt")
+    )
   p
 }
 
 make_england_posterior_plot <- function(post2D, obs_df = NULL, title = NULL) {
 
-  p <- ggplot(post2D) +
+  p <- post2D |>
+    dplyr::filter(between(x_i, 6, 17)) |>
+    ggplot() +
     geom_line(aes(x = x_i, y = post2D_constrained , group = factor(draw)),
               alpha = 0.15, linewidth = 0.3) +
-    scale_x_continuous(name = "Current age", limits = c(5, 21),
-                       breaks = seq(5, 21, by = 5)) +
+    scale_x_continuous(name = "Current age",
+                       breaks = seq(6, 17, by = 2)) +
     scale_y_continuous(name = "Vaccine coverage"
     , labels = scales::label_percent()
     ) +
-    facet_wrap(~ y_label)
+    facet_wrap(~ y_label, scales = "free_y")
 
   # add optional elements
   if (!is.null(obs_df)) {

@@ -15,10 +15,11 @@ Vaccine coverage data is collated in `1_collate-data.qmd`. This document include
 ## Overall repository structure
 
 - `*.qmd`: the main analysis documents, numbered in the order they should be run.
+- `0_load-packages-funs.R`: loads required packages and sources helper functions; used by `4_figs-tables.qmd` and the figure/table scripts in `results/`.
 - `_targets.R`: a [`{targets}`](https://docs.ropensci.org/targets/) pipeline for the England validation analysis.
 - `R/`: helper and model-fitting functions (Gaussian Process kernels, posterior computation, plotting, and pipeline helpers) sourced by the analysis documents and the pipeline.
 - `data/`: raw and generated data. See `data/README.md` for details on the datasets.
-- `results/`: generated model outputs (`.rds`) and manuscript figures.
+- `results/`: figure/table generation scripts (`fig-*.R`, `tbl-*.R`) along with generated model outputs (`.rds`) and manuscript figures.
 - `tests/`: `{testthat}` unit tests.
 
 # One-time setup for using the code
@@ -33,7 +34,7 @@ renv::restore()
 
 # Reproducing the analysis
 
-Run the Quarto documents in numerical order (`1_collate-data.qmd` through `4_figs-tables.qmd`) to fully reproduce the analysis. Be sure to toggle the "re-run" flags in the `4_figs-tables.qmd` document to `TRUE` for a complete reproduction. However, note that in doing so, the analysis may take a few hours to run completely on a laptop with standard specifications (processing power and RAM) as of mid-2026.
+Run the Quarto documents in numerical order (`1_collate-data.qmd` through `4_figs-tables.qmd`) to fully reproduce the analysis. Be sure to toggle the "re-run" flags at the top of `3_compute-results.R` to `TRUE` for a complete reproduction. However, note that in doing so, the analysis may take a few hours to run completely on a laptop with standard specifications (processing power and RAM) as of mid-2026.
 
 # License
 
