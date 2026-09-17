@@ -56,15 +56,17 @@ make_posterior_plot <- function(post2D, obs_df, show_unobs = FALSE, unobs_df = N
 
 make_england_posterior_plot <- function(post2D, obs_df = NULL, title = NULL) {
 
-  p <- ggplot(post2D) +
+  p <- post2D |>
+    dplyr::filter(between(x_i, 6, 17)) |>
+    ggplot() +
     geom_line(aes(x = x_i, y = post2D_constrained , group = factor(draw)),
               alpha = 0.15, linewidth = 0.3) +
-    scale_x_continuous(name = "Current age", limits = c(5, 21),
-                       breaks = seq(5, 21, by = 5)) +
+    scale_x_continuous(name = "Current age",
+                       breaks = seq(6, 17, by = 2)) +
     scale_y_continuous(name = "Vaccine coverage"
     , labels = scales::label_percent()
     ) +
-    facet_wrap(~ y_label)
+    facet_wrap(~ y_label, scales = "free_y")
 
   # add optional elements
   if (!is.null(obs_df)) {

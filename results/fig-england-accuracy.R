@@ -11,8 +11,7 @@ source(here::here("R", "make_fig_england_accuracy.R"))
 
 # fig_england_accuracy
 fig_england_accuracy <- make_fig_england_accuracy(accuracy, error_tolerance, data_split, fit_hp, accuracy_branch)
-
-# fig_england_accuracy
+fig_england_accuracy
 
 ggsave(
   here::here("results", "fig-england-accuracy.pdf"),

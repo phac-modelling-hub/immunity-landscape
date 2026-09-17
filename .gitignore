@@ -45,6 +45,6 @@ _targets/
 
 *.sh
 config.yml
-plots/Thumbs.db
 rendered/
 logs/*
+*/Thumbs.db
