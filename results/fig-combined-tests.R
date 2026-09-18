@@ -6,10 +6,12 @@ library(patchwork)
 
 # --- Unified colour scale ---
 
-gap_colours <- c("Close (1 year or <10% of range)"       = "#D7191C",  # vivid red
-                 "Near (2 years or 10-25% of range)"     = "#E66101",  # vivid orange
-                 "Moderate (3 years or 25-50% of range)" = "#D9B000",  # deep gold (readable yellow)
-                 "Distant (>3 years or >50% of range)"   = "#0072B2")  # vivid blue
+gap_colours <- c(
+  "Close (1 year or <10% of range)"      = "#082511",
+  "Near (2 years or 10-25% of range)"    = "#1b7837",
+  "Moderate (3 years or 25-50% of range)" = "#5aae61",
+  "Distant (>3 years or >50% of range)"  = "#a6dba0"
+)
 
 # --- Ages test data and figures ---
 
@@ -23,32 +25,22 @@ age_recode <- c("1 year apart"   = "Close (1 year or <10% of range)",
 
 age_pairs_1plus$gap_group <- factor(age_recode[age_pairs_1plus$gap_group], levels = names(gap_colours))
 
-# Bin settings and helper for centred bins + banding
-bw <- 0.05
+# Keep only locations with data across all four gap_group options
+age_pairs_1plus <- age_pairs_1plus |>
+  dplyr::group_by(location) |>
+  dplyr::filter(dplyr::n_distinct(gap_group) == length(gap_colours)) |>
+  dplyr::ungroup()
 
-make_bin_bands <- function(x, binwidth) {
-  max_bin <- ceiling(max(x, na.rm = TRUE) / binwidth)
-  k <- 0:max_bin
-  data.frame(
-    xmin = k * binwidth - binwidth / 2,
-    xmax = k * binwidth + binwidth / 2,
-    shade = k %% 2 == 0
-  ) |>
-    dplyr::filter(shade)
-}
-
-bands_ages <- make_bin_bands(age_pairs_1plus$diff, bw)
+# Bin settings
+bw <- 0.02
 
 fig_ages_test_all <- ggplot(age_pairs_1plus, aes(x = diff, fill = gap_group)) +
-  geom_rect(data = bands_ages, inherit.aes = FALSE,
-            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
-            fill = "grey70", alpha = 0.5) +
-  geom_histogram(binwidth = bw, center = 0, position = position_dodge2(preserve = "single")) +
+  geom_histogram(binwidth = bw, boundary = 0) +
   scale_fill_manual(values = gap_colours, name = stringr::str_wrap("Gap between pairs", width = 12)) +
-  facet_wrap(~ location, ncol = 3, scales = "free_y") +
-  scale_x_continuous(breaks = seq(0, ceiling(max(age_pairs_1plus$diff, na.rm = TRUE) / bw) * bw, by = bw),
+  facet_grid(rows = vars(gap_group), cols = vars(location), scales = "free") +
+  scale_x_continuous(breaks = seq(0, (ceiling(max(age_pairs_1plus$diff, na.rm = TRUE) / bw) + 1) * bw, by = 2*bw),
                      labels = scales::label_percent(suffix = "")) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) + 
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)), breaks = scales::breaks_extended(n = 3)) + 
   labs(
     title = "A: Among pairs of ages by PT",
     x = "Absolute difference in vaccine coverage (%)", y = "Number of age pairs") +
@@ -68,22 +60,25 @@ prov_recode <- c("Similar (within 10% of range)"       = "Close (1 year or <10% 
 
 province_pairs_Gini$gap_group <- factor(prov_recode[province_pairs_Gini$gap_group], levels = names(gap_colours))
 
-bands_pt <- make_bin_bands(province_pairs_Gini$diff, bw)
+# Keep only ages with data across all four gap_group options
+province_pairs_Gini <- province_pairs_Gini |>
+  dplyr::group_by(age_current) |>
+  dplyr::filter(dplyr::n_distinct(gap_group) == length(gap_colours)) |>
+  dplyr::ungroup()
 
 fig_pt_test1 <- ggplot(province_pairs_Gini, aes(x = diff, fill = gap_group)) +
-  geom_rect(data = bands_pt, inherit.aes = FALSE,
-            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
-            fill = "grey70", alpha = 0.5) +
-  geom_histogram(binwidth = bw, center = 0, position = position_dodge2(preserve = "single")) +
+  geom_histogram(binwidth = bw, boundary = 0) +
   scale_fill_manual(values = gap_colours, name = stringr::str_wrap("Gap between pairs", width = 12)) +
-  facet_wrap(~ age_current, labeller = labeller(age_current = \(x) paste("Age", x)), ncol = 3, scales = "free_y") +
-  scale_x_continuous(breaks = seq(0, ceiling(max(province_pairs_Gini$diff, na.rm = TRUE) / bw) * bw, by = bw),
+  facet_grid(rows = vars(gap_group), cols = vars(age_current), labeller = labeller(age_current = \(x) paste("Age", x)), scales = "free") +
+  scale_x_continuous(breaks = seq(0, (ceiling(max(province_pairs_Gini$diff, na.rm = TRUE) / bw) + 1) * bw, by = 2*bw),
                      labels = scales::label_percent(suffix = "")) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)), breaks = scales::breaks_extended(n = 3)) +
   labs(
     title = "B: Among pairs of PTs by age",
     x = "Absolute difference in vaccine coverage (%)", y = "Number of PT pairs") +
-  theme(plot.title = element_text(size = 14))
+  theme(
+    plot.title = element_text(size = 14)
+  )
 
 # --- Combine into multipanel figure ---
 fig_combined_tests <- fig_ages_test_all / fig_pt_test1 +
@@ -92,22 +87,29 @@ fig_combined_tests <- fig_ages_test_all / fig_pt_test1 +
     title = "Similarity in vaccine coverage",
     tag_levels = NULL
   ) &
-  theme(legend.position = "bottom", axis.text.y = element_text(size = 7), legend.title = element_text(size = 10), legend.text = element_text(size = 10)) &
+  theme(
+    legend.position = "bottom", 
+    legend.title = element_text(size = 10), 
+    legend.text = element_text(size = 10),
+    strip.text.y = element_blank(),
+    axis.text.x = element_text(size = 8),
+    axis.text.y = element_text(size = 8)
+  ) &
   guides(fill = guide_legend(nrow = 2))
-fig_combined_tests
+
 # Save combined figure
 ggsave(
   here::here("results", "fig-combined-tests.jpeg"),
   fig_combined_tests,
   width = fig_w,
-  height = 2*fig_h,
+  height = 1.5*fig_h,
   dpi = 300
 )
 
 ggsave(
   here::here("results", "fig-combined-tests.pdf"),
   fig_combined_tests,
-  width = fig_w,
-  height = 2*fig_h,
+  width = 2*fig_w,
+  height = fig_h,
   dpi = 300
 )
